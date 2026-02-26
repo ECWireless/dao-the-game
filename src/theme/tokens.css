@@ -1,0 +1,10 @@
+:root {
+  --color-bg: #e4e0d4;
+  --color-panel: #f2eee4;
+  --color-ink: #1d2226;
+  --color-accent: #1f6f50;
+  --color-border: #5a5e5f;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --radius-2: 0.5rem;
+}

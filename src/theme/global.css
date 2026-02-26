@@ -1,0 +1,24 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(circle at top, #f0ecdf 0%, var(--color-bg) 70%);
+  color: var(--color-ink);
+  font-family: 'Trebuchet MS', 'Avenir Next', sans-serif;
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  text-align: center;
+}
+
+h1,
+p {
+  margin: var(--space-3) 0;
+}
