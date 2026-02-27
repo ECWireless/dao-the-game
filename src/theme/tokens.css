@@ -1,10 +1,24 @@
 :root {
-  --color-bg: #e4e0d4;
-  --color-panel: #f2eee4;
-  --color-ink: #1d2226;
-  --color-accent: #1f6f50;
-  --color-border: #5a5e5f;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --radius-2: 0.5rem;
+  --font-display: 'Avenir Next Demi Bold', 'Avenir Next', 'SF Pro Display', 'Helvetica Neue', sans-serif;
+  --font-body: 'Avenir Next', 'SF Pro Text', 'Helvetica Neue', sans-serif;
+
+  --shell-surface-top: #f0e9dc;
+  --shell-surface-bottom: #dad0bf;
+  --shell-surface-deep: #887e70;
+  --shell-ink: #21262a;
+  --shell-muted: #4d555c;
+  --shell-border: #655f55;
+  --shell-accent: #2b7f5d;
+  --shell-accent-soft: #80b99f;
+  --shell-danger: #ba4e3b;
+
+  --engine-surface-top: #d5d9dc;
+  --engine-surface-bottom: #aeb7bd;
+  --engine-surface-deep: #616d75;
+  --engine-ink: #182027;
+  --engine-muted: #42505a;
+  --engine-border: #4b5963;
+  --engine-accent: #2f6e9f;
+  --engine-accent-soft: #7fa4c4;
+  --engine-danger: #a94039;
 }
