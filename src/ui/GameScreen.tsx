@@ -3,18 +3,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getScene, type StoryApp } from '../levels/story';
 import {
   countAssignedRoles,
-  estimateRunCost,
   estimateRunwayAfterRun,
   getActiveRoles,
   useGameStore
 } from '../state/gameStore';
 import { APP_META } from './game-screen/constants';
 import { AppDock } from './game-screen/components/AppDock';
+import { NotificationBanner, type MessageNotification } from './game-screen/scenes/CommunicationScenes';
 import { StatusBar } from './game-screen/components/StatusBar';
 import { renderSceneContent } from './game-screen/sceneContent';
 import { DormantAppPanel } from './game-screen/scenes/OperationsScenes';
 import type { AppSwitchPhase } from './game-screen/types';
-import { getAppLaunchOrigin, getRunSummary, getUnlockedApps, formatCredits } from './game-screen/utils';
+import { getAppLaunchOrigin, getRunSummary, getUnlockedApps } from './game-screen/utils';
 import './game-screen.css';
 
 export default function GameScreen() {
@@ -36,19 +36,25 @@ export default function GameScreen() {
 
   const scene = getScene(storySceneIndex);
   const unlockedApps = useMemo(() => getUnlockedApps(storySceneIndex), [storySceneIndex]);
-  const previousUnlockedAppsRef = useRef<StoryApp[]>(unlockedApps);
+  const previousUnlockedAppsRef = useRef<StoryApp[]>(
+    storySceneIndex === 0 && unlockedApps.includes('mail')
+      ? unlockedApps.filter((app) => app !== 'mail')
+      : unlockedApps
+  );
 
   const [currentApp, setCurrentApp] = useState<StoryApp>(scene.app);
   const [pendingApp, setPendingApp] = useState<StoryApp | null>(null);
   const [switchPhase, setSwitchPhase] = useState<AppSwitchPhase>('idle');
-  const [launchOriginX, setLaunchOriginX] = useState<number>(getAppLaunchOrigin(scene.app, unlockedApps));
+  const [launchOriginX, setLaunchOriginX] = useState<number>(
+    getAppLaunchOrigin(scene.app, unlockedApps)
+  );
   const [pulseApp, setPulseApp] = useState<StoryApp | null>(null);
   const [installingApp, setInstallingApp] = useState<StoryApp | null>(null);
   const [isMachineLocked, setIsMachineLocked] = useState(false);
+  const [isPhoneNotificationVisible, setIsPhoneNotificationVisible] = useState(false);
 
   const activeRoles = getActiveRoles(roles, unlockedRoleCount);
   const assignedActiveRoles = countAssignedRoles(activeRoles);
-  const runEstimate = estimateRunCost(activeRoles, agents);
   const runwayAfterRun = estimateRunwayAfterRun(treasury, activeRoles, agents);
   const latestRunSummary = getRunSummary(latestRun);
   const canSwitchApps = !isMachineLocked;
@@ -67,6 +73,14 @@ export default function GameScreen() {
     [canSwitchApps, currentApp, switchPhase, unlockedApps]
   );
 
+  const advanceStoryAndOpenApp = useCallback(
+    (targetApp: StoryApp) => {
+      advanceStory();
+      requestAppSwitch(targetApp);
+    },
+    [advanceStory, requestAppSwitch]
+  );
+
   useEffect(() => {
     const previousUnlockedApps = previousUnlockedAppsRef.current;
     const newlyUnlockedApp = unlockedApps.find((app) => !previousUnlockedApps.includes(app));
@@ -80,15 +94,21 @@ export default function GameScreen() {
     }
 
     setInstallingApp(newlyUnlockedApp);
+  }, [unlockedApps]);
+
+  useEffect(() => {
+    if (!installingApp) {
+      return;
+    }
 
     const timer = window.setTimeout(() => {
-      setInstallingApp((current) => (current === newlyUnlockedApp ? null : current));
+      setInstallingApp((current) => (current === installingApp ? null : current));
     }, 1900);
 
     return () => {
       window.clearTimeout(timer);
     };
-  }, [unlockedApps]);
+  }, [installingApp]);
 
   useEffect(() => {
     if (unlockedApps.includes(currentApp)) {
@@ -138,6 +158,40 @@ export default function GameScreen() {
     '--launch-origin-x': `${launchOriginX}%`
   } as CSSProperties;
 
+  const handlePhoneNotificationOpen = useCallback(() => {
+    setIsPhoneNotificationVisible(false);
+    advanceStoryAndOpenApp('mail');
+  }, [advanceStoryAndOpenApp]);
+
+  const hasPhoneNotification = scene.id === 'messages-notification';
+  const activePhoneNotification: MessageNotification | null = hasPhoneNotification
+    ? {
+        appName: 'Mail',
+        title: 'URGENT: Full rebrand needed in 48 hours',
+        preview: 'Lina, Event Director',
+        onOpen: handlePhoneNotificationOpen
+      }
+    : null;
+
+  const showAppSubtitle = !(currentApp === 'messages' && scene.app === currentApp);
+  const appSubtitle = scene.app === currentApp ? scene.subtitle : 'Background app';
+
+  useEffect(() => {
+    if (!hasPhoneNotification) {
+      setIsPhoneNotificationVisible(false);
+      return;
+    }
+
+    setIsPhoneNotificationVisible(false);
+    const timer = window.setTimeout(() => {
+      setIsPhoneNotificationVisible(true);
+    }, 2000);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [hasPhoneNotification]);
+
   const sceneContent = renderSceneContent({
     sceneId: scene.id,
     activeRoles,
@@ -179,6 +233,12 @@ export default function GameScreen() {
 
           <StatusBar sceneIndex={storySceneIndex} treasury={treasury} />
 
+          {activePhoneNotification && isPhoneNotificationVisible ? (
+            <div className="phone-notification-tray">
+              <NotificationBanner notification={activePhoneNotification} />
+            </div>
+          ) : null}
+
           <section className="app-header">
             <div className="app-header-bar">
               <button
@@ -196,14 +256,16 @@ export default function GameScreen() {
 
               <div className="app-heading">
                 <p className="app-title">{APP_META[currentApp].label}</p>
-                <p className="app-subtitle">{scene.app === currentApp ? scene.subtitle : 'Background app'}</p>
+                {showAppSubtitle && appSubtitle ? (
+                  <p className="app-subtitle">{appSubtitle}</p>
+                ) : null}
               </div>
             </div>
           </section>
 
           <section className="app-viewport">
             <article
-              key={`${currentApp}-${scene.id}`}
+              key={currentApp}
               className={`app-frame phase-${switchPhase}`}
               style={frameStyle}
               aria-live="polite"
@@ -213,14 +275,6 @@ export default function GameScreen() {
           </section>
 
           <footer className="app-bottom">
-            <div className="bottom-metric">
-              <p className="eyebrow">Contract</p>
-              <p>
-                Roles {assignedActiveRoles}/{activeRoles.length} | est {formatCredits(runEstimate)} | runway{' '}
-                {formatCredits(runwayAfterRun)}
-              </p>
-            </div>
-
             <AppDock
               availableApps={unlockedApps}
               currentApp={currentApp}

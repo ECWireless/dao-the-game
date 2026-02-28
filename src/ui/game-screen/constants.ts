@@ -11,10 +11,10 @@ export const APP_META: Record<StoryApp, { label: string }> = {
   machine: { label: 'Machine' }
 };
 
-export const APP_INTRO_SCENE_INDEX: Record<StoryApp, number> = APP_ORDER.reduce(
-  (accumulator, app) => {
-    accumulator[app] = STORY_SCENES.findIndex((scene) => scene.app === app);
-    return accumulator;
-  },
-  {} as Record<StoryApp, number>
-);
+export const APP_INTRO_SCENE_INDEX: Record<StoryApp, number> = {
+  messages: 0,
+  mail: 0,
+  whiteboard: STORY_SCENES.findIndex((scene) => scene.app === 'whiteboard'),
+  guild: STORY_SCENES.findIndex((scene) => scene.app === 'guild'),
+  machine: STORY_SCENES.findIndex((scene) => scene.app === 'machine')
+};

@@ -15,6 +15,12 @@ export const STORY_SCENES: StoryScene[] = [
     subtitle: 'Anonymous guide thread'
   },
   {
+    id: 'messages-hold',
+    app: 'messages',
+    title: 'Messages',
+    subtitle: 'Hold for a second'
+  },
+  {
     id: 'messages-notification',
     app: 'messages',
     title: 'Messages',

@@ -40,27 +40,81 @@ export function renderSceneContent({
   switch (sceneId) {
     case 'messages-warmup': {
       const thread: ChatLine[] = [
-        { id: 'a', author: 'friend', text: 'yo accidental operator, you online?' },
-        { id: 'b', author: 'player', text: 'barely. why?' },
-        { id: 'c', author: 'friend', text: 'keep this thread open. chaos is inbound.' }
-      ];
-
-      return <MessagesScene thread={thread} draft="uh okay... waiting for chaos" sendLabel="Send" onSend={advanceStory} />;
-    }
-    case 'messages-notification': {
-      const thread: ChatLine[] = [
-        { id: 'd', author: 'system', text: 'Push alert: new email marked URGENT.' },
-        { id: 'e', author: 'friend', text: 'that ping is your plot twist. open mail now.' }
+        {
+          id: 'a',
+          author: 'friend',
+          text: 'new co-op crawler just dropped. weird relics, procedural bosses. you in?'
+        }
       ];
 
       return (
         <MessagesScene
           thread={thread}
-          showNotification
-          footerActionLabel="Switch to Mail"
-          onFooterAction={advanceStory}
+          initialThreadDelayMs={2000}
+          draft="not tonight."
+          sendLabel="Send"
+          onSend={advanceStory}
         />
       );
+    }
+    case 'messages-hold': {
+      const thread: ChatLine[] = [
+        {
+          id: 'a',
+          author: 'friend',
+          text: 'new co-op crawler just dropped. weird relics, procedural bosses. you in?'
+        },
+        {
+          id: 'b',
+          author: 'player',
+          text: 'not tonight.'
+        },
+        {
+          id: 'c',
+          author: 'friend',
+          text: 'you have been in a rut all week. one run, then you can go back to staring at the ceiling.'
+        }
+      ];
+
+      return (
+        <MessagesScene
+          thread={thread}
+          draft="not in the mood. tomorrow."
+          sendLabel="Send"
+          onSend={advanceStory}
+        />
+      );
+    }
+    case 'messages-notification': {
+      const thread: ChatLine[] = [
+        {
+          id: 'a',
+          author: 'friend',
+          text: 'new co-op crawler just dropped. weird relics, procedural bosses. you in?'
+        },
+        {
+          id: 'b',
+          author: 'player',
+          text: 'not tonight.'
+        },
+        {
+          id: 'c',
+          author: 'friend',
+          text: 'you have been in a rut all week. one run, then you can go back to staring at the ceiling.'
+        },
+        {
+          id: 'd',
+          author: 'player',
+          text: 'not in the mood. tomorrow.'
+        },
+        {
+          id: 'e',
+          author: 'friend',
+          text: 'fine. i will bother you tomorrow.'
+        }
+      ];
+
+      return <MessagesScene thread={thread} />;
     }
     case 'mail-offer':
       return (
@@ -80,19 +134,19 @@ export function renderSceneContent({
       );
     case 'messages-convince': {
       const thread: ChatLine[] = [
-        { id: 'f', author: 'player', text: 'they offered 2800 credits. wrong address though.' },
-        { id: 'g', author: 'friend', text: 'wrong address? no. destiny typo.' },
+        { id: 'f', author: 'player', text: 'they offered 2800 credits. this was definitely sent to the wrong person.' },
+        { id: 'g', author: 'friend', text: 'competent people are mostly a payroll rumor.' },
         {
           id: 'h',
           author: 'friend',
-          text: 'you do not need to build it yourself. you orchestrate. machine does the lifting.'
+          text: 'you do not build it. you arrange the right parts and let the machine take the blame.'
         }
       ];
 
       return (
         <MessagesScene
           thread={thread}
-          draft="fine. i accept the contract. please don’t let me crash this."
+          draft="this feels like a bad idea. fine. i am in."
           sendLabel="Send"
           onSend={advanceStory}
         />
@@ -111,19 +165,19 @@ export function renderSceneContent({
       );
     case 'messages-cant-do': {
       const thread: ChatLine[] = [
-        { id: 'i', author: 'player', text: 'can you fill this role for me?' },
-        { id: 'j', author: 'friend', text: 'heck no. i am advisory chaos only.' },
+        { id: 'i', author: 'player', text: 'can you just do this for me?' },
+        { id: 'j', author: 'friend', text: 'absolutely not. i prefer to remain deniable.' },
         {
           id: 'k',
           author: 'friend',
-          text: 'dropping you into RaidGuild server. post the role, hire someone, assign them.'
+          text: 'i can, however, point you toward the right weirdos. opening a guild channel now.'
         }
       ];
 
       return (
         <MessagesScene
           thread={thread}
-          draft="copy that. opening guild and posting role now."
+          draft="right. hiring help. try not to vanish."
           sendLabel="Send"
           onSend={advanceStory}
         />
@@ -175,19 +229,19 @@ export function renderSceneContent({
       );
     case 'messages-pivot': {
       const thread: ChatLine[] = [
-        { id: 'l', author: 'player', text: 'client hated it. i am cooked.' },
+        { id: 'l', author: 'player', text: 'client hated it. tell me you have a fix.' },
         {
           id: 'm',
           author: 'friend',
-          text: 'nah. your graph was under-scoped. add Designer + Reviewer + Deployment roles.'
+          text: 'of course. your graph is starving. add Designer, Reviewer, and Deployment.'
         },
-        { id: 'n', author: 'friend', text: 'expand hats tree, hire again, rerun. same machine, better topology.' }
+        { id: 'n', author: 'friend', text: 'same machine, better wiring. patch the tree, hire again, rerun.' }
       ];
 
       return (
         <MessagesScene
           thread={thread}
-          draft="patching tree now. let’s run this back."
+          draft="patching the tree now. do not become mysteriously correct about me."
           sendLabel="Send"
           onSend={() => {
             unlockExpandedRoles();

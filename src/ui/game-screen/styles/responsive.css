@@ -17,6 +17,8 @@
   }
 
   .phone-screen {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
     min-height: 100%;
     border-radius: 2.02rem;
     box-shadow:
@@ -49,6 +51,12 @@
     color: #42516a;
     font-size: 0.7rem;
     font-weight: 800;
+  }
+
+  .phone-notification-tray {
+    top: 1.2rem;
+    left: 0.8rem;
+    right: 0.8rem;
   }
 
   .status-center {

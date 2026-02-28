@@ -1,0 +1,356 @@
+.scene-body {
+  min-height: 100%;
+  height: 100%;
+  display: grid;
+  align-content: start;
+  gap: 0.7rem;
+  overflow: auto;
+}
+
+.eyebrow {
+  margin: 0;
+  color: #71819b;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.scene-copy {
+  margin: 0;
+  color: #56667f;
+  font-size: 0.8rem;
+  line-height: 1.34;
+}
+
+.messages-scene {
+  display: flex;
+  flex-direction: column;
+  align-content: normal;
+  overflow: hidden;
+}
+
+.messages-contact-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.52rem;
+  flex-shrink: 0;
+}
+
+.messages-contact-avatar {
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(255 255 255 / 62%);
+  background:
+    radial-gradient(circle at 35% 28%, rgb(255 255 255 / 32%), transparent 34%),
+    linear-gradient(160deg, rgb(95 111 145 / 88%), rgb(46 58 86 / 92%));
+  overflow: hidden;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 18%),
+    0 8px 18px rgb(86 99 125 / 14%);
+}
+
+.messages-avatar-shell,
+.messages-avatar-face,
+.messages-avatar-eye {
+  position: absolute;
+  display: block;
+}
+
+.messages-avatar-shell {
+  inset: 0.2rem 0.24rem 0.14rem;
+  border-radius: 0.95rem 0.95rem 0.75rem 0.75rem;
+  background:
+    linear-gradient(180deg, rgb(33 43 67 / 96%), rgb(25 33 50 / 92%)),
+    linear-gradient(180deg, rgb(255 255 255 / 12%), transparent);
+}
+
+.messages-avatar-face {
+  left: 0.63rem;
+  top: 0.62rem;
+  width: 0.86rem;
+  height: 0.72rem;
+  border-radius: 0.42rem 0.42rem 0.48rem 0.48rem;
+  background: linear-gradient(180deg, rgb(221 232 255 / 90%), rgb(184 199 236 / 92%));
+  box-shadow: 0 0 0 1px rgb(17 26 45 / 18%);
+}
+
+.messages-avatar-eye {
+  top: 0.93rem;
+  width: 0.12rem;
+  height: 0.12rem;
+  border-radius: 50%;
+  background: rgb(32 43 67 / 88%);
+}
+
+.messages-avatar-eye.eye-left {
+  left: 0.87rem;
+}
+
+.messages-avatar-eye.eye-right {
+  right: 0.87rem;
+}
+
+.messages-contact-copy {
+  min-width: 0;
+}
+
+.messages-contact-name,
+.messages-contact-status {
+  margin: 0;
+}
+
+.messages-contact-name {
+  color: #2e3f5a;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.messages-contact-status {
+  margin-top: 0.1rem;
+  color: #6d7c96;
+  font-size: 0.68rem;
+}
+
+.chat-thread {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.54rem;
+  padding: 0.16rem 0 0.4rem;
+  overflow: auto;
+}
+
+.chat-bubble {
+  width: fit-content;
+  max-width: 84%;
+  border-radius: 0.76rem;
+  border: 1px solid rgb(255 255 255 / 62%);
+  padding: 0.52rem 0.7rem;
+  font-size: 0.76rem;
+  line-height: 1.34;
+  backdrop-filter: blur(16px) saturate(145%);
+  -webkit-backdrop-filter: blur(16px) saturate(145%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 56%),
+    0 8px 18px rgb(118 129 149 / 8%);
+  animation: bubbleIn 180ms ease-out both;
+}
+
+.chat-bubble p {
+  margin: 0;
+}
+
+.chat-bubble.from-friend {
+  align-self: flex-start;
+  color: #35465f;
+  background: linear-gradient(160deg, rgb(255 255 255 / 48%), rgb(246 249 255 / 28%));
+}
+
+.chat-bubble.from-player {
+  align-self: flex-end;
+  color: #f7fbff;
+  border-color: rgb(140 191 255 / 46%);
+  background: linear-gradient(160deg, rgb(106 160 241 / 88%), rgb(74 121 210 / 88%));
+}
+
+.chat-bubble.from-system {
+  align-self: center;
+  color: #435674;
+  text-align: center;
+  background: linear-gradient(160deg, rgb(250 252 255 / 50%), rgb(239 245 255 / 28%));
+}
+
+.chat-bubble.from-client {
+  align-self: flex-start;
+  color: #665465;
+  background: linear-gradient(160deg, rgb(255 247 250 / 52%), rgb(252 236 244 / 28%));
+}
+
+.messages-footer {
+  margin-top: auto;
+  display: grid;
+  gap: 0.42rem;
+  padding-top: 0.1rem;
+  flex-shrink: 0;
+}
+
+.draft-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.38rem;
+}
+
+.draft-preview {
+  margin: 0;
+  min-height: 2.72rem;
+  border: 1px solid rgb(255 255 255 / 64%);
+  border-radius: 1.08rem;
+  padding: 0.52rem 0.72rem;
+  display: flex;
+  align-items: center;
+  color: #5e6f88;
+  font-size: 0.72rem;
+  line-height: 1.3;
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 40%), rgb(243 247 254 / 24%)),
+    rgb(255 255 255 / 14%);
+  backdrop-filter: blur(14px) saturate(145%);
+  -webkit-backdrop-filter: blur(14px) saturate(145%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 56%),
+    0 8px 18px rgb(118 129 149 / 8%);
+}
+
+.draft-preview.is-typing::after {
+  content: '';
+  width: 0.08rem;
+  height: 1rem;
+  margin-left: 0.08rem;
+  border-radius: 999px;
+  background: rgb(94 111 140 / 72%);
+  animation: composerCaret 720ms steps(1) infinite;
+}
+
+.chat-bubble.is-sending-bubble {
+  animation: outgoingSend 520ms cubic-bezier(0.18, 0.84, 0.32, 1) both;
+}
+
+.iphone-notification {
+  width: 100%;
+  border: 0;
+  border-radius: 1rem;
+  padding: 0.5rem 0.58rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.46rem;
+  text-align: left;
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 72%), rgb(241 246 253 / 62%)),
+    rgb(255 255 255 / 54%);
+  backdrop-filter: blur(26px) saturate(165%);
+  -webkit-backdrop-filter: blur(26px) saturate(165%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 72%),
+    0 16px 30px rgb(94 108 133 / 14%);
+  animation: notificationIn 240ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+.iphone-notification-icon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.52rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #f6fbff;
+  background: linear-gradient(160deg, rgb(118 178 255 / 96%), rgb(69 123 218 / 96%));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 24%),
+    0 10px 18px rgb(75 120 199 / 24%);
+}
+
+.iphone-notification-icon svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.iphone-notification-copy {
+  min-width: 0;
+  display: grid;
+  gap: 0.1rem;
+}
+
+.iphone-notification-meta,
+.iphone-notification-title,
+.iphone-notification-preview {
+  display: block;
+}
+
+.iphone-notification-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: #6b7b95;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.iphone-notification-title {
+  color: #2b3b54;
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1.22;
+}
+
+.iphone-notification-preview {
+  color: #50617b;
+  font-size: 0.7rem;
+  line-height: 1.22;
+}
+
+.primary-action,
+.ghost-action,
+.mini-action,
+.role-tab,
+.dock-app {
+  min-height: 2.72rem;
+  border-radius: 0.66rem;
+  font-family: var(--font-body);
+  font-weight: 800;
+}
+
+.primary-action {
+  border: 1px solid rgb(140 191 255 / 52%);
+  background: linear-gradient(180deg, rgb(102 160 245 / 92%), rgb(78 129 217 / 92%));
+  color: #f5faff;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 22%),
+    0 10px 22px rgb(90 132 196 / 18%);
+}
+
+.primary-action:disabled,
+.mini-action:disabled,
+.role-tab:disabled,
+.ghost-action:disabled,
+.dock-app:disabled {
+  opacity: 0.46;
+}
+
+@keyframes outgoingSend {
+  0% {
+    opacity: 0.2;
+    transform: translateY(0.9rem) scale(0.94);
+  }
+
+  45% {
+    opacity: 1;
+    transform: translateY(0) scale(1.01);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes composerCaret {
+  0%,
+  49% {
+    opacity: 1;
+  }
+
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
