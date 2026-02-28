@@ -1,0 +1,119 @@
+@keyframes appLaunchOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(34px) scale(0.9);
+  }
+}
+
+@keyframes appLaunchIn {
+  from {
+    opacity: 0;
+    transform: translateY(36px) scale(0.88);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes bubbleIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes notificationIn {
+  from {
+    opacity: 0;
+    transform: translateY(-28px);
+  }
+
+  60% {
+    opacity: 1;
+    transform: translateY(2px);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes lampPulse {
+  from {
+    transform: scale(1);
+  }
+
+  to {
+    transform: scale(1.11);
+  }
+}
+
+@keyframes candidateIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dockPulse {
+  from {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.08);
+  }
+
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes appInstall {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.74);
+  }
+
+  38% {
+    opacity: 1;
+    transform: translateY(0) scale(0.94);
+  }
+
+  72% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1.08);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes installWheel {
+  from {
+    stroke-dashoffset: 97.4;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
