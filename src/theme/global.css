@@ -10,10 +10,7 @@ body,
 
 body {
   margin: 0;
-  background:
-    radial-gradient(circle at 20% 12%, rgb(151 196 255 / 42%), transparent 40%),
-    radial-gradient(circle at 82% 10%, rgb(254 191 219 / 36%), transparent 42%),
-    linear-gradient(180deg, #eff5ff, #d9e3f4 72%);
+  background: linear-gradient(180deg, #eff2f7, #e6eaf1 72%);
   color: #243654;
   font-family: var(--font-body);
 }
