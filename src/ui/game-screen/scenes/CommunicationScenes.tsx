@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
+import type { StoryApp } from '../../../levels/story';
 import type { ChatLine } from '../types';
 
 export type MessageNotification = {
   appName: string;
   title: string;
   preview: string;
+  icon?: StoryApp;
   onOpen: () => void;
 };
 
@@ -28,18 +30,7 @@ type MessagesSceneProps = {
   footerActionLabel?: string;
   onFooterAction?: () => void;
   initialThreadDelayMs?: number;
-};
-
-type MailSceneProps = {
-  from: string;
-  subject: string;
-  body: string[];
-  draft?: string;
-  sendLabel?: string;
-  onSend?: () => void;
-  actionLabel?: string;
-  onAction?: () => void;
-  tone: 'panic' | 'fail' | 'success';
+  disableEntryAnimation?: boolean;
 };
 
 function ChatBubble({
@@ -67,27 +58,54 @@ function ChatBubble({
 }
 
 export function NotificationBanner({ notification }: { notification: MessageNotification }) {
+  const icon = notification.icon ?? 'mail';
+
   return (
     <button className="iphone-notification" type="button" onClick={notification.onOpen}>
       <span className="iphone-notification-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none">
-          <rect
-            x="4.5"
-            y="6.5"
-            width="15"
-            height="11"
-            rx="2.2"
-            fill="currentColor"
-            opacity="0.92"
-          />
-          <path
-            d="m6.4 8.4 5.1 4.1a.8.8 0 0 0 1 0l5.1-4.1"
-            stroke="rgb(255 255 255 / 0.9)"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="1.6"
-          />
-        </svg>
+        {icon === 'messages' ? (
+          <svg viewBox="0 0 24 24" fill="none">
+            <path
+              d="M6.3 7.4a2 2 0 0 1 2-2h7.4a2 2 0 0 1 2 2v5.6a2 2 0 0 1-2 2h-4l-2.8 2.4c-.5.4-1.2 0-.9-.6l.8-1.8H8.3a2 2 0 0 1-2-2V7.4Z"
+              fill="currentColor"
+              opacity="0.94"
+            />
+          </svg>
+        ) : icon === 'whiteboard' ? (
+          <svg viewBox="0 0 24 24" fill="none">
+            <rect x="5.2" y="4.8" width="13.6" height="14.4" rx="2.1" fill="currentColor" opacity="0.94" />
+            <path d="M8.4 9.2h7.2M8.4 12h5.1M8.4 14.8h6.1" stroke="rgb(255 255 255 / 0.92)" strokeLinecap="round" strokeWidth="1.4" />
+          </svg>
+        ) : icon === 'guild' ? (
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M9.2 5.5 7 18.5M16.9 5.5l-2.2 13M5 9.2h14M4.1 14.8h14" stroke="currentColor" strokeLinecap="round" strokeWidth="1.7" />
+          </svg>
+        ) : icon === 'machine' ? (
+          <svg viewBox="0 0 24 24" fill="none">
+            <rect x="5.4" y="6.1" width="13.2" height="11.8" rx="2.3" fill="currentColor" opacity="0.94" />
+            <path d="M9.1 10.1h5.8M9.1 13.9h3.6" stroke="rgb(255 255 255 / 0.9)" strokeLinecap="round" strokeWidth="1.5" />
+            <path d="M3.8 9.5h1.8M3.8 14.5h1.8M18.4 9.5h1.8M18.4 14.5h1.8" stroke="currentColor" strokeLinecap="round" strokeWidth="1.4" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 24 24" fill="none">
+            <rect
+              x="4.5"
+              y="6.5"
+              width="15"
+              height="11"
+              rx="2.2"
+              fill="currentColor"
+              opacity="0.92"
+            />
+            <path
+              d="m6.4 8.4 5.1 4.1a.8.8 0 0 0 1 0l5.1-4.1"
+              stroke="rgb(255 255 255 / 0.9)"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="1.6"
+            />
+          </svg>
+        )}
       </span>
       <span className="iphone-notification-copy">
         <span className="iphone-notification-meta">
@@ -110,7 +128,8 @@ export function MessagesScene({
   onSend,
   footerActionLabel,
   onFooterAction,
-  initialThreadDelayMs = 0
+  initialThreadDelayMs = 0,
+  disableEntryAnimation = false
 }: MessagesSceneProps) {
   const [isSending, setIsSending] = useState(false);
   const [visibleDraft, setVisibleDraft] = useState('');
@@ -149,7 +168,7 @@ export function MessagesScene({
         return [
           line.id,
           {
-            animate: !isPendingSentLine,
+            animate: !disableEntryAnimation && !isPendingSentLine,
             delayMs: isPendingSentLine ? 0 : effectiveDelayMs
           }
         ];
@@ -310,47 +329,6 @@ export function MessagesScene({
             </button>
           ) : null}
         </footer>
-      ) : null}
-    </section>
-  );
-}
-
-export function MailScene({
-  from,
-  subject,
-  body,
-  draft,
-  sendLabel,
-  onSend,
-  actionLabel,
-  onAction,
-  tone
-}: MailSceneProps) {
-  return (
-    <section className="scene-body mail-scene">
-      <article className={`mail-card tone-${tone}`}>
-        <p className="eyebrow">From: {from}</p>
-        <h2>{subject}</h2>
-        <div className="mail-copy">
-          {body.map((line) => (
-            <p key={line}>{line}</p>
-          ))}
-        </div>
-      </article>
-
-      {draft && onSend ? (
-        <div className="draft-row">
-          <p className="draft-preview">{draft}</p>
-          <button className="primary-action" type="button" onClick={onSend}>
-            {sendLabel ?? 'Send Reply'}
-          </button>
-        </div>
-      ) : null}
-
-      {actionLabel && onAction ? (
-        <button className="primary-action" type="button" onClick={onAction}>
-          {actionLabel}
-        </button>
       ) : null}
     </section>
   );

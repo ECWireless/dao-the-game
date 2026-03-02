@@ -1,4 +1,4 @@
-import type { StoryApp } from '../../levels/story';
+import { getScene, type StoryApp, type StoryScene } from '../../levels/story';
 import type { Agent, HatRole, RunResult } from '../../types';
 import { APP_INTRO_SCENE_INDEX, APP_ORDER } from './constants';
 import type { RunSummary } from './types';
@@ -37,4 +37,16 @@ export function getRunSummary(result?: RunResult): RunSummary | undefined {
     cost: result.cost,
     events: result.events
   };
+}
+
+export function getLatestReachedSceneForApp(sceneIndex: number, app: StoryApp): StoryScene | undefined {
+  for (let index = sceneIndex; index >= 0; index -= 1) {
+    const scene = getScene(index);
+
+    if (scene.app === app) {
+      return scene;
+    }
+  }
+
+  return undefined;
 }

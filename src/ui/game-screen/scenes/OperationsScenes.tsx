@@ -9,19 +9,21 @@ type WhiteboardSceneProps = {
   roles: HatRole[];
   agents: Agent[];
   copy: string;
-  actionLabel: string;
-  onAction: () => void;
+  actionLabel?: string;
+  onAction?: () => void;
   isExpanded: boolean;
+  isReadOnly?: boolean;
 };
 
 type GuildSceneProps = {
   roles: HatRole[];
   agents: Agent[];
   assignmentLog: AssignmentLogEntry[];
-  onAssign: (roleId: string, agentId: string) => void;
-  onContinue: () => void;
-  continueDisabled: boolean;
+  onAssign?: (roleId: string, agentId: string) => void;
+  onContinue?: () => void;
+  continueDisabled?: boolean;
   guidance: string;
+  isReadOnly?: boolean;
 };
 
 type MachineSceneProps = {
@@ -29,9 +31,10 @@ type MachineSceneProps = {
   canRun: boolean;
   hasRun: boolean;
   latestRunSummary?: RunSummary;
-  onRun: () => Promise<void>;
-  onContinue: () => void;
-  onLockChange: (isLocked: boolean) => void;
+  onRun?: () => Promise<void>;
+  onContinue?: () => void;
+  onLockChange?: (isLocked: boolean) => void;
+  isReadOnly?: boolean;
 };
 
 type DormantAppPanelProps = {
@@ -52,7 +55,15 @@ const DORMANT_TITLES: Record<StoryApp, string> = {
   machine: 'Machine controls are on standby.'
 };
 
-export function WhiteboardScene({ roles, agents, copy, actionLabel, onAction, isExpanded }: WhiteboardSceneProps) {
+export function WhiteboardScene({
+  roles,
+  agents,
+  copy,
+  actionLabel,
+  onAction,
+  isExpanded,
+  isReadOnly = false
+}: WhiteboardSceneProps) {
   const agentById = useMemo(() => new Map(agents.map((agent) => [agent.id, agent])), [agents]);
 
   return (
@@ -73,9 +84,11 @@ export function WhiteboardScene({ roles, agents, copy, actionLabel, onAction, is
         })}
       </div>
 
-      <button className="primary-action" type="button" onClick={onAction}>
-        {actionLabel}
-      </button>
+      {!isReadOnly && actionLabel && onAction ? (
+        <button className="primary-action" type="button" onClick={onAction}>
+          {actionLabel}
+        </button>
+      ) : null}
     </section>
   );
 }
@@ -86,8 +99,9 @@ export function GuildScene({
   assignmentLog,
   onAssign,
   onContinue,
-  continueDisabled,
-  guidance
+  continueDisabled = false,
+  guidance,
+  isReadOnly = false
 }: GuildSceneProps) {
   const [selectedRoleId, setSelectedRoleId] = useState<string>(roles[0]?.id ?? '');
 
@@ -111,6 +125,7 @@ export function GuildScene({
             type="button"
             role="tab"
             aria-selected={selectedRole?.id === role.id}
+            disabled={isReadOnly}
             onClick={() => setSelectedRoleId(role.id)}
           >
             {role.name}
@@ -130,7 +145,8 @@ export function GuildScene({
             <button
               className="mini-action"
               type="button"
-              onClick={() => selectedRole && onAssign(selectedRole.id, agent.id)}
+              disabled={isReadOnly || !selectedRole || !onAssign}
+              onClick={() => selectedRole && onAssign?.(selectedRole.id, agent.id)}
             >
               Hire for {selectedRole?.name ?? 'role'}
             </button>
@@ -148,27 +164,38 @@ export function GuildScene({
         </ul>
       </section>
 
-      <button className="primary-action" type="button" disabled={continueDisabled} onClick={onContinue}>
-        Return to Machine
-      </button>
+      {!isReadOnly && onContinue ? (
+        <button className="primary-action" type="button" disabled={continueDisabled} onClick={onContinue}>
+          Return to Machine
+        </button>
+      ) : null}
     </section>
   );
 }
 
-export function MachineScene({ cycle, canRun, hasRun, latestRunSummary, onRun, onContinue, onLockChange }: MachineSceneProps) {
+export function MachineScene({
+  cycle,
+  canRun,
+  hasRun,
+  latestRunSummary,
+  onRun,
+  onContinue,
+  onLockChange,
+  isReadOnly = false
+}: MachineSceneProps) {
   const [isRunning, setIsRunning] = useState(false);
   const [phaseIndex, setPhaseIndex] = useState(-1);
 
   useEffect(() => {
-    onLockChange(isRunning);
+    onLockChange?.(isRunning);
 
     return () => {
-      onLockChange(false);
+      onLockChange?.(false);
     };
   }, [isRunning, onLockChange]);
 
   useEffect(() => {
-    if (!isRunning) {
+    if (!isRunning || isReadOnly) {
       return;
     }
 
@@ -186,10 +213,10 @@ export function MachineScene({ cycle, canRun, hasRun, latestRunSummary, onRun, o
     return () => {
       window.clearInterval(timer);
     };
-  }, [isRunning]);
+  }, [isReadOnly, isRunning]);
 
   useEffect(() => {
-    if (!isRunning || phaseIndex < RUN_PHASES.length - 1) {
+    if (!isRunning || isReadOnly || phaseIndex < RUN_PHASES.length - 1 || !onRun) {
       return;
     }
 
@@ -202,7 +229,7 @@ export function MachineScene({ cycle, canRun, hasRun, latestRunSummary, onRun, o
     return () => {
       window.clearTimeout(finalize);
     };
-  }, [isRunning, onRun, phaseIndex]);
+  }, [isReadOnly, isRunning, onRun, phaseIndex]);
 
   return (
     <section className="scene-body machine-scene">
@@ -231,11 +258,11 @@ export function MachineScene({ cycle, canRun, hasRun, latestRunSummary, onRun, o
         })}
       </ol>
 
-      {!hasRun ? (
+      {!hasRun && !isReadOnly ? (
         <button
           className="primary-action"
           type="button"
-          disabled={!canRun || isRunning}
+          disabled={!canRun || isRunning || !onRun}
           onClick={() => {
             setIsRunning(true);
             setPhaseIndex(0);
@@ -252,9 +279,11 @@ export function MachineScene({ cycle, canRun, hasRun, latestRunSummary, onRun, o
             Quality {latestRunSummary.qualityScore} | Cost {formatCredits(latestRunSummary.cost)}
           </p>
           <p>{latestRunSummary.events[latestRunSummary.events.length - 1]}</p>
-          <button className="primary-action" type="button" onClick={onContinue}>
-            Submit to Client
-          </button>
+          {!isReadOnly && onContinue ? (
+            <button className="primary-action" type="button" onClick={onContinue}>
+              Submit to Client
+            </button>
+          ) : null}
         </article>
       ) : null}
     </section>

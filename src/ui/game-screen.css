@@ -1,5 +1,6 @@
 @import './game-screen/styles/layout.css';
 @import './game-screen/styles/communication.css';
+@import './game-screen/styles/mail.css';
 @import './game-screen/styles/scenes.css';
 @import './game-screen/styles/dock.css';
 @import './game-screen/styles/animations.css';
