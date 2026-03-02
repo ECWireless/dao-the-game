@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { Agent, ArtifactBundle, HatRole, RunResult } from '../../types';
 import type { AssignmentLogEntry, ChatLine } from './types';
+import { getPrimaryRaidGuildCandidateForRole } from './guildData';
 import { MessagesScene } from './scenes/CommunicationScenes';
 import { MailScene } from './scenes/MailScenes';
 import { GuildScene } from './scenes/GuildScene';
@@ -96,6 +97,10 @@ export function renderSceneContent({
   resetTutorial,
   setIsMachineLocked
 }: SceneContentArgs): ReactNode {
+  const configuredExpandedRoles = activeRoles.filter((role) => role.isConfigured);
+  const secondCycleHiringRoles = configuredExpandedRoles.filter((role) => role.id !== activeRoles[0]?.id);
+  const assignedConfiguredRoles = configuredExpandedRoles.filter((role) => Boolean(role.assignedAgentId)).length;
+
   switch (sceneId) {
     case 'messages-warmup':
       return renderMessageStep({ thread: INTRO_MESSAGES_THREAD.slice(0, 1), draft: 'not tonight.', isInteractive, onSend: advanceStory, initialThreadDelayMs: 2000 });
@@ -171,7 +176,6 @@ export function renderSceneContent({
           agents={agents}
           assignmentLog={assignmentLog}
           onAssign={isInteractive ? assignRole : undefined}
-          guidance="Post your role to RaidGuild. Pick one candidate and bind them to the board."
           onContinue={isInteractive ? queueCrossAppAdvance : undefined}
           isReadOnly={!isInteractive}
         />
@@ -248,36 +252,60 @@ export function renderSceneContent({
           agents={agents}
           studioName={studioName}
           isExpanded
+          onConfigureRole={isInteractive ? configureRole : undefined}
           onComplete={isInteractive ? queueCrossAppAdvance : undefined}
-          completeLabel={isInteractive ? 'Commit Update' : undefined}
+          autoAdvanceOnReady={isInteractive}
           isReadOnly={!isInteractive}
         />
       );
     case 'guild-second': {
-      const allAssigned = assignedActiveRoles === activeRoles.length;
-
       return (
         <GuildScene
           studioName={studioName}
-          roles={activeRoles}
+          roles={secondCycleHiringRoles}
           agents={agents}
           assignmentLog={assignmentLog}
           onAssign={isInteractive ? assignRole : undefined}
-          guidance="Hire for every remaining role, then snap assignments into the whiteboard graph."
           onContinue={isInteractive ? queueCrossAppAdvance : undefined}
-          continueDisabled={!allAssigned}
           isReadOnly={!isInteractive}
         />
       );
     }
+    case 'whiteboard-second-integrate':
+      return (
+        <WhiteboardScene
+          roles={configuredExpandedRoles}
+          agents={agents}
+          studioName={studioName}
+          isExpanded
+          onImportAllCandidates={
+            isInteractive
+              ? () => {
+                  secondCycleHiringRoles
+                    .filter((role) => !role.assignedAgentId)
+                    .forEach((role) => {
+                      const candidate = getPrimaryRaidGuildCandidateForRole(agents, role.id);
+
+                      if (candidate?.agentId) {
+                        assignRole(role.id, candidate.agentId);
+                      }
+                    });
+
+                  queueCrossAppAdvance();
+                }
+              : undefined
+          }
+          isReadOnly={!isInteractive}
+        />
+      );
     case 'machine-second':
       return (
         <MachineScene
           studioName={studioName}
           cycle={2}
-          roles={activeRoles}
+          roles={configuredExpandedRoles}
           agents={agents}
-          canRun={assignedActiveRoles === activeRoles.length && runwayAfterRun >= 0}
+          canRun={assignedConfiguredRoles === configuredExpandedRoles.length && runwayAfterRun >= 0}
           hasRun={runCount >= 2}
           latestRun={runCount >= 2 ? latestRun : undefined}
           latestArtifacts={runCount >= 2 ? latestArtifacts : undefined}

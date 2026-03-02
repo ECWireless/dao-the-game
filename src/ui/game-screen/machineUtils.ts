@@ -12,6 +12,28 @@ function normalizeRoleName(roleName: string): string {
   return roleName.trim().toLowerCase();
 }
 
+function getWorkflowRank(role: HatRole): number {
+  const normalized = normalizeRoleName(role.name);
+
+  if (normalized.includes('design')) {
+    return 0;
+  }
+
+  if (normalized.includes('developer') || normalized.includes('build')) {
+    return 1;
+  }
+
+  if (normalized.includes('review') || normalized.includes('qa')) {
+    return 2;
+  }
+
+  if (normalized.includes('deploy')) {
+    return 3;
+  }
+
+  return 99;
+}
+
 function getOperatorLabel(agent: Agent | undefined, agents: Agent[]): Pick<MachineRoleLane, 'operatorName' | 'operatorMeta'> {
   if (!agent) {
     return {
@@ -38,7 +60,9 @@ function getOperatorLabel(agent: Agent | undefined, agents: Agent[]): Pick<Machi
 export function buildMachineRoleLanes(roles: HatRole[], agents: Agent[]): MachineRoleLane[] {
   const agentById = new Map(agents.map((agent) => [agent.id, agent]));
 
-  return roles.map((role) => {
+  return [...roles]
+    .sort((left, right) => getWorkflowRank(left) - getWorkflowRank(right))
+    .map((role) => {
     const agent = role.assignedAgentId ? agentById.get(role.assignedAgentId) : undefined;
     const operator = getOperatorLabel(agent, agents);
 
@@ -48,7 +72,7 @@ export function buildMachineRoleLanes(roles: HatRole[], agents: Agent[]): Machin
       operatorName: operator.operatorName,
       operatorMeta: operator.operatorMeta
     };
-  });
+    });
 }
 
 export function hasRoleWithKeyword(roles: HatRole[], keyword: string): boolean {

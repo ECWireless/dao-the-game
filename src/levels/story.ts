@@ -123,6 +123,12 @@ export const STORY_SCENES: StoryScene[] = [
     subtitle: '#hiring-board'
   },
   {
+    id: 'whiteboard-second-integrate',
+    app: 'whiteboard',
+    title: 'Whiteboard',
+    subtitle: 'Import applicants'
+  },
+  {
     id: 'machine-second',
     app: 'machine',
     title: 'Autonomous Machine',

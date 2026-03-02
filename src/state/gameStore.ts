@@ -103,9 +103,15 @@ export function countAssignedRoles(roles: HatRole[]): number {
   return roles.filter((role) => Boolean(role.assignedAgentId)).length;
 }
 
+function getConfiguredRunRoles(roles: HatRole[]): HatRole[] {
+  const configuredRoles = roles.filter((role) => role.isConfigured);
+  return configuredRoles.length > 0 ? configuredRoles : roles;
+}
+
 export function estimateRunCost(roles: HatRole[], agents: Agent[]): number {
+  const runnableRoles = getConfiguredRunRoles(roles);
   const agentById = new Map(agents.map((agent) => [agent.id, agent]));
-  const assignedCost = roles.reduce((sum, role) => {
+  const assignedCost = runnableRoles.reduce((sum, role) => {
     if (!role.assignedAgentId) {
       return sum;
     }
@@ -114,7 +120,7 @@ export function estimateRunCost(roles: HatRole[], agents: Agent[]): number {
     return sum + (agent?.cost ?? 0);
   }, 0);
 
-  const baseCost = 36 + roles.length * 2;
+  const baseCost = 36 + runnableRoles.length * 2;
   return baseCost + assignedCost;
 }
 
@@ -268,12 +274,13 @@ export const useGameStore = create<GameStore>()(
       runProduction: () => {
         const state = get();
         const activeRoles = getActiveRoles(state.roles, state.unlockedRoleCount);
+        const runnableRoles = getConfiguredRunRoles(activeRoles);
 
-        if (!areRolesFullyAssigned(activeRoles)) {
+        if (!areRolesFullyAssigned(runnableRoles)) {
           return undefined;
         }
 
-        const runState = buildRunState(state.seed, state.treasury, activeRoles, state.agents);
+        const runState = buildRunState(state.seed, state.treasury, runnableRoles, state.agents);
         let result = simulateRun(runState);
 
         if (state.runCount === 0) {

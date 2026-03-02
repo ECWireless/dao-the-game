@@ -63,19 +63,19 @@ export function MachineScene({
     !hasReviewer ? 'No QA pass' : null,
     !hasDeploymentRole ? 'No deployment specialist' : null
   ].filter(Boolean) as string[];
-  const sourceNode = { x: 44, y: 90, width: 150, height: 66 };
-  const rootNode = { x: 270, y: 82, width: 220, height: 82 };
+  const sourceNode = { x: 48, y: 198, width: 150, height: 66 };
+  const rootNode = { x: 222, y: 188, width: 200, height: 82 };
   const roleNodes: PositionedRoleLane[] = roleLanes.map((lane, index) => ({
     ...lane,
-    x: 292,
-    y: 206 + index * 72,
+    x: 476 + index * 214,
+    y: 202,
     width: 176,
     height: 56
   }));
   const lastRoleNode = roleNodes[roleNodes.length - 1];
   const outputNode = {
-    x: 546,
-    y: (lastRoleNode?.y ?? 206) - 7,
+    x: lastRoleNode ? lastRoleNode.x + 214 : 690,
+    y: 195,
     width: 170,
     height: 70
   };
@@ -127,8 +127,7 @@ export function MachineScene({
     : hasRun
       ? latestRun?.events[latestRun.events.length - 1] ?? 'Creation is waiting in the output node.'
       : `Ready to route through ${roleLanes.length} linked role ${roleLanes.length === 1 ? 'node' : 'nodes'}.`;
-  const firstRoleConnectorX = roleNodes[0] ? roleNodes[0].x + roleNodes[0].width / 2 : rootNode.x + rootNode.width / 2;
-  const firstRoleConnectorY = roleNodes[0]?.y ?? rootNode.y + rootNode.height + 24;
+  const sharedRoleCenterY = roleNodes[0]?.y ? roleNodes[0].y + roleNodes[0].height / 2 : rootNode.y + rootNode.height / 2;
   const pipeSegments: PipeSegment[] = [
     {
       id: 'source-root',
@@ -139,29 +138,29 @@ export function MachineScene({
     },
     {
       id: 'root-role',
-      x1: rootNode.x + rootNode.width / 2,
-      y1: rootNode.y + rootNode.height,
-      x2: firstRoleConnectorX,
-      y2: firstRoleConnectorY
+      x1: rootNode.x + rootNode.width,
+      y1: rootNode.y + rootNode.height / 2,
+      x2: roleNodes[0]?.x ?? rootNode.x + rootNode.width + 54,
+      y2: sharedRoleCenterY
     },
     ...roleNodes.slice(0, -1).map((node, index) => ({
       id: `role-${node.id}-next`,
-      x1: node.x + node.width / 2,
-      y1: node.y + node.height,
-      x2: roleNodes[index + 1].x + roleNodes[index + 1].width / 2,
-      y2: roleNodes[index + 1].y
+      x1: node.x + node.width,
+      y1: node.y + node.height / 2,
+      x2: roleNodes[index + 1].x,
+      y2: roleNodes[index + 1].y + roleNodes[index + 1].height / 2
     })),
     {
       id: 'role-output',
-      x1: (lastRoleNode?.x ?? rootNode.x) + (lastRoleNode?.width ?? rootNode.width) / 2,
+      x1: (lastRoleNode?.x ?? rootNode.x) + (lastRoleNode?.width ?? rootNode.width),
       y1: (lastRoleNode?.y ?? rootNode.y) + (lastRoleNode?.height ?? rootNode.height) / 2,
       x2: outputNode.x,
       y2: outputNode.y + outputNode.height / 2
     }
   ];
   const centerViewport = useCallback((viewport: HTMLDivElement) => {
-    const desiredLeft = rootNode.x - viewport.clientWidth * 0.26;
-    const desiredTop = rootNode.y - viewport.clientHeight * 0.18;
+    const desiredLeft = rootNode.x - viewport.clientWidth * 0.18;
+    const desiredTop = rootNode.y - viewport.clientHeight * 0.2;
     const maxLeft = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
     const maxTop = Math.max(0, viewport.scrollHeight - viewport.clientHeight);
 
@@ -266,7 +265,7 @@ export function MachineScene({
           onPointerCancel={handlePointerEnd}
         >
           <div className="machine-board-canvas" aria-label="Machine assembly tree">
-            <svg className="machine-board-pipes" viewBox="0 0 760 520" aria-hidden="true">
+            <svg className="machine-board-pipes" viewBox="0 0 1560 440" aria-hidden="true">
               {pipeSegments.map((segment, index) => {
                 const segmentState = isRunning
                   ? safePacketIndex > index + 1

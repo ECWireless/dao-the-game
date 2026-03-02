@@ -20,8 +20,8 @@ const CROSS_APP_HANDOFFS: Record<string, CrossAppHandoff> = {
   'whiteboard-first': {
     targetApp: 'whiteboard',
     appName: 'Whiteboard',
-    title: 'Planning Board',
-    preview: 'New board installed.',
+    title: 'Whiteboard',
+    preview: 'A planning board just appeared.',
     icon: 'whiteboard'
   },
   'messages-cant-do': {
@@ -41,15 +41,15 @@ const CROSS_APP_HANDOFFS: Record<string, CrossAppHandoff> = {
   'whiteboard-integrate': {
     targetApp: 'whiteboard',
     appName: 'Whiteboard',
-    title: 'Planning Board',
-    preview: 'Integrate RaidGuild server?',
+    title: 'Whiteboard',
+    preview: 'RaidGuild applicants are waiting on the board.',
     icon: 'whiteboard'
   },
   'machine-first': {
     targetApp: 'machine',
     appName: 'Machine',
     title: 'Machine Companion',
-    preview: 'Companion installed. Switch to deploy.',
+    preview: 'Deployment rig is installed. Switch over.',
     icon: 'machine'
   },
   'mail-fail': {
@@ -69,22 +69,29 @@ const CROSS_APP_HANDOFFS: Record<string, CrossAppHandoff> = {
   'whiteboard-expand': {
     targetApp: 'whiteboard',
     appName: 'Whiteboard',
-    title: 'Role Graph Updated',
-    preview: 'Designer, Reviewer, Deployment are ready to slot in.',
+    title: 'Whiteboard',
+    preview: 'The board just made room for more branches.',
     icon: 'whiteboard'
   },
   'guild-second': {
     targetApp: 'guild',
     appName: 'RaidGuild',
-    title: '#hiring-board',
-    preview: 'New openings posted. Fill the graph.',
+    title: 'Quartermaster Nyx',
+    preview: 'any other work need filling?',
     icon: 'guild'
+  },
+  'whiteboard-second-integrate': {
+    targetApp: 'whiteboard',
+    appName: 'Whiteboard',
+    title: 'Whiteboard',
+    preview: 'RaidGuild applicants are queued on the board.',
+    icon: 'whiteboard'
   },
   'machine-second': {
     targetApp: 'machine',
     appName: 'Machine',
     title: 'Machine Companion',
-    preview: 'Expanded rig is ready. Switch to deploy.',
+    preview: 'Updated crew loaded. Switch over.',
     icon: 'machine'
   },
   'mail-success': {

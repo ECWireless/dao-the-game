@@ -21,6 +21,15 @@ function assignAllVisibleRoles() {
   });
 }
 
+function configureExpandedCycleTwoRoles() {
+  const state = useGameStore.getState();
+  state.configureRole('hat-01', 'Web Developer');
+  state.configureRole('hat-02', 'Designer');
+  state.configureRole('hat-03', 'QA Reviewer');
+  state.assignRole('hat-02', 'agent-02');
+  state.assignRole('hat-03', 'agent-03');
+}
+
 describe('gameStore role visibility', () => {
   it('starts with one unlocked role for first cycle', () => {
     const state = useGameStore.getState();
@@ -89,6 +98,25 @@ describe('gameStore narrative run shaping', () => {
     expect(secondRun).toBeDefined();
     expect(secondRun?.passed).toBe(true);
     expect(secondRun?.qualityScore).toBeGreaterThanOrEqual(72);
+  });
+
+  it('allows second cycle to run with configured branches even if later unlocked roles stay unconfigured', () => {
+    assignAllVisibleRoles();
+    useGameStore.getState().runProduction();
+
+    useGameStore.getState().unlockExpandedRoles();
+    configureExpandedCycleTwoRoles();
+
+    const state = useGameStore.getState();
+    const activeRoles = getActiveRoles(state.roles, state.unlockedRoleCount);
+    const configuredRoles = activeRoles.filter((role) => role.isConfigured);
+
+    expect(estimateRunCost(activeRoles, state.agents)).toBe(estimateRunCost(configuredRoles, state.agents));
+
+    const secondRun = useGameStore.getState().runProduction();
+
+    expect(secondRun).toBeDefined();
+    expect(secondRun?.passed).toBe(true);
   });
 
   it('writes persisted gameplay snapshot to localStorage', () => {

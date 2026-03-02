@@ -42,6 +42,50 @@ const CANDIDATE_PRESETS: Omit<GuildMemberProfile, 'id' | 'agentId'>[] = [
     hair: '#51481A',
     robe: '#534A13',
     trim: '#D8C46A'
+  },
+  {
+    name: 'Hexa Thorn',
+    handle: 'hexa-thorn',
+    title: 'brand scavenger',
+    accent: '#8B3A2E',
+    shadow: '#4D1A14',
+    skin: '#C58D71',
+    hair: '#2F1511',
+    robe: '#5E2319',
+    trim: '#D59A6F'
+  },
+  {
+    name: 'Sable Quill',
+    handle: 'sable-quill',
+    title: 'review sentinel',
+    accent: '#6F5C18',
+    shadow: '#3A300B',
+    skin: '#D7B595',
+    hair: '#3C3210',
+    robe: '#4D4312',
+    trim: '#C9B15B'
+  },
+  {
+    name: 'Mint Halberd',
+    handle: 'mint-halberd',
+    title: 'deploy courier',
+    accent: '#5D6E2F',
+    shadow: '#2E3A18',
+    skin: '#D5A787',
+    hair: '#243016',
+    robe: '#3B4C1D',
+    trim: '#A7C96B'
+  },
+  {
+    name: 'Dorian Ash',
+    handle: 'dorian-ash',
+    title: 'stack architect',
+    accent: '#6C4C89',
+    shadow: '#332244',
+    skin: '#D7A98D',
+    hair: '#2A1B33',
+    robe: '#4A3360',
+    trim: '#BE9AE6'
   }
 ];
 
@@ -110,16 +154,48 @@ export const RAIDGUILD_HISTORY: GuildFeedEntry[] = [
   }
 ];
 
-export function getRaidGuildCandidates(agents: Agent[]): GuildMemberProfile[] {
-  return agents.slice(0, 2).map((agent, index) => {
-    const preset = CANDIDATE_PRESETS[index] ?? CANDIDATE_PRESETS[CANDIDATE_PRESETS.length - 1];
+function getRoleCandidateOffset(roleId: string) {
+  switch (roleId) {
+    case 'hat-02':
+      return 2;
+    case 'hat-03':
+      return 4;
+    case 'hat-04':
+      return 1;
+    case 'hat-01':
+    default:
+      return 0;
+  }
+}
+
+function buildCandidateProfiles(agents: Agent[], startIndex: number, count: number) {
+  if (agents.length === 0) {
+    return [];
+  }
+
+  return Array.from({ length: Math.min(count, agents.length) }, (_, index) => {
+    const agentIndex = (startIndex + index) % agents.length;
+    const agent = agents[agentIndex];
+    const preset = CANDIDATE_PRESETS[(startIndex + index) % CANDIDATE_PRESETS.length];
 
     return {
       ...preset,
-      id: `candidate-${agent.id}`,
+      id: `candidate-${startIndex}-${agent.id}`,
       agentId: agent.id
     };
   });
+}
+
+export function getRaidGuildCandidates(agents: Agent[], count = agents.length): GuildMemberProfile[] {
+  return buildCandidateProfiles(agents, 0, count);
+}
+
+export function getRaidGuildCandidatesForRole(agents: Agent[], roleId: string, count = 2): GuildMemberProfile[] {
+  return buildCandidateProfiles(agents, getRoleCandidateOffset(roleId), count);
+}
+
+export function getPrimaryRaidGuildCandidateForRole(agents: Agent[], roleId: string): GuildMemberProfile | undefined {
+  return getRaidGuildCandidatesForRole(agents, roleId, 1)[0];
 }
 
 export function getRaidGuildRoster(agents: Agent[]): GuildMemberProfile[] {

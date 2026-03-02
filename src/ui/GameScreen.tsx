@@ -308,9 +308,6 @@ export default function GameScreen() {
   const appContent = sceneContent ? sceneContent : currentApp === 'mail'
     ? <MailInboxScene storyItem={mailInboxStoryItem} />
     : <DormantAppPanel app={currentApp} targetApp={scene.app} onReturn={() => requestAppSwitch(scene.app)} activeRoles={activeRoles} assignedRoles={assignedActiveRoles} runCount={runCount} latestRun={latestRun} />;
-  const showAppSubtitle = currentApp !== 'messages' && Boolean(displayedScene?.subtitle);
-  const appSubtitle = displayedScene?.subtitle ?? scene.subtitle;
-
   return (
     <main className="game-root">
       <section className="phone-shell">
@@ -343,9 +340,6 @@ export default function GameScreen() {
 
               <div className="app-heading">
                 <p className="app-title">{APP_META[currentApp].label}</p>
-                {showAppSubtitle && appSubtitle ? (
-                  <p className="app-subtitle">{appSubtitle}</p>
-                ) : null}
               </div>
             </div>
           </section>

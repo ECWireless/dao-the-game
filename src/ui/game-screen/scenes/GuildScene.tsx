@@ -2,8 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Agent, HatRole } from '../../../types';
 import fullLogo from '../../../assets/raidguild-full.svg';
 import { GuildMemberAvatar } from '../components/GuildMemberAvatar';
+import { GuildMemberCard } from '../components/GuildMemberCard';
+import { getRaidGuildCandidates, getRaidGuildRoster, RAIDGUILD_CHANNELS, RAIDGUILD_HISTORY } from '../guildData';
 import { formatCredits } from '../utils';
-import { RAIDGUILD_CHANNELS, RAIDGUILD_HISTORY, getRaidGuildCandidates, getRaidGuildRoster, type GuildMemberProfile } from '../guildData';
+import { GuildSecondCycleScene } from './GuildSecondCycleScene';
 
 type AssignmentLogEntry = {
   id: string;
@@ -18,139 +20,13 @@ export type GuildSceneProps = {
   onAssign?: (roleId: string, agentId: string) => void;
   onContinue?: () => void;
   continueDisabled?: boolean;
-  guidance: string;
   isReadOnly?: boolean;
 };
-
-function MemberCard({ member, agent, onClose }: { member: GuildMemberProfile; agent?: Agent; onClose: () => void }) {
-  return (
-    <div className="guild-member-scrim">
-      <section className="guild-member-card" aria-label={`${member.name} profile`}>
-        <button className="guild-member-close" type="button" onClick={onClose}>
-          Done
-        </button>
-        <GuildMemberAvatar member={member} />
-        <p className="guild-member-name">{member.name}</p>
-        <p className="guild-member-handle">@{member.handle}</p>
-        <p className="guild-member-title">{member.title}</p>
-
-        {agent ? (
-          <div className="guild-stats">
-            <div className="guild-stat-row">
-              <span>Affinity</span>
-              <strong>{agent.roleAffinity}</strong>
-            </div>
-            <div className="guild-stat-row">
-              <span>Creativity</span>
-              <strong>{agent.creativity}</strong>
-            </div>
-            <div className="guild-stat-row">
-              <span>Reliability</span>
-              <strong>{agent.reliability}</strong>
-            </div>
-            <div className="guild-stat-row">
-              <span>Speed</span>
-              <strong>{agent.speed}</strong>
-            </div>
-            <div className="guild-stat-row">
-              <span>Cost</span>
-              <strong>{formatCredits(agent.cost)}</strong>
-            </div>
-          </div>
-        ) : (
-          <p className="guild-member-note">Guild regular. Mostly here to keep the server weird.</p>
-        )}
-      </section>
-    </div>
-  );
-}
-
-function LegacyGuildScene({
-  studioName,
-  roles,
-  agents,
-  assignmentLog,
-  onAssign,
-  onContinue,
-  continueDisabled = false,
-  guidance,
-  isReadOnly = false
-}: GuildSceneProps) {
-  const [selectedRoleId, setSelectedRoleId] = useState<string>(roles[0]?.id ?? '');
-
-  useEffect(() => {
-    if (!roles.some((role) => role.id === selectedRoleId)) {
-      setSelectedRoleId(roles[0]?.id ?? '');
-    }
-  }, [roles, selectedRoleId]);
-
-  const selectedRole = roles.find((role) => role.id === selectedRoleId) ?? roles[0];
-
-  return (
-    <section className="scene-body guild-scene">
-      <p className="scene-copy">{guidance}</p>
-      <p className="eyebrow">Posting As: {studioName || 'Unnamed Studio'}</p>
-
-      <div className="role-tabs" role="tablist" aria-label="Select role to hire for">
-        {roles.map((role) => (
-          <button
-            key={role.id}
-            className={`role-tab ${selectedRole?.id === role.id ? 'is-active' : ''}`}
-            type="button"
-            role="tab"
-            aria-selected={selectedRole?.id === role.id}
-            disabled={isReadOnly}
-            onClick={() => setSelectedRoleId(role.id)}
-          >
-            {role.name}
-          </button>
-        ))}
-      </div>
-
-      <div className="candidate-stack" aria-label="Candidate responses">
-        {agents.map((agent, index) => (
-          <article className="candidate-card" key={agent.id} style={{ animationDelay: `${index * 125}ms` }}>
-            <div>
-              <p className="candidate-name">{agent.roleAffinity}</p>
-              <p className="candidate-meta">
-                {agent.id} | reliability {agent.reliability} | cost {formatCredits(agent.cost)}
-              </p>
-            </div>
-            <button
-              className="mini-action"
-              type="button"
-              disabled={isReadOnly || !selectedRole || !onAssign}
-              onClick={() => selectedRole && onAssign?.(selectedRole.id, agent.id)}
-            >
-              Hire for {selectedRole?.name ?? 'role'}
-            </button>
-          </article>
-        ))}
-      </div>
-
-      <section className="ops-log">
-        <p className="eyebrow">Ops Log</p>
-        <ul>
-          {assignmentLog.slice(0, 4).map((entry) => (
-            <li key={entry.id}>{entry.message}</li>
-          ))}
-          {assignmentLog.length === 0 ? <li>No hires logged yet.</li> : null}
-        </ul>
-      </section>
-
-      {!isReadOnly && onContinue ? (
-        <button className="primary-action" type="button" disabled={continueDisabled} onClick={onContinue}>
-          Return to Machine
-        </button>
-      ) : null}
-    </section>
-  );
-}
 
 function FirstCycleGuildScene({ studioName, roles, agents, onContinue, isReadOnly = false }: GuildSceneProps) {
   const role = roles[0];
   const roster = useMemo(() => getRaidGuildRoster(agents), [agents]);
-  const candidates = useMemo(() => getRaidGuildCandidates(agents), [agents]);
+  const candidates = useMemo(() => getRaidGuildCandidates(agents, 2), [agents]);
   const [postStage, setPostStage] = useState(isReadOnly ? 3 : 0);
   const [isPostingSequenceActive, setIsPostingSequenceActive] = useState(false);
   const [openMemberId, setOpenMemberId] = useState<string | null>(null);
@@ -365,7 +241,7 @@ function FirstCycleGuildScene({ studioName, roles, agents, onContinue, isReadOnl
             </button>
           ) : showSyncAction ? (
             <button className="guild-send-button is-sync" type="button" onClick={onContinue}>
-              Sync
+              Send to Board
             </button>
           ) : (
             <button className="guild-compose-button is-muted" type="button" disabled aria-label="Voice message">
@@ -379,14 +255,14 @@ function FirstCycleGuildScene({ studioName, roles, agents, onContinue, isReadOnl
         )}
       </footer>
 
-      {openMember ? <MemberCard member={openMember} agent={openAgent} onClose={() => setOpenMemberId(null)} /> : null}
+      {openMember ? <GuildMemberCard member={openMember} agent={openAgent} onClose={() => setOpenMemberId(null)} /> : null}
     </section>
   );
 }
 
 export function GuildScene(props: GuildSceneProps) {
   if (props.roles.length !== 1) {
-    return <LegacyGuildScene {...props} />;
+    return <GuildSecondCycleScene {...props} />;
   }
 
   return <FirstCycleGuildScene {...props} />;

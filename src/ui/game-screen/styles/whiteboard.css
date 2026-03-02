@@ -51,7 +51,7 @@
 
 .whiteboard-canvas {
   position: relative;
-  width: 760px;
+  width: 920px;
   height: 520px;
   transform-origin: 50% 50%;
 }
@@ -79,7 +79,7 @@
 
 .tree-node {
   position: absolute;
-  width: 210px;
+  width: 186px;
   min-height: 86px;
   border: 1px solid rgb(255 255 255 / 70%);
   border-radius: 0.95rem;

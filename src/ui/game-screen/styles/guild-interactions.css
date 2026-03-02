@@ -1,0 +1,79 @@
+.guild-role-chip-row {
+  margin-top: 0.4rem;
+  display: flex;
+  gap: 0.34rem;
+  overflow-x: auto;
+  padding-bottom: 0.08rem;
+}
+
+.guild-role-chip-row::-webkit-scrollbar {
+  display: none;
+}
+
+.guild-role-chip {
+  min-width: 6.2rem;
+  border: 1px solid rgb(249 247 231 / 8%);
+  border-radius: 0.82rem;
+  padding: 0.48rem 0.56rem;
+  display: grid;
+  gap: 0.08rem;
+  text-align: left;
+  background: rgb(249 247 231 / 3%);
+  color: #f9f7e7;
+  font: inherit;
+}
+
+.guild-role-chip span,
+.guild-role-chip small {
+  display: block;
+}
+
+.guild-role-chip span {
+  font-family: var(--font-raidguild-display);
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.guild-role-chip small {
+  color: rgb(249 247 231 / 46%);
+  font-family: var(--font-raidguild-body);
+  font-size: 0.56rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.guild-role-chip.is-active {
+  border-color: rgb(189 72 45 / 72%);
+  background: rgb(189 72 45 / 10%);
+}
+
+.guild-role-chip.is-filled {
+  border-color: rgb(83 74 19 / 54%);
+}
+
+.guild-assign-row {
+  margin-top: 0.18rem;
+  display: grid;
+  gap: 0.42rem;
+}
+
+.guild-inline-assign {
+  min-height: 1.9rem;
+  justify-self: start;
+  border: 1px solid rgb(249 247 231 / 10%);
+  border-radius: 999px;
+  padding: 0 0.7rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(249 247 231 / 6%);
+  color: #f9f7e7;
+  font-family: var(--font-raidguild-display);
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+.guild-inline-assign:disabled {
+  opacity: 0.45;
+}
