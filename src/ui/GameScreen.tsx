@@ -18,6 +18,7 @@ export default function GameScreen() {
   const storySceneIndex = useGameStore((state) => state.storySceneIndex);
   const unlockedRoleCount = useGameStore((state) => state.unlockedRoleCount);
   const treasury = useGameStore((state) => state.treasury);
+  const studioName = useGameStore((state) => state.studioName);
   const roles = useGameStore((state) => state.roles);
   const agents = useGameStore((state) => state.agents);
   const assignmentLog = useGameStore((state) => state.assignmentLog);
@@ -26,6 +27,8 @@ export default function GameScreen() {
 
   const advanceStory = useGameStore((state) => state.advanceStory);
   const retreatStory = useGameStore((state) => state.retreatStory);
+  const setStudioName = useGameStore((state) => state.setStudioName);
+  const configureRole = useGameStore((state) => state.configureRole);
   const unlockExpandedRoles = useGameStore((state) => state.unlockExpandedRoles);
   const assignRole = useGameStore((state) => state.assignRole);
   const runProduction = useGameStore((state) => state.runProduction);
@@ -271,6 +274,7 @@ export default function GameScreen() {
     ? renderSceneContent({
         sceneId: displayedScene.id,
         isInteractive: isSceneInteractive,
+        studioName,
         activeRoles,
         agents,
         assignmentLog,
@@ -281,6 +285,8 @@ export default function GameScreen() {
         advanceStory,
         onMailOfferReply: handleMailOfferReply,
         queueCrossAppAdvance,
+        setStudioName,
+        configureRole,
         mailOfferReplyLocked: isMailOfferReplyLocked,
         unlockExpandedRoles,
         assignRole,

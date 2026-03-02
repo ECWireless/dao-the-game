@@ -3,13 +3,15 @@ import type { Agent, HatRole } from '../../types';
 import type { AssignmentLogEntry, ChatLine, RunSummary } from './types';
 import { MessagesScene } from './scenes/CommunicationScenes';
 import { MailScene } from './scenes/MailScenes';
-import { GuildScene, MachineScene, WhiteboardScene } from './scenes/OperationsScenes';
+import { GuildScene, MachineScene } from './scenes/OperationsScenes';
+import { WhiteboardScene } from './scenes/WhiteboardScene';
 import { HELP_THREAD, INTRO_MESSAGES_THREAD, OFFER_MESSAGES_THREAD, PIVOT_THREAD } from './storyThreads';
 
 type SceneContentArgs = {
   sceneId: string;
   isInteractive: boolean;
   mailOfferReplyLocked: boolean;
+  studioName: string;
   activeRoles: HatRole[];
   agents: Agent[];
   assignmentLog: AssignmentLogEntry[];
@@ -20,6 +22,8 @@ type SceneContentArgs = {
   advanceStory: () => void;
   onMailOfferReply: () => void;
   queueCrossAppAdvance: () => void;
+  setStudioName: (name: string) => void;
+  configureRole: (roleId: string, name: string) => void;
   unlockExpandedRoles: () => void;
   assignRole: (roleId: string, agentId: string) => void;
   runProduction: () => void;
@@ -58,6 +62,7 @@ export function renderSceneContent({
   sceneId,
   isInteractive,
   mailOfferReplyLocked,
+  studioName,
   activeRoles,
   agents,
   assignmentLog,
@@ -68,6 +73,8 @@ export function renderSceneContent({
   advanceStory,
   onMailOfferReply,
   queueCrossAppAdvance,
+  setStudioName,
+  configureRole,
   unlockExpandedRoles,
   assignRole,
   runProduction,
@@ -112,11 +119,11 @@ export function renderSceneContent({
       return (
         <WhiteboardScene
           roles={activeRoles}
-          agents={agents}
+          studioName={studioName}
           isExpanded={false}
-          copy="You open a whiteboard app. Gremlin rule: keep it clumsy and fast. One role only for cycle one."
-          actionLabel={isInteractive ? 'Save Board' : undefined}
-          onAction={isInteractive ? queueCrossAppAdvance : undefined}
+          onSetStudioName={isInteractive ? setStudioName : undefined}
+          onConfigureRole={isInteractive ? configureRole : undefined}
+          onComplete={isInteractive ? queueCrossAppAdvance : undefined}
           isReadOnly={!isInteractive}
         />
       );
@@ -127,6 +134,7 @@ export function renderSceneContent({
 
       return (
         <GuildScene
+          studioName={studioName}
           roles={activeRoles}
           agents={agents}
           assignmentLog={assignmentLog}
@@ -141,6 +149,7 @@ export function renderSceneContent({
     case 'machine-first':
       return (
         <MachineScene
+          studioName={studioName}
           cycle={1}
           canRun={assignedActiveRoles === activeRoles.length}
           hasRun={runCount >= 1}
@@ -181,11 +190,10 @@ export function renderSceneContent({
       return (
         <WhiteboardScene
           roles={activeRoles}
-          agents={agents}
+          studioName={studioName}
           isExpanded
-          copy="You expand from one role to a full autonomous chain. Authority wiring now spans design, review, and deployment."
-          actionLabel={isInteractive ? 'Commit Update' : undefined}
-          onAction={isInteractive ? queueCrossAppAdvance : undefined}
+          onComplete={isInteractive ? queueCrossAppAdvance : undefined}
+          completeLabel={isInteractive ? 'Commit Update' : undefined}
           isReadOnly={!isInteractive}
         />
       );
@@ -194,6 +202,7 @@ export function renderSceneContent({
 
       return (
         <GuildScene
+          studioName={studioName}
           roles={activeRoles}
           agents={agents}
           assignmentLog={assignmentLog}
@@ -208,6 +217,7 @@ export function renderSceneContent({
     case 'machine-second':
       return (
         <MachineScene
+          studioName={studioName}
           cycle={2}
           canRun={assignedActiveRoles === activeRoles.length && runwayAfterRun >= 0}
           hasRun={runCount >= 2}

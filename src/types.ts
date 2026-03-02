@@ -10,6 +10,7 @@ export type Agent = {
 export type HatRole = {
   id: string;
   name: string;
+  isConfigured?: boolean;
   assignedAgentId?: string;
 };
 

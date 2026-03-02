@@ -1,21 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { StoryApp } from '../../../levels/story';
 import type { Agent, HatRole, RunResult } from '../../../types';
 import { APP_META, RUN_PHASES } from '../constants';
 import type { AssignmentLogEntry, RunSummary } from '../types';
-import { formatCredits, formatRoleAssignment } from '../utils';
-
-type WhiteboardSceneProps = {
-  roles: HatRole[];
-  agents: Agent[];
-  copy: string;
-  actionLabel?: string;
-  onAction?: () => void;
-  isExpanded: boolean;
-  isReadOnly?: boolean;
-};
+import { formatCredits } from '../utils';
 
 type GuildSceneProps = {
+  studioName?: string;
   roles: HatRole[];
   agents: Agent[];
   assignmentLog: AssignmentLogEntry[];
@@ -27,6 +18,7 @@ type GuildSceneProps = {
 };
 
 type MachineSceneProps = {
+  studioName?: string;
   cycle: 1 | 2;
   canRun: boolean;
   hasRun: boolean;
@@ -55,45 +47,8 @@ const DORMANT_TITLES: Record<StoryApp, string> = {
   machine: 'Machine controls are on standby.'
 };
 
-export function WhiteboardScene({
-  roles,
-  agents,
-  copy,
-  actionLabel,
-  onAction,
-  isExpanded,
-  isReadOnly = false
-}: WhiteboardSceneProps) {
-  const agentById = useMemo(() => new Map(agents.map((agent) => [agent.id, agent])), [agents]);
-
-  return (
-    <section className="scene-body whiteboard-scene">
-      <p className="scene-copy">{copy}</p>
-
-      <div className={`whiteboard-grid ${isExpanded ? 'expanded' : ''}`}>
-        {roles.map((role) => {
-          const agent = role.assignedAgentId ? agentById.get(role.assignedAgentId) : undefined;
-
-          return (
-            <article key={role.id} className="role-note">
-              <p className="role-note-title">{role.name}</p>
-              <p>{formatRoleAssignment(role, agent)}</p>
-              <span className={`status-lamp ${agent ? 'lamp-on' : 'lamp-off'}`} aria-hidden="true" />
-            </article>
-          );
-        })}
-      </div>
-
-      {!isReadOnly && actionLabel && onAction ? (
-        <button className="primary-action" type="button" onClick={onAction}>
-          {actionLabel}
-        </button>
-      ) : null}
-    </section>
-  );
-}
-
 export function GuildScene({
+  studioName,
   roles,
   agents,
   assignmentLog,
@@ -116,6 +71,7 @@ export function GuildScene({
   return (
     <section className="scene-body guild-scene">
       <p className="scene-copy">{guidance}</p>
+      <p className="eyebrow">Posting As: {studioName || 'Unnamed Studio'}</p>
 
       <div className="role-tabs" role="tablist" aria-label="Select role to hire for">
         {roles.map((role) => (
@@ -174,6 +130,7 @@ export function GuildScene({
 }
 
 export function MachineScene({
+  studioName,
   cycle,
   canRun,
   hasRun,
@@ -238,6 +195,7 @@ export function MachineScene({
           ? 'Cycle one: one role only. Expect unstable output and client backlash.'
           : 'Cycle two: expanded role graph online. Running confidence rebuild.'}
       </p>
+      <p className="eyebrow">Studio Runtime: {studioName || 'Unnamed Studio'}</p>
 
       <ol className="phase-list" aria-label="Autonomous pipeline">
         {RUN_PHASES.map((phase, index) => {
