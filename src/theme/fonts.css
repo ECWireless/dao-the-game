@@ -1,0 +1,49 @@
+@font-face {
+  font-family: 'Mazius Display';
+  src: url('../assets/fonts/MaziusDisplay-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Mazius Display';
+  src: url('../assets/fonts/MaziusDisplay-Extraitalic.otf') format('opentype');
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Mazius Display';
+  src: url('../assets/fonts/MaziusDisplay-ExtraItalicBold.otf') format('opentype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Mazius Review';
+  src:
+    url('../assets/fonts/MAZIUSREVIEW20.09-Regular.woff') format('woff'),
+    url('../assets/fonts/MAZIUSREVIEW20.09-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('../assets/fonts/EBGaramond-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('../assets/fonts/EBGaramond-Italic-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}

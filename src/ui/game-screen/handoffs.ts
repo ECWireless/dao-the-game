@@ -1,4 +1,5 @@
 import type { StoryApp } from '../../levels/story';
+import { OFFER_INSTALL_REMINDER } from './storyThreads';
 
 export type CrossAppHandoff = {
   targetApp: StoryApp;
@@ -13,35 +14,42 @@ const CROSS_APP_HANDOFFS: Record<string, CrossAppHandoff> = {
     targetApp: 'messages',
     appName: 'Messages',
     title: 'murmur',
-    preview: 'last chance. you playing anything tonight or not?',
+    preview: OFFER_INSTALL_REMINDER,
     icon: 'messages'
   },
   'whiteboard-first': {
     targetApp: 'whiteboard',
     appName: 'Whiteboard',
     title: 'Planning Board',
-    preview: 'New board installed. Map this gig before you panic.',
+    preview: 'New board installed.',
     icon: 'whiteboard'
   },
   'messages-cant-do': {
     targetApp: 'messages',
     appName: 'Messages',
     title: 'murmur',
-    preview: 'good. now ask me how to staff this thing.',
+    preview: 'are you done whiteboarding?',
     icon: 'messages'
   },
   'guild-first': {
     targetApp: 'guild',
     appName: 'RaidGuild',
     title: '#hiring-board',
-    preview: 'Server invite ready. Post the role.',
+    preview: 'You have been invited to the server',
     icon: 'guild'
+  },
+  'whiteboard-integrate': {
+    targetApp: 'whiteboard',
+    appName: 'Whiteboard',
+    title: 'Planning Board',
+    preview: 'Integrate RaidGuild server?',
+    icon: 'whiteboard'
   },
   'machine-first': {
     targetApp: 'machine',
     appName: 'Machine',
-    title: 'Cycle One Ready',
-    preview: 'Your first run is primed. Review and launch.',
+    title: 'Machine Companion',
+    preview: 'Companion installed. Switch to deploy.',
     icon: 'machine'
   },
   'mail-fail': {
@@ -75,8 +83,8 @@ const CROSS_APP_HANDOFFS: Record<string, CrossAppHandoff> = {
   'machine-second': {
     targetApp: 'machine',
     appName: 'Machine',
-    title: 'Cycle Two Ready',
-    preview: 'Expanded run is primed. Launch when ready.',
+    title: 'Machine Companion',
+    preview: 'Expanded rig is ready. Switch to deploy.',
     icon: 'machine'
   },
   'mail-success': {

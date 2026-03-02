@@ -75,10 +75,22 @@ export const STORY_SCENES: StoryScene[] = [
     subtitle: 'Skill gap panic'
   },
   {
+    id: 'messages-guild-open',
+    app: 'messages',
+    title: 'Messages',
+    subtitle: 'Guild handoff'
+  },
+  {
     id: 'guild-first',
     app: 'guild',
     title: 'RaidGuild Server',
     subtitle: '#hiring-board'
+  },
+  {
+    id: 'whiteboard-integrate',
+    app: 'whiteboard',
+    title: 'Whiteboard',
+    subtitle: 'Import contractors'
   },
   {
     id: 'machine-first',

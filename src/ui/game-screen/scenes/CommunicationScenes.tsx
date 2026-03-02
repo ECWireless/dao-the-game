@@ -30,6 +30,7 @@ type MessagesSceneProps = {
   footerActionLabel?: string;
   onFooterAction?: () => void;
   initialThreadDelayMs?: number;
+  lineDelayOffsets?: Record<string, number>;
   disableEntryAnimation?: boolean;
 };
 
@@ -129,6 +130,7 @@ export function MessagesScene({
   footerActionLabel,
   onFooterAction,
   initialThreadDelayMs = 0,
+  lineDelayOffsets,
   disableEntryAnimation = false
 }: MessagesSceneProps) {
   const [isSending, setIsSending] = useState(false);
@@ -164,12 +166,13 @@ export function MessagesScene({
             : index * 95;
         const effectiveDelayMs =
           isInitialBatch && initialThreadDelayMs > 0 ? delayMs + initialThreadDelayMs : delayMs;
+        const offsetDelayMs = lineDelayOffsets?.[line.id] ?? 0;
 
         return [
           line.id,
           {
             animate: !disableEntryAnimation && !isPendingSentLine,
-            delayMs: isPendingSentLine ? 0 : effectiveDelayMs
+            delayMs: isPendingSentLine ? 0 : effectiveDelayMs + offsetDelayMs
           }
         ];
       })

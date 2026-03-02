@@ -1,6 +1,9 @@
 :root {
   --font-display: 'Avenir Next Demi Bold', 'Avenir Next', 'SF Pro Display', 'Helvetica Neue', sans-serif;
   --font-body: 'Avenir Next', 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  --font-raidguild-display: 'Mazius Display', 'Avenir Next Demi Bold', 'Helvetica Neue', sans-serif;
+  --font-raidguild-brand: 'Mazius Review', 'Avenir Next Demi Bold', 'Helvetica Neue', sans-serif;
+  --font-raidguild-body: 'EB Garamond', Georgia, serif;
 
   --shell-surface-top: #f0e9dc;
   --shell-surface-bottom: #dad0bf;

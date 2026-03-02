@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
-import type { Agent, HatRole } from '../../types';
-import type { AssignmentLogEntry, ChatLine, RunSummary } from './types';
+import type { Agent, ArtifactBundle, HatRole, RunResult } from '../../types';
+import type { AssignmentLogEntry, ChatLine } from './types';
 import { MessagesScene } from './scenes/CommunicationScenes';
 import { MailScene } from './scenes/MailScenes';
-import { GuildScene, MachineScene } from './scenes/OperationsScenes';
+import { GuildScene } from './scenes/GuildScene';
+import { MachineScene } from './scenes/MachineScene';
 import { WhiteboardScene } from './scenes/WhiteboardScene';
 import { HELP_THREAD, INTRO_MESSAGES_THREAD, OFFER_MESSAGES_THREAD, PIVOT_THREAD } from './storyThreads';
 
@@ -16,7 +17,8 @@ type SceneContentArgs = {
   agents: Agent[];
   assignmentLog: AssignmentLogEntry[];
   assignedActiveRoles: number;
-  latestRunSummary?: RunSummary;
+  latestRun?: RunResult;
+  latestArtifacts?: ArtifactBundle;
   runCount: number;
   runwayAfterRun: number;
   advanceStory: () => void;
@@ -45,6 +47,7 @@ function renderMessageStep({
   isInteractive,
   onSend,
   initialThreadDelayMs = 0,
+  lineDelayOffsets,
   appendPassiveDraft = true
 }: {
   thread: ChatLine[];
@@ -52,10 +55,21 @@ function renderMessageStep({
   isInteractive: boolean;
   onSend?: () => void;
   initialThreadDelayMs?: number;
+  lineDelayOffsets?: Record<string, number>;
   appendPassiveDraft?: boolean;
 }) {
   const visibleThread = appendPassiveDraft && draft ? getPassiveThread(thread, draft, isInteractive) : thread;
-  return <MessagesScene thread={visibleThread} initialThreadDelayMs={initialThreadDelayMs} disableEntryAnimation={!isInteractive} draft={isInteractive ? draft : undefined} sendLabel={isInteractive && draft ? 'Send' : undefined} onSend={isInteractive ? onSend : undefined} />;
+  return (
+    <MessagesScene
+      thread={visibleThread}
+      initialThreadDelayMs={initialThreadDelayMs}
+      lineDelayOffsets={lineDelayOffsets}
+      disableEntryAnimation={!isInteractive}
+      draft={isInteractive ? draft : undefined}
+      sendLabel={isInteractive && draft ? 'Send' : undefined}
+      onSend={isInteractive ? onSend : undefined}
+    />
+  );
 }
 
 export function renderSceneContent({
@@ -67,7 +81,8 @@ export function renderSceneContent({
   agents,
   assignmentLog,
   assignedActiveRoles,
-  latestRunSummary,
+  latestRun,
+  latestArtifacts,
   runCount,
   runwayAfterRun,
   advanceStory,
@@ -110,7 +125,13 @@ export function renderSceneContent({
     case 'messages-offer-doubt':
       return renderMessageStep({ thread: OFFER_MESSAGES_THREAD.slice(0, 2), draft: 'i think they emailed the wrong person.', isInteractive, onSend: advanceStory });
     case 'messages-convince':
-      return renderMessageStep({ thread: OFFER_MESSAGES_THREAD.slice(0, 5), draft: 'this feels like a bad idea. fine. i am in.', isInteractive, onSend: advanceStory });
+      return renderMessageStep({
+        thread: OFFER_MESSAGES_THREAD.slice(0, 5),
+        draft: 'this feels like a bad idea. fine. i am in.',
+        isInteractive,
+        onSend: advanceStory,
+        lineDelayOffsets: { j: 1400 }
+      });
     case 'messages-start-where':
       return renderMessageStep({ thread: OFFER_MESSAGES_THREAD.slice(0, 6), draft: 'i have no idea where to even start.', isInteractive, onSend: advanceStory });
     case 'messages-board-drop':
@@ -119,6 +140,7 @@ export function renderSceneContent({
       return (
         <WhiteboardScene
           roles={activeRoles}
+          agents={agents}
           studioName={studioName}
           isExpanded={false}
           onSetStudioName={isInteractive ? setStudioName : undefined}
@@ -128,10 +150,20 @@ export function renderSceneContent({
         />
       );
     case 'messages-cant-do':
-      return renderMessageStep({ thread: HELP_THREAD, draft: 'right. hiring help. try not to vanish.', isInteractive, onSend: queueCrossAppAdvance });
+      return renderMessageStep({
+        thread: HELP_THREAD.slice(0, 1),
+        draft: 'can you just do this for me?',
+        isInteractive,
+        onSend: advanceStory
+      });
+    case 'messages-guild-open':
+      return renderMessageStep({
+        thread: HELP_THREAD,
+        isInteractive,
+        appendPassiveDraft: false,
+        lineDelayOffsets: { 'help-d': 1400 }
+      });
     case 'guild-first': {
-      const firstRoleAssigned = Boolean(activeRoles[0]?.assignedAgentId);
-
       return (
         <GuildScene
           studioName={studioName}
@@ -141,7 +173,27 @@ export function renderSceneContent({
           onAssign={isInteractive ? assignRole : undefined}
           guidance="Post your role to RaidGuild. Pick one candidate and bind them to the board."
           onContinue={isInteractive ? queueCrossAppAdvance : undefined}
-          continueDisabled={!firstRoleAssigned}
+          isReadOnly={!isInteractive}
+        />
+      );
+    }
+    case 'whiteboard-integrate': {
+      const firstRole = activeRoles[0];
+
+      return (
+        <WhiteboardScene
+          roles={activeRoles}
+          agents={agents}
+          studioName={studioName}
+          isExpanded={false}
+          onAssignCandidate={
+            isInteractive && firstRole
+              ? (agentId) => {
+                  assignRole(firstRole.id, agentId);
+                  queueCrossAppAdvance();
+                }
+              : undefined
+          }
           isReadOnly={!isInteractive}
         />
       );
@@ -151,9 +203,12 @@ export function renderSceneContent({
         <MachineScene
           studioName={studioName}
           cycle={1}
+          roles={activeRoles}
+          agents={agents}
           canRun={assignedActiveRoles === activeRoles.length}
           hasRun={runCount >= 1}
-          latestRunSummary={runCount >= 1 ? latestRunSummary : undefined}
+          latestRun={runCount >= 1 ? latestRun : undefined}
+          latestArtifacts={runCount >= 1 ? latestArtifacts : undefined}
           onRun={
             isInteractive
               ? async () => {
@@ -173,9 +228,9 @@ export function renderSceneContent({
           from="Lina, Event Director"
           subject="Re: URGENT rebrand"
           body={[
-            'We reviewed the output. This does not feel production-ready.',
-            'Visual quality and QA confidence are below threshold.',
-            'Please revise role coverage and resubmit quickly.'
+            'I just pulled this up and I am honestly stressing out.',
+            'This still does not feel ready to put in front of attendees.',
+            'Please clean this up fast and send me a stronger revision.'
           ]}
           actionLabel={isInteractive ? 'Close Thread' : undefined}
           onAction={isInteractive ? queueCrossAppAdvance : undefined}
@@ -190,6 +245,7 @@ export function renderSceneContent({
       return (
         <WhiteboardScene
           roles={activeRoles}
+          agents={agents}
           studioName={studioName}
           isExpanded
           onComplete={isInteractive ? queueCrossAppAdvance : undefined}
@@ -219,9 +275,12 @@ export function renderSceneContent({
         <MachineScene
           studioName={studioName}
           cycle={2}
+          roles={activeRoles}
+          agents={agents}
           canRun={assignedActiveRoles === activeRoles.length && runwayAfterRun >= 0}
           hasRun={runCount >= 2}
-          latestRunSummary={runCount >= 2 ? latestRunSummary : undefined}
+          latestRun={runCount >= 2 ? latestRun : undefined}
+          latestArtifacts={runCount >= 2 ? latestArtifacts : undefined}
           onRun={
             isInteractive
               ? async () => {

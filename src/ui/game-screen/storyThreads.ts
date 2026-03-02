@@ -1,32 +1,71 @@
 import type { ChatLine } from './types';
 
+export const OFFER_INSTALL_REMINDER = 'don\'t forget to install the game before tomorrow.';
+
 export const INTRO_MESSAGES_THREAD: ChatLine[] = [
-  { id: 'a', author: 'friend', text: 'new co-op crawler just dropped. weird relics, procedural bosses. you in?' },
+  {
+    id: 'a',
+    author: 'friend',
+    text: 'new co-op crawler just dropped. weird relics, procedural bosses. you in?'
+  },
   { id: 'b', author: 'player', text: 'not tonight.' },
-  { id: 'c', author: 'friend', text: 'you have been in a rut all week. one run, then you can go back to staring at the ceiling.' },
+  {
+    id: 'c',
+    author: 'friend',
+    text: "you've been in a rut all week. one run, then you can go back to staring at the ceiling."
+  },
   { id: 'd', author: 'player', text: 'not in the mood. tomorrow.' },
   { id: 'e', author: 'friend', text: 'fine. i will bother you tomorrow.' }
 ];
 
 export const OFFER_MESSAGES_THREAD: ChatLine[] = [
-  { id: 'f', author: 'friend', text: 'last offer. relic run tonight or i stop asking.' },
-  { id: 'g', author: 'player', text: 'someone just accidentally emailed me offering $15k to redo their site.' },
+  { id: 'f', author: 'friend', text: OFFER_INSTALL_REMINDER },
+  {
+    id: 'g',
+    author: 'player',
+    text: 'someone just accidentally emailed me offering $15k to redo their site.'
+  },
   { id: 'h', author: 'player', text: 'i think they emailed the wrong person.' },
-  { id: 'i', author: 'friend', text: 'fifteen grand is a ridiculous amount of money for being underqualified.' },
-  { id: 'j', author: 'friend', text: 'take the job anyway. we can fake the part where you are a real studio.' },
+  {
+    id: 'i',
+    author: 'friend',
+    text: 'fifteen grand is a ridiculous amount of money for being underqualified.'
+  },
+  {
+    id: 'j',
+    author: 'friend',
+    text: 'take the job anyway. we can fake the part where you are a real studio.'
+  },
   { id: 'k', author: 'player', text: 'this feels like a bad idea. fine. i am in.' },
   { id: 'l', author: 'player', text: 'i have no idea where to even start.' },
-  { id: 'm', author: 'friend', text: 'i am dropping a planning board onto your phone right now. do not ask how i got root.' }
+  {
+    id: 'm',
+    author: 'friend',
+    text: 'i am dropping a planning board onto your phone right now. do not ask how i got root.'
+  }
 ];
 
 export const HELP_THREAD: ChatLine[] = [
-  { id: 'i', author: 'player', text: 'can you just do this for me?' },
-  { id: 'j', author: 'friend', text: 'absolutely not. i prefer to remain deniable.' },
-  { id: 'k', author: 'friend', text: 'i can, however, point you toward the right weirdos. opening a guild channel now.' }
+  { id: 'help-a', author: 'friend', text: 'are you done whiteboarding?' },
+  { id: 'help-b', author: 'player', text: 'can you just do this for me?' },
+  { id: 'help-c', author: 'friend', text: 'absolutely not. i prefer to remain deniable.' },
+  {
+    id: 'help-d',
+    author: 'friend',
+    text: 'i can, however, point you toward the right weirdos. opening a guild channel now.'
+  }
 ];
 
 export const PIVOT_THREAD: ChatLine[] = [
   { id: 'l', author: 'player', text: 'client hated it. tell me you have a fix.' },
-  { id: 'm', author: 'friend', text: 'of course. your graph is starving. add Designer, Reviewer, and Deployment.' },
-  { id: 'n', author: 'friend', text: 'same machine, better wiring. patch the tree, hire again, rerun.' }
+  {
+    id: 'm',
+    author: 'friend',
+    text: 'of course. your graph is starving. add Designer, Reviewer, and Deployment.'
+  },
+  {
+    id: 'n',
+    author: 'friend',
+    text: 'same machine, better wiring. patch the tree, hire again, rerun.'
+  }
 ];

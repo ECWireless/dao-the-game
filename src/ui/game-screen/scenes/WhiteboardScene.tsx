@@ -1,18 +1,21 @@
-import { useEffect, useRef, useState, type PointerEvent } from 'react';
-import type { HatRole } from '../../../types';
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
+import type { Agent, HatRole } from '../../../types';
+import { findRaidGuildMember, getRaidGuildCandidates } from '../guildData';
 
 type WhiteboardSceneProps = {
   roles: HatRole[];
+  agents?: Agent[];
   studioName: string;
   isExpanded: boolean;
   isReadOnly?: boolean;
   onSetStudioName?: (name: string) => void;
   onConfigureRole?: (roleId: string, name: string) => void;
+  onAssignCandidate?: (agentId: string) => void;
   onComplete?: () => void;
   completeLabel?: string;
 };
 
-type SheetMode = 'studio' | 'role' | null;
+type SheetMode = 'studio' | 'role' | 'integrate' | null;
 
 const STUDIO_NAME_LIMIT = 20;
 const DEFAULT_ROLE_NAME = 'Web Developer';
@@ -23,16 +26,19 @@ function clamp(value: number, min: number, max: number) {
 
 export function WhiteboardScene({
   roles,
+  agents = [],
   studioName,
   isExpanded,
   isReadOnly = false,
   onSetStudioName,
   onConfigureRole,
+  onAssignCandidate,
   onComplete,
   completeLabel
 }: WhiteboardSceneProps) {
   const firstRole = roles[0];
   const firstRoleReady = Boolean(firstRole?.isConfigured);
+  const firstRoleAssigned = Boolean(firstRole?.assignedAgentId);
   const isInteractive = !isReadOnly;
   const [sheetMode, setSheetMode] = useState<SheetMode>(null);
   const [hasDraftBranch, setHasDraftBranch] = useState(firstRoleReady);
@@ -59,8 +65,15 @@ export function WhiteboardScene({
   const canAddBranch = Boolean(studioName) && !showPrimaryBranch && isInteractive && Boolean(firstRole);
   const canOpenRole = Boolean(studioName) && showPrimaryBranch && !firstRoleReady && isInteractive && Boolean(onConfigureRole);
   const primaryRoleTitle = firstRoleReady ? firstRole?.name ?? DEFAULT_ROLE_NAME : 'Create a role';
-  const primaryRoleMeta = firstRoleReady ? 'Configured' : 'Open role form';
-  const showCompleteButton = isInteractive && isExpanded && Boolean(onComplete) && Boolean(completeLabel);
+  const assignedMember = findRaidGuildMember(agents, firstRole?.assignedAgentId);
+  const primaryRoleMeta = firstRoleAssigned
+    ? `Linked: ${assignedMember?.name ?? firstRole?.assignedAgentId}`
+    : firstRoleReady
+      ? 'Configured'
+      : 'Open role form';
+  const canIntegrateGuild = isInteractive && Boolean(onAssignCandidate) && firstRoleReady && !firstRoleAssigned;
+  const guildCandidates = getRaidGuildCandidates(agents);
+  const showCompleteButton = isInteractive && Boolean(onComplete) && Boolean(completeLabel);
 
   const commitStudioName = () => {
     if (!canOpenStudio || !studioReady) {
@@ -82,6 +95,15 @@ export function WhiteboardScene({
     if (!isExpanded) {
       onComplete?.();
     }
+  };
+
+  const commitCandidate = (agentId: string) => {
+    if (!canIntegrateGuild) {
+      return;
+    }
+
+    onAssignCandidate?.(agentId);
+    setSheetMode(null);
   };
 
   const handleBoardPointerDown = (event: PointerEvent<HTMLElement>) => {
@@ -186,6 +208,23 @@ export function WhiteboardScene({
                 <span className="tree-node-kicker">Primary Branch</span>
                 <span className="tree-node-title">{primaryRoleTitle}</span>
                 <span className="tree-node-meta">{primaryRoleMeta}</span>
+                {assignedMember ? (
+                  <span className="tree-node-assignee">
+                    <span
+                      className="tree-node-assignee-mark"
+                      aria-hidden="true"
+                      style={
+                        {
+                          '--guild-avatar-accent': assignedMember.accent,
+                          '--guild-avatar-shadow': assignedMember.shadow
+                        } as CSSProperties
+                      }
+                    >
+                      {assignedMember.name.charAt(0)}
+                    </span>
+                    {assignedMember.name}
+                  </span>
+                ) : null}
               </button>
             ) : null}
           </div>
@@ -197,6 +236,15 @@ export function WhiteboardScene({
         </div>
       </section>
 
+      {canIntegrateGuild ? (
+        <section className="whiteboard-integrate-card">
+          <p>Integrate RaidGuild server?</p>
+          <button className="primary-action" type="button" onClick={() => setSheetMode('integrate')}>
+            Yes, import applicants
+          </button>
+        </section>
+      ) : null}
+
       {showCompleteButton ? (
         <button className="primary-action" type="button" onClick={onComplete}>
           {completeLabel}
@@ -205,13 +253,28 @@ export function WhiteboardScene({
 
       {sheetMode ? (
         <div className="whiteboard-sheet-scrim">
-          <section className="whiteboard-sheet" aria-label={sheetMode === 'studio' ? 'Name your studio' : 'Add role'}>
-            <p className="whiteboard-sheet-kicker">{sheetMode === 'studio' ? 'Studio' : 'Role'}</p>
-            <h2>{sheetMode === 'studio' ? 'Name your studio' : 'Create role'}</h2>
+          <section
+            className="whiteboard-sheet"
+            aria-label={
+              sheetMode === 'studio'
+                ? 'Name your studio'
+                : sheetMode === 'integrate'
+                  ? 'Import a contractor'
+                  : 'Add role'
+            }
+          >
+            <p className="whiteboard-sheet-kicker">
+              {sheetMode === 'studio' ? 'Studio' : sheetMode === 'integrate' ? 'RaidGuild' : 'Role'}
+            </p>
+            <h2>
+              {sheetMode === 'studio' ? 'Name your studio' : sheetMode === 'integrate' ? 'Import a contractor' : 'Create role'}
+            </h2>
             <p className="whiteboard-sheet-copy">
               {sheetMode === 'studio'
                 ? 'This name will appear anywhere the studio is referenced.'
-                : 'Review the prefilled role details, then create it.'}
+                : sheetMode === 'integrate'
+                  ? 'Pick one applicant to link directly into this branch.'
+                  : 'Review the prefilled role details, then create it.'}
             </p>
 
             {sheetMode === 'studio' ? (
@@ -224,7 +287,7 @@ export function WhiteboardScene({
                   onChange={(event) => setStudioDraft(event.target.value)}
                 />
               </label>
-            ) : (
+            ) : sheetMode === 'role' ? (
               <div className="whiteboard-summary">
                 <div className="whiteboard-summary-row">
                   <span>Role name</span>
@@ -238,6 +301,44 @@ export function WhiteboardScene({
                   <span>Scope</span>
                   <strong>Build the site</strong>
                 </div>
+              </div>
+            ) : (
+              <div className="whiteboard-candidate-list">
+                {guildCandidates.map((candidate) => {
+                  const agent = candidate.agentId ? agents.find((item) => item.id === candidate.agentId) : undefined;
+
+                  if (!agent || !candidate.agentId) {
+                    return null;
+                  }
+
+                  return (
+                    <button
+                      key={candidate.id}
+                      className="whiteboard-candidate-row"
+                      type="button"
+                      onClick={() => commitCandidate(candidate.agentId!)}
+                    >
+                      <span
+                        className="whiteboard-candidate-avatar"
+                        aria-hidden="true"
+                        style={
+                          {
+                            '--guild-avatar-accent': candidate.accent,
+                            '--guild-avatar-shadow': candidate.shadow
+                          } as CSSProperties
+                        }
+                      >
+                        {candidate.name.charAt(0)}
+                      </span>
+                      <span className="whiteboard-candidate-copy">
+                        <span className="whiteboard-candidate-name">{candidate.name}</span>
+                        <span className="whiteboard-candidate-meta">
+                          {agent.roleAffinity} | rel {agent.reliability} | spd {agent.speed}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             )}
 
@@ -256,9 +357,13 @@ export function WhiteboardScene({
                     Save Studio
                   </button>
                 </>
-              ) : (
+              ) : sheetMode === 'role' ? (
                 <button className="primary-action whiteboard-create-role" type="button" onClick={commitRole}>
                   Create Role
+                </button>
+              ) : (
+                <button className="secondary-action whiteboard-create-role" type="button" onClick={() => setSheetMode(null)}>
+                  Close
                 </button>
               )}
             </div>

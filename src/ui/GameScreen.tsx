@@ -11,7 +11,7 @@ import { StatusBar } from './game-screen/components/StatusBar';
 import { renderSceneContent } from './game-screen/sceneContent';
 import { DormantAppPanel } from './game-screen/scenes/OperationsScenes';
 import type { AppSwitchPhase } from './game-screen/types';
-import { getAppLaunchOrigin, getLatestReachedSceneForApp, getRunSummary, getUnlockedApps } from './game-screen/utils';
+import { getAppLaunchOrigin, getLatestReachedSceneForApp, getUnlockedApps } from './game-screen/utils';
 import './game-screen.css';
 
 export default function GameScreen() {
@@ -24,6 +24,7 @@ export default function GameScreen() {
   const assignmentLog = useGameStore((state) => state.assignmentLog);
   const runCount = useGameStore((state) => state.runCount);
   const latestRun = useGameStore((state) => state.latestRun);
+  const latestArtifacts = useGameStore((state) => state.latestArtifacts);
 
   const advanceStory = useGameStore((state) => state.advanceStory);
   const retreatStory = useGameStore((state) => state.retreatStory);
@@ -55,7 +56,6 @@ export default function GameScreen() {
   const activeRoles = getActiveRoles(roles, unlockedRoleCount);
   const assignedActiveRoles = countAssignedRoles(activeRoles);
   const runwayAfterRun = estimateRunwayAfterRun(treasury, activeRoles, agents);
-  const latestRunSummary = getRunSummary(latestRun);
   const canSwitchApps = !isMachineLocked;
 
   const requestAppSwitch = useCallback(
@@ -257,8 +257,17 @@ export default function GameScreen() {
   }, [hasEmailNotification]);
 
   useEffect(() => {
-    if (scene.id !== 'messages-board-drop' || currentApp !== 'messages' || pendingHandoffSceneId) return;
-    const timer = window.setTimeout(() => queueCrossAppAdvance(), 1700);
+    if (currentApp !== 'messages' || pendingHandoffSceneId) return;
+
+    const autoAdvanceDelayMs = scene.id === 'messages-board-drop'
+      ? 1700
+      : scene.id === 'messages-guild-open'
+        ? 2500
+        : null;
+
+    if (autoAdvanceDelayMs === null) return;
+
+    const timer = window.setTimeout(() => queueCrossAppAdvance(), autoAdvanceDelayMs);
     return () => window.clearTimeout(timer);
   }, [currentApp, pendingHandoffSceneId, queueCrossAppAdvance, scene.id]);
 
@@ -279,7 +288,8 @@ export default function GameScreen() {
         agents,
         assignmentLog,
         assignedActiveRoles,
-        latestRunSummary,
+        latestRun,
+        latestArtifacts,
         runCount,
         runwayAfterRun,
         advanceStory,

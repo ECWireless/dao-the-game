@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { StoryApp } from '../../../levels/story';
+import guildSymbol from '../../../assets/raidguild-symbol.svg';
 import { APP_META } from '../constants';
 
 type AppDockProps = {
@@ -58,16 +59,7 @@ function AppGlyph({ app }: { app: StoryApp }) {
         </svg>
       );
     case 'guild':
-      return (
-        <svg viewBox="0 0 24 24" fill="none">
-          <path
-            d="M12 4.8 18.2 7v4.8c0 3.4-2.5 5.9-6.2 7.5-3.7-1.6-6.2-4.1-6.2-7.5V7L12 4.8Z"
-            fill="currentColor"
-            opacity="0.92"
-          />
-          <path d="M9.4 12.1h5.2M12 9.5v5.2" stroke="rgb(255 255 255 / 0.86)" strokeLinecap="round" strokeWidth="1.6" />
-        </svg>
-      );
+      return <img src={guildSymbol} alt="" />;
     default:
       return (
         <svg viewBox="0 0 24 24" fill="none">

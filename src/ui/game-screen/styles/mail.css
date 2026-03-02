@@ -55,7 +55,7 @@
   padding: 0 0.78rem;
   background: #ffffff;
   color: #5f6368;
-  font-size: 0.74rem;
+  font-size: 0.77rem;
   box-shadow:
     0 1px 3px rgb(60 64 67 / 14%),
     0 4px 8px rgb(60 64 67 / 8%);
@@ -91,7 +91,7 @@
   margin: 0;
   padding: 0 1rem 0.42rem 4rem;
   color: #5f6368;
-  font-size: 0.67rem;
+  font-size: 0.7rem;
   font-weight: 500;
   letter-spacing: 0.01em;
 }
@@ -161,19 +161,19 @@ button.mail-row {
 .mail-row-sender,
 .mail-row-time {
   color: #202124;
-  font-size: 0.74rem;
+  font-size: 0.77rem;
 }
 
 .mail-row-subject {
   margin-top: 0.08rem;
   color: #3c4043;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
 }
 
 .mail-row-preview {
   margin-top: 0.08rem;
   color: #5f6368;
-  font-size: 0.7rem;
+  font-size: 0.73rem;
 }
 
 .mail-row-sender.is-unread,
@@ -290,14 +290,14 @@ button.mail-row {
 
 .mail-detail-from-name {
   color: #202124;
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   font-weight: 700;
 }
 
 .mail-detail-from-meta,
 .mail-detail-time {
   color: #5f6368;
-  font-size: 0.68rem;
+  font-size: 0.71rem;
 }
 
 .mail-detail-body {
@@ -309,7 +309,7 @@ button.mail-row {
 .mail-detail-body p {
   margin: 0;
   color: #202124;
-  font-size: 0.78rem;
+  font-size: 0.81rem;
   line-height: 1.55;
 }
 

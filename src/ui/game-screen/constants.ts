@@ -15,6 +15,6 @@ export const APP_INTRO_SCENE_INDEX: Record<StoryApp, number> = {
   messages: 0,
   mail: 0,
   whiteboard: STORY_SCENES.findIndex((scene) => scene.id === 'messages-board-drop'),
-  guild: STORY_SCENES.findIndex((scene) => scene.id === 'messages-cant-do'),
-  machine: STORY_SCENES.findIndex((scene) => scene.id === 'guild-first')
+  guild: STORY_SCENES.findIndex((scene) => scene.id === 'guild-first'),
+  machine: STORY_SCENES.findIndex((scene) => scene.id === 'machine-first')
 };

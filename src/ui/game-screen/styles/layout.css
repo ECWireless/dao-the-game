@@ -67,8 +67,8 @@
 .phone-notification-tray {
   position: absolute;
   top: max(0.48rem, env(safe-area-inset-top));
-  left: 0.54rem;
-  right: 0.54rem;
+  left: 0.42rem;
+  right: 0.42rem;
   z-index: 8;
   pointer-events: none;
 }
@@ -139,12 +139,12 @@
   border-radius: 999px;
   border: 1px solid rgb(255 255 255 / 62%);
   background: linear-gradient(180deg, rgb(255 255 255 / 34%), rgb(245 248 252 / 18%));
-  color: #54647d;
+  color: #465670;
   padding: 0.35rem 0.64rem 0.35rem 0.52rem;
   display: inline-flex;
   align-items: center;
   gap: 0.24rem;
-  font-size: 0.73rem;
+  font-size: 0.76rem;
   font-weight: 800;
   backdrop-filter: blur(14px) saturate(145%);
   -webkit-backdrop-filter: blur(14px) saturate(145%);
@@ -160,17 +160,17 @@
 
 .app-title {
   margin: 0;
-  color: #1f2c40;
+  color: #17263b;
   font-family: var(--font-display);
-  font-size: 1rem;
+  font-size: 1.05rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .app-subtitle {
   margin: 0.12rem 0 0;
-  color: #61708a;
-  font-size: 0.71rem;
+  color: #556882;
+  font-size: 0.75rem;
 }
 
 .app-viewport {

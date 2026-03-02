@@ -1,7 +1,13 @@
 @import './game-screen/styles/layout.css';
 @import './game-screen/styles/communication.css';
 @import './game-screen/styles/mail.css';
+@import './game-screen/styles/guild.css';
+@import './game-screen/styles/guild-avatars.css';
 @import './game-screen/styles/whiteboard.css';
+@import './game-screen/styles/whiteboard-members.css';
+@import './game-screen/styles/machine-core.css';
+@import './game-screen/styles/machine-preview.css';
+@import './game-screen/styles/machine-preview-layout.css';
 @import './game-screen/styles/scenes.css';
 @import './game-screen/styles/dock.css';
 @import './game-screen/styles/animations.css';

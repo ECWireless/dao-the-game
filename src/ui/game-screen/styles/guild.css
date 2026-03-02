@@ -1,0 +1,364 @@
+.guild-discord-scene {
+  margin: -0.68rem;
+  padding: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 0;
+  background:
+    radial-gradient(circle at 82% 12%, rgb(189 72 45 / 10%), transparent 22%),
+    linear-gradient(180deg, #120a08 0%, #160b08 22%, #110908 100%);
+  color: #f9f7e7;
+  overflow: hidden;
+}
+
+.guild-mobile-topbar {
+  min-height: 3.25rem;
+  padding: 0.58rem 0.72rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.6rem;
+  border-bottom: 1px solid rgb(249 247 231 / 6%);
+  background: rgb(14 9 8 / 92%);
+}
+
+.guild-topbar-copy {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.48rem;
+}
+
+.guild-channel-hash {
+  color: rgb(249 247 231 / 78%);
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.guild-topbar-channel,
+.guild-topbar-server {
+  margin: 0;
+}
+
+.guild-topbar-channel {
+  color: #f9f7e7;
+  font-family: var(--font-raidguild-brand);
+  font-size: 0.84rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.guild-topbar-server {
+  margin-top: 0.08rem;
+  color: rgb(249 247 231 / 44%);
+  font-family: var(--font-raidguild-body);
+  font-size: 0.64rem;
+  line-height: 1.2;
+}
+
+.guild-toolbar-button {
+  width: 2.2rem;
+  height: 2.2rem;
+  border: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(249 247 231 / 7%);
+  color: rgb(249 247 231 / 76%);
+  padding: 0;
+}
+
+.guild-toolbar-button svg {
+  width: 1.08rem;
+  height: 1.08rem;
+}
+
+.guild-feed {
+  min-height: 0;
+  overflow: auto;
+  padding: 0.72rem 0.78rem 1rem;
+  display: grid;
+  align-content: start;
+  gap: 0.9rem;
+  background: linear-gradient(180deg, rgb(17 10 8 / 98%), rgb(16 10 8 / 100%));
+}
+
+.guild-system-card {
+  border: 1px solid rgb(249 247 231 / 7%);
+  border-radius: 0.92rem;
+  padding: 0.72rem;
+  display: grid;
+  gap: 0.24rem;
+  background:
+    linear-gradient(180deg, rgb(249 247 231 / 3%), rgb(249 247 231 / 1%)),
+    rgb(249 247 231 / 2%);
+}
+
+.guild-wordmark {
+  display: block;
+  width: 100%;
+  max-width: 8.6rem;
+  height: auto;
+}
+
+.guild-system-title,
+.guild-system-text {
+  margin: 0;
+}
+
+.guild-system-title {
+  margin-top: 0.12rem;
+  color: rgb(249 247 231 / 62%);
+  font-family: var(--font-raidguild-display);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.guild-system-text {
+  color: rgb(249 247 231 / 54%);
+  font-family: var(--font-raidguild-body);
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
+.guild-date-divider {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.guild-date-divider::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 1px solid rgb(249 247 231 / 7%);
+}
+
+.guild-date-divider span {
+  position: relative;
+  z-index: 1;
+  padding: 0 0.55rem;
+  background: #120a08;
+  color: rgb(249 247 231 / 42%);
+  font-family: var(--font-raidguild-body);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.guild-feed-entry {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.56rem;
+  align-items: start;
+}
+
+.guild-feed-entry.is-entering {
+  animation: guildFeedEntryIn 420ms cubic-bezier(0.2, 0.72, 0.18, 1) both;
+}
+
+.guild-feed-entry.is-self-post {
+  align-items: start;
+}
+
+.guild-avatar-button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.guild-feed-copy {
+  min-width: 0;
+}
+
+.guild-feed-name,
+.guild-feed-submeta,
+.guild-feed-text {
+  margin: 0;
+}
+
+.guild-feed-name {
+  color: #f9f7e7;
+  font-family: var(--font-raidguild-display);
+  font-size: 0.74rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.guild-feed-name span {
+  margin-left: 0.34rem;
+  color: rgb(249 247 231 / 42%);
+  font-family: var(--font-raidguild-body);
+  font-size: 0.64rem;
+  font-weight: 600;
+}
+
+.guild-feed-submeta {
+  margin-top: 0.08rem;
+  color: rgb(189 72 45 / 88%);
+  font-family: var(--font-raidguild-body);
+  font-size: 0.64rem;
+  font-weight: 700;
+}
+
+.guild-feed-text {
+  margin-top: 0.14rem;
+  color: rgb(249 247 231 / 82%);
+  font-family: var(--font-raidguild-body);
+  font-size: 0.8rem;
+  line-height: 1.42;
+}
+
+.guild-brief-embed {
+  margin-top: 0.36rem;
+  border-left: 3px solid #bd482d;
+  border-radius: 0 0.88rem 0.88rem 0;
+  padding: 0.62rem 0.68rem 0.68rem;
+  background:
+    linear-gradient(180deg, rgb(189 72 45 / 10%), rgb(83 74 19 / 8%)),
+    rgb(249 247 231 / 3%);
+}
+
+.guild-brief-kicker,
+.guild-brief-embed h2,
+.guild-brief-embed p,
+.guild-brief-embed ul {
+  margin: 0;
+}
+
+.guild-brief-kicker {
+  color: rgb(249 247 231 / 58%);
+  font-family: var(--font-raidguild-display);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.guild-brief-embed h2 {
+  margin-top: 0.22rem;
+  color: #f9f7e7;
+  font-family: var(--font-raidguild-brand);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.guild-brief-embed p,
+.guild-brief-embed li {
+  margin-top: 0.26rem;
+  color: rgb(249 247 231 / 78%);
+  font-family: var(--font-raidguild-body);
+  font-size: 0.72rem;
+  line-height: 1.38;
+}
+
+.guild-brief-embed ul {
+  padding-left: 0.92rem;
+}
+
+.guild-draft-hint {
+  border: 1px dashed rgb(249 247 231 / 8%);
+  border-radius: 0.86rem;
+  padding: 0.66rem;
+  background: rgb(249 247 231 / 2%);
+}
+
+.guild-draft-hint p {
+  margin: 0;
+  color: rgb(249 247 231 / 48%);
+  font-family: var(--font-raidguild-body);
+  font-size: 0.7rem;
+}
+
+.guild-composer {
+  padding: 0.62rem 0.72rem max(0.72rem, env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.42rem;
+  border-top: 1px solid rgb(249 247 231 / 6%);
+  background: rgb(14 9 8 / 94%);
+}
+
+.guild-compose-button {
+  width: 2.1rem;
+  height: 2.1rem;
+  border: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(249 247 231 / 7%);
+  color: rgb(249 247 231 / 72%);
+  font: inherit;
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0;
+}
+
+.guild-compose-button.is-muted {
+  font-size: 1rem;
+}
+
+.guild-compose-field {
+  min-height: 2.3rem;
+  border-radius: 999px;
+  padding: 0 0.82rem;
+  display: flex;
+  align-items: center;
+  background: rgb(249 247 231 / 7%);
+  color: rgb(249 247 231 / 38%);
+  font-family: var(--font-raidguild-body);
+  font-size: 0.75rem;
+  overflow: hidden;
+}
+
+.guild-compose-field span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.guild-compose-field.is-filled {
+  color: rgb(249 247 231 / 74%);
+}
+
+.guild-send-button {
+  min-height: 2rem;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 0.78rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #bd482d;
+  color: #f9f7e7;
+  font-family: var(--font-raidguild-display);
+  font-size: 0.7rem;
+  font-weight: 800;
+  box-shadow: 0 10px 18px rgb(0 0 0 / 20%);
+}
+
+.guild-send-button.is-sync {
+  background: #534a13;
+}
+
+@keyframes guildFeedEntryIn {
+  0% {
+    opacity: 0;
+    transform: translateY(0.55rem);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
