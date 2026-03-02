@@ -7,6 +7,7 @@ import type { Agent, ArtifactBundle, HatRole, RunResult, RunState, ScoreBreakdow
 
 const GAME_STATE_STORAGE_KEY = 'dao-the-game:state:v2';
 const FIRST_CYCLE_ROLE_COUNT = 1;
+const DEFAULT_STUDIO_NAME = '';
 
 export type AssignmentLogEntry = {
   id: string;
@@ -18,6 +19,7 @@ type GameStore = {
   unlockedRoleCount: number;
   seed: number;
   treasury: number;
+  studioName: string;
   roles: HatRole[];
   agents: Agent[];
   latestRun?: RunResult;
@@ -27,6 +29,8 @@ type GameStore = {
   setStorySceneIndex: (next: number) => void;
   advanceStory: () => void;
   retreatStory: () => void;
+  setStudioName: (name: string) => void;
+  configureRole: (roleId: string, name: string) => void;
   unlockExpandedRoles: () => void;
   assignRole: (roleId: string, agentId: string) => void;
   unassignRole: (roleId: string) => void;
@@ -40,6 +44,7 @@ type PersistedGameState = Pick<
   | 'unlockedRoleCount'
   | 'seed'
   | 'treasury'
+  | 'studioName'
   | 'roles'
   | 'agents'
   | 'latestRun'
@@ -49,7 +54,7 @@ type PersistedGameState = Pick<
 >;
 
 function cloneTutorialRoles(): HatRole[] {
-  return TUTORIAL_ROLES.map((role) => ({ ...role }));
+  return TUTORIAL_ROLES.map((role) => ({ ...role, isConfigured: role.isConfigured ?? false }));
 }
 
 function createAssignmentLogEntry(message: string): AssignmentLogEntry {
@@ -65,6 +70,7 @@ function getInitialState() {
     unlockedRoleCount: FIRST_CYCLE_ROLE_COUNT,
     seed: TUTORIAL_SEED,
     treasury: TUTORIAL_TREASURY,
+    studioName: DEFAULT_STUDIO_NAME,
     roles: cloneTutorialRoles(),
     agents: generateStartingAgents(TUTORIAL_SEED),
     latestRun: undefined,
@@ -175,6 +181,36 @@ export const useGameStore = create<GameStore>()(
       retreatStory: () => {
         set((state) => ({ storySceneIndex: clampSceneIndex(state.storySceneIndex - 1) }));
       },
+      setStudioName: (name) => {
+        set({ studioName: name.trim() });
+      },
+      configureRole: (roleId, name) => {
+        const state = get();
+        const role = state.roles.find((item) => item.id === roleId);
+
+        if (!role) {
+          return;
+        }
+
+        const normalizedName = name.trim();
+
+        if (!normalizedName) {
+          return;
+        }
+
+        set({
+          roles: state.roles.map((item) =>
+            item.id === roleId
+              ? {
+                  ...item,
+                  name: normalizedName,
+                  isConfigured: true
+                }
+              : item
+          ),
+          assignmentLog: [createAssignmentLogEntry(`${normalizedName} added to the org chart.`), ...state.assignmentLog].slice(0, 8)
+        });
+      },
       unlockExpandedRoles: () => {
         set((state) => ({ unlockedRoleCount: state.roles.length }));
       },
@@ -272,13 +308,14 @@ export const useGameStore = create<GameStore>()(
     }),
     {
       name: GAME_STATE_STORAGE_KEY,
-      version: 2,
+      version: 3,
       storage: createJSONStorage(() => localStorage),
       partialize: (state): PersistedGameState => ({
         storySceneIndex: state.storySceneIndex,
         unlockedRoleCount: state.unlockedRoleCount,
         seed: state.seed,
         treasury: state.treasury,
+        studioName: state.studioName,
         roles: state.roles,
         agents: state.agents,
         latestRun: state.latestRun,
@@ -297,6 +334,25 @@ export const useGameStore = create<GameStore>()(
         return {
           ...initial,
           ...candidate,
+          studioName: typeof candidate.studioName === 'string' ? candidate.studioName : initial.studioName,
+          roles: Array.isArray(candidate.roles)
+            ? initial.roles.map((role, index) => {
+                const persistedRole = candidate.roles?.[index];
+
+                if (!persistedRole) {
+                  return role;
+                }
+
+                return {
+                  ...role,
+                  ...persistedRole,
+                  isConfigured:
+                    typeof persistedRole.isConfigured === 'boolean'
+                      ? persistedRole.isConfigured
+                      : Boolean(persistedRole.assignedAgentId) || persistedRole.name !== role.name
+                };
+              })
+            : initial.roles,
           storySceneIndex:
             typeof candidate.storySceneIndex === 'number'
               ? clampSceneIndex(candidate.storySceneIndex)

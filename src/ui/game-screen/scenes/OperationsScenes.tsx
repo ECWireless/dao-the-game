@@ -1,37 +1,32 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { StoryApp } from '../../../levels/story';
 import type { Agent, HatRole, RunResult } from '../../../types';
 import { APP_META, RUN_PHASES } from '../constants';
 import type { AssignmentLogEntry, RunSummary } from '../types';
-import { formatCredits, formatRoleAssignment } from '../utils';
-
-type WhiteboardSceneProps = {
-  roles: HatRole[];
-  agents: Agent[];
-  copy: string;
-  actionLabel: string;
-  onAction: () => void;
-  isExpanded: boolean;
-};
+import { formatCredits } from '../utils';
 
 type GuildSceneProps = {
+  studioName?: string;
   roles: HatRole[];
   agents: Agent[];
   assignmentLog: AssignmentLogEntry[];
-  onAssign: (roleId: string, agentId: string) => void;
-  onContinue: () => void;
-  continueDisabled: boolean;
+  onAssign?: (roleId: string, agentId: string) => void;
+  onContinue?: () => void;
+  continueDisabled?: boolean;
   guidance: string;
+  isReadOnly?: boolean;
 };
 
 type MachineSceneProps = {
+  studioName?: string;
   cycle: 1 | 2;
   canRun: boolean;
   hasRun: boolean;
   latestRunSummary?: RunSummary;
-  onRun: () => Promise<void>;
-  onContinue: () => void;
-  onLockChange: (isLocked: boolean) => void;
+  onRun?: () => Promise<void>;
+  onContinue?: () => void;
+  onLockChange?: (isLocked: boolean) => void;
+  isReadOnly?: boolean;
 };
 
 type DormantAppPanelProps = {
@@ -52,42 +47,16 @@ const DORMANT_TITLES: Record<StoryApp, string> = {
   machine: 'Machine controls are on standby.'
 };
 
-export function WhiteboardScene({ roles, agents, copy, actionLabel, onAction, isExpanded }: WhiteboardSceneProps) {
-  const agentById = useMemo(() => new Map(agents.map((agent) => [agent.id, agent])), [agents]);
-
-  return (
-    <section className="scene-body whiteboard-scene">
-      <p className="scene-copy">{copy}</p>
-
-      <div className={`whiteboard-grid ${isExpanded ? 'expanded' : ''}`}>
-        {roles.map((role) => {
-          const agent = role.assignedAgentId ? agentById.get(role.assignedAgentId) : undefined;
-
-          return (
-            <article key={role.id} className="role-note">
-              <p className="role-note-title">{role.name}</p>
-              <p>{formatRoleAssignment(role, agent)}</p>
-              <span className={`status-lamp ${agent ? 'lamp-on' : 'lamp-off'}`} aria-hidden="true" />
-            </article>
-          );
-        })}
-      </div>
-
-      <button className="primary-action" type="button" onClick={onAction}>
-        {actionLabel}
-      </button>
-    </section>
-  );
-}
-
 export function GuildScene({
+  studioName,
   roles,
   agents,
   assignmentLog,
   onAssign,
   onContinue,
-  continueDisabled,
-  guidance
+  continueDisabled = false,
+  guidance,
+  isReadOnly = false
 }: GuildSceneProps) {
   const [selectedRoleId, setSelectedRoleId] = useState<string>(roles[0]?.id ?? '');
 
@@ -102,6 +71,7 @@ export function GuildScene({
   return (
     <section className="scene-body guild-scene">
       <p className="scene-copy">{guidance}</p>
+      <p className="eyebrow">Posting As: {studioName || 'Unnamed Studio'}</p>
 
       <div className="role-tabs" role="tablist" aria-label="Select role to hire for">
         {roles.map((role) => (
@@ -111,6 +81,7 @@ export function GuildScene({
             type="button"
             role="tab"
             aria-selected={selectedRole?.id === role.id}
+            disabled={isReadOnly}
             onClick={() => setSelectedRoleId(role.id)}
           >
             {role.name}
@@ -130,7 +101,8 @@ export function GuildScene({
             <button
               className="mini-action"
               type="button"
-              onClick={() => selectedRole && onAssign(selectedRole.id, agent.id)}
+              disabled={isReadOnly || !selectedRole || !onAssign}
+              onClick={() => selectedRole && onAssign?.(selectedRole.id, agent.id)}
             >
               Hire for {selectedRole?.name ?? 'role'}
             </button>
@@ -148,27 +120,39 @@ export function GuildScene({
         </ul>
       </section>
 
-      <button className="primary-action" type="button" disabled={continueDisabled} onClick={onContinue}>
-        Return to Machine
-      </button>
+      {!isReadOnly && onContinue ? (
+        <button className="primary-action" type="button" disabled={continueDisabled} onClick={onContinue}>
+          Return to Machine
+        </button>
+      ) : null}
     </section>
   );
 }
 
-export function MachineScene({ cycle, canRun, hasRun, latestRunSummary, onRun, onContinue, onLockChange }: MachineSceneProps) {
+export function MachineScene({
+  studioName,
+  cycle,
+  canRun,
+  hasRun,
+  latestRunSummary,
+  onRun,
+  onContinue,
+  onLockChange,
+  isReadOnly = false
+}: MachineSceneProps) {
   const [isRunning, setIsRunning] = useState(false);
   const [phaseIndex, setPhaseIndex] = useState(-1);
 
   useEffect(() => {
-    onLockChange(isRunning);
+    onLockChange?.(isRunning);
 
     return () => {
-      onLockChange(false);
+      onLockChange?.(false);
     };
   }, [isRunning, onLockChange]);
 
   useEffect(() => {
-    if (!isRunning) {
+    if (!isRunning || isReadOnly) {
       return;
     }
 
@@ -186,10 +170,10 @@ export function MachineScene({ cycle, canRun, hasRun, latestRunSummary, onRun, o
     return () => {
       window.clearInterval(timer);
     };
-  }, [isRunning]);
+  }, [isReadOnly, isRunning]);
 
   useEffect(() => {
-    if (!isRunning || phaseIndex < RUN_PHASES.length - 1) {
+    if (!isRunning || isReadOnly || phaseIndex < RUN_PHASES.length - 1 || !onRun) {
       return;
     }
 
@@ -202,7 +186,7 @@ export function MachineScene({ cycle, canRun, hasRun, latestRunSummary, onRun, o
     return () => {
       window.clearTimeout(finalize);
     };
-  }, [isRunning, onRun, phaseIndex]);
+  }, [isReadOnly, isRunning, onRun, phaseIndex]);
 
   return (
     <section className="scene-body machine-scene">
@@ -211,6 +195,7 @@ export function MachineScene({ cycle, canRun, hasRun, latestRunSummary, onRun, o
           ? 'Cycle one: one role only. Expect unstable output and client backlash.'
           : 'Cycle two: expanded role graph online. Running confidence rebuild.'}
       </p>
+      <p className="eyebrow">Studio Runtime: {studioName || 'Unnamed Studio'}</p>
 
       <ol className="phase-list" aria-label="Autonomous pipeline">
         {RUN_PHASES.map((phase, index) => {
@@ -231,11 +216,11 @@ export function MachineScene({ cycle, canRun, hasRun, latestRunSummary, onRun, o
         })}
       </ol>
 
-      {!hasRun ? (
+      {!hasRun && !isReadOnly ? (
         <button
           className="primary-action"
           type="button"
-          disabled={!canRun || isRunning}
+          disabled={!canRun || isRunning || !onRun}
           onClick={() => {
             setIsRunning(true);
             setPhaseIndex(0);
@@ -252,9 +237,11 @@ export function MachineScene({ cycle, canRun, hasRun, latestRunSummary, onRun, o
             Quality {latestRunSummary.qualityScore} | Cost {formatCredits(latestRunSummary.cost)}
           </p>
           <p>{latestRunSummary.events[latestRunSummary.events.length - 1]}</p>
-          <button className="primary-action" type="button" onClick={onContinue}>
-            Submit to Client
-          </button>
+          {!isReadOnly && onContinue ? (
+            <button className="primary-action" type="button" onClick={onContinue}>
+              Submit to Client
+            </button>
+          ) : null}
         </article>
       ) : null}
     </section>

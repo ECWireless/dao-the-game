@@ -1,11 +1,17 @@
 import type { ReactNode } from 'react';
 import type { Agent, HatRole } from '../../types';
 import type { AssignmentLogEntry, ChatLine, RunSummary } from './types';
-import { MailScene, MessagesScene } from './scenes/CommunicationScenes';
-import { GuildScene, MachineScene, WhiteboardScene } from './scenes/OperationsScenes';
+import { MessagesScene } from './scenes/CommunicationScenes';
+import { MailScene } from './scenes/MailScenes';
+import { GuildScene, MachineScene } from './scenes/OperationsScenes';
+import { WhiteboardScene } from './scenes/WhiteboardScene';
+import { HELP_THREAD, INTRO_MESSAGES_THREAD, OFFER_MESSAGES_THREAD, PIVOT_THREAD } from './storyThreads';
 
 type SceneContentArgs = {
   sceneId: string;
+  isInteractive: boolean;
+  mailOfferReplyLocked: boolean;
+  studioName: string;
   activeRoles: HatRole[];
   agents: Agent[];
   assignmentLog: AssignmentLogEntry[];
@@ -14,6 +20,10 @@ type SceneContentArgs = {
   runCount: number;
   runwayAfterRun: number;
   advanceStory: () => void;
+  onMailOfferReply: () => void;
+  queueCrossAppAdvance: () => void;
+  setStudioName: (name: string) => void;
+  configureRole: (roleId: string, name: string) => void;
   unlockExpandedRoles: () => void;
   assignRole: (roleId: string, agentId: string) => void;
   runProduction: () => void;
@@ -21,8 +31,38 @@ type SceneContentArgs = {
   setIsMachineLocked: (isLocked: boolean) => void;
 };
 
+function getPassiveThread(thread: ChatLine[], draft?: string, isInteractive = true): ChatLine[] {
+  if (isInteractive || !draft) {
+    return thread;
+  }
+
+  return [...thread, { id: `${thread[thread.length - 1]?.id ?? 'draft'}-passive-player`, author: 'player', text: draft }];
+}
+
+function renderMessageStep({
+  thread,
+  draft,
+  isInteractive,
+  onSend,
+  initialThreadDelayMs = 0,
+  appendPassiveDraft = true
+}: {
+  thread: ChatLine[];
+  draft?: string;
+  isInteractive: boolean;
+  onSend?: () => void;
+  initialThreadDelayMs?: number;
+  appendPassiveDraft?: boolean;
+}) {
+  const visibleThread = appendPassiveDraft && draft ? getPassiveThread(thread, draft, isInteractive) : thread;
+  return <MessagesScene thread={visibleThread} initialThreadDelayMs={initialThreadDelayMs} disableEntryAnimation={!isInteractive} draft={isInteractive ? draft : undefined} sendLabel={isInteractive && draft ? 'Send' : undefined} onSend={isInteractive ? onSend : undefined} />;
+}
+
 export function renderSceneContent({
   sceneId,
+  isInteractive,
+  mailOfferReplyLocked,
+  studioName,
   activeRoles,
   agents,
   assignmentLog,
@@ -31,6 +71,10 @@ export function renderSceneContent({
   runCount,
   runwayAfterRun,
   advanceStory,
+  onMailOfferReply,
+  queueCrossAppAdvance,
+  setStudioName,
+  configureRole,
   unlockExpandedRoles,
   assignRole,
   runProduction,
@@ -38,84 +82,12 @@ export function renderSceneContent({
   setIsMachineLocked
 }: SceneContentArgs): ReactNode {
   switch (sceneId) {
-    case 'messages-warmup': {
-      const thread: ChatLine[] = [
-        {
-          id: 'a',
-          author: 'friend',
-          text: 'new co-op crawler just dropped. weird relics, procedural bosses. you in?'
-        }
-      ];
-
-      return (
-        <MessagesScene
-          thread={thread}
-          initialThreadDelayMs={2000}
-          draft="not tonight."
-          sendLabel="Send"
-          onSend={advanceStory}
-        />
-      );
-    }
-    case 'messages-hold': {
-      const thread: ChatLine[] = [
-        {
-          id: 'a',
-          author: 'friend',
-          text: 'new co-op crawler just dropped. weird relics, procedural bosses. you in?'
-        },
-        {
-          id: 'b',
-          author: 'player',
-          text: 'not tonight.'
-        },
-        {
-          id: 'c',
-          author: 'friend',
-          text: 'you have been in a rut all week. one run, then you can go back to staring at the ceiling.'
-        }
-      ];
-
-      return (
-        <MessagesScene
-          thread={thread}
-          draft="not in the mood. tomorrow."
-          sendLabel="Send"
-          onSend={advanceStory}
-        />
-      );
-    }
-    case 'messages-notification': {
-      const thread: ChatLine[] = [
-        {
-          id: 'a',
-          author: 'friend',
-          text: 'new co-op crawler just dropped. weird relics, procedural bosses. you in?'
-        },
-        {
-          id: 'b',
-          author: 'player',
-          text: 'not tonight.'
-        },
-        {
-          id: 'c',
-          author: 'friend',
-          text: 'you have been in a rut all week. one run, then you can go back to staring at the ceiling.'
-        },
-        {
-          id: 'd',
-          author: 'player',
-          text: 'not in the mood. tomorrow.'
-        },
-        {
-          id: 'e',
-          author: 'friend',
-          text: 'fine. i will bother you tomorrow.'
-        }
-      ];
-
-      return <MessagesScene thread={thread} />;
-    }
+    case 'messages-warmup':
+      return renderMessageStep({ thread: INTRO_MESSAGES_THREAD.slice(0, 1), draft: 'not tonight.', isInteractive, onSend: advanceStory, initialThreadDelayMs: 2000 });
+    case 'messages-hold':
+      return renderMessageStep({ thread: INTRO_MESSAGES_THREAD.slice(0, 3), draft: 'not in the mood. tomorrow.', isInteractive, onSend: advanceStory });
+    case 'messages-notification':
+      return renderMessageStep({ thread: INTRO_MESSAGES_THREAD, isInteractive, appendPassiveDraft: false });
     case 'mail-offer':
       return (
         <MailScene
@@ -124,92 +96,74 @@ export function renderSceneContent({
           subject="URGENT: Full rebrand needed in 48 hours"
           body={[
             'Our conference brand is collapsing and our website is unusable.',
-            'Budget approved: 2800 credits for immediate autonomous rebuild.',
-            'Need architecture, design, QA, deployment. No delays.'
+            'Budget approved: $15,000 for an immediate redesign and rebuild.',
+            'Need strategy, design, QA, and deployment. No delays.'
           ]}
           draft="I think you emailed the wrong person. I have no idea how to build this."
           sendLabel="Send Reply"
-          onSend={advanceStory}
+          onSend={isInteractive && !mailOfferReplyLocked ? onMailOfferReply : undefined}
+          isPrimaryActionDisabled={mailOfferReplyLocked || !isInteractive}
         />
       );
-    case 'messages-convince': {
-      const thread: ChatLine[] = [
-        { id: 'f', author: 'player', text: 'they offered 2800 credits. this was definitely sent to the wrong person.' },
-        { id: 'g', author: 'friend', text: 'competent people are mostly a payroll rumor.' },
-        {
-          id: 'h',
-          author: 'friend',
-          text: 'you do not build it. you arrange the right parts and let the machine take the blame.'
-        }
-      ];
-
-      return (
-        <MessagesScene
-          thread={thread}
-          draft="this feels like a bad idea. fine. i am in."
-          sendLabel="Send"
-          onSend={advanceStory}
-        />
-      );
-    }
+    case 'messages-offer-share':
+      return renderMessageStep({ thread: OFFER_MESSAGES_THREAD.slice(0, 1), draft: 'someone just accidentally emailed me offering $15k to redo their site.', isInteractive, onSend: advanceStory });
+    case 'messages-offer-doubt':
+      return renderMessageStep({ thread: OFFER_MESSAGES_THREAD.slice(0, 2), draft: 'i think they emailed the wrong person.', isInteractive, onSend: advanceStory });
+    case 'messages-convince':
+      return renderMessageStep({ thread: OFFER_MESSAGES_THREAD.slice(0, 5), draft: 'this feels like a bad idea. fine. i am in.', isInteractive, onSend: advanceStory });
+    case 'messages-start-where':
+      return renderMessageStep({ thread: OFFER_MESSAGES_THREAD.slice(0, 6), draft: 'i have no idea where to even start.', isInteractive, onSend: advanceStory });
+    case 'messages-board-drop':
+      return renderMessageStep({ thread: OFFER_MESSAGES_THREAD, isInteractive, appendPassiveDraft: false });
     case 'whiteboard-first':
       return (
         <WhiteboardScene
           roles={activeRoles}
-          agents={agents}
+          studioName={studioName}
           isExpanded={false}
-          copy="You open a whiteboard app. Gremlin rule: keep it clumsy and fast. One role only for cycle one."
-          actionLabel="Ask Guide About Hiring"
-          onAction={advanceStory}
+          onSetStudioName={isInteractive ? setStudioName : undefined}
+          onConfigureRole={isInteractive ? configureRole : undefined}
+          onComplete={isInteractive ? queueCrossAppAdvance : undefined}
+          isReadOnly={!isInteractive}
         />
       );
-    case 'messages-cant-do': {
-      const thread: ChatLine[] = [
-        { id: 'i', author: 'player', text: 'can you just do this for me?' },
-        { id: 'j', author: 'friend', text: 'absolutely not. i prefer to remain deniable.' },
-        {
-          id: 'k',
-          author: 'friend',
-          text: 'i can, however, point you toward the right weirdos. opening a guild channel now.'
-        }
-      ];
-
-      return (
-        <MessagesScene
-          thread={thread}
-          draft="right. hiring help. try not to vanish."
-          sendLabel="Send"
-          onSend={advanceStory}
-        />
-      );
-    }
+    case 'messages-cant-do':
+      return renderMessageStep({ thread: HELP_THREAD, draft: 'right. hiring help. try not to vanish.', isInteractive, onSend: queueCrossAppAdvance });
     case 'guild-first': {
       const firstRoleAssigned = Boolean(activeRoles[0]?.assignedAgentId);
 
       return (
         <GuildScene
+          studioName={studioName}
           roles={activeRoles}
           agents={agents}
           assignmentLog={assignmentLog}
-          onAssign={assignRole}
+          onAssign={isInteractive ? assignRole : undefined}
           guidance="Post your role to RaidGuild. Pick one candidate and bind them to the board."
-          onContinue={advanceStory}
+          onContinue={isInteractive ? queueCrossAppAdvance : undefined}
           continueDisabled={!firstRoleAssigned}
+          isReadOnly={!isInteractive}
         />
       );
     }
     case 'machine-first':
       return (
         <MachineScene
+          studioName={studioName}
           cycle={1}
           canRun={assignedActiveRoles === activeRoles.length}
           hasRun={runCount >= 1}
           latestRunSummary={runCount >= 1 ? latestRunSummary : undefined}
-          onRun={async () => {
-            runProduction();
-          }}
-          onContinue={advanceStory}
-          onLockChange={setIsMachineLocked}
+          onRun={
+            isInteractive
+              ? async () => {
+                  runProduction();
+                }
+              : undefined
+          }
+          onContinue={isInteractive ? queueCrossAppAdvance : undefined}
+          onLockChange={isInteractive ? setIsMachineLocked : undefined}
+          isReadOnly={!isInteractive}
         />
       );
     case 'mail-fail':
@@ -223,42 +177,24 @@ export function renderSceneContent({
             'Visual quality and QA confidence are below threshold.',
             'Please revise role coverage and resubmit quickly.'
           ]}
-          actionLabel="Text Your Guide"
-          onAction={advanceStory}
+          actionLabel={isInteractive ? 'Close Thread' : undefined}
+          onAction={isInteractive ? queueCrossAppAdvance : undefined}
         />
       );
-    case 'messages-pivot': {
-      const thread: ChatLine[] = [
-        { id: 'l', author: 'player', text: 'client hated it. tell me you have a fix.' },
-        {
-          id: 'm',
-          author: 'friend',
-          text: 'of course. your graph is starving. add Designer, Reviewer, and Deployment.'
-        },
-        { id: 'n', author: 'friend', text: 'same machine, better wiring. patch the tree, hire again, rerun.' }
-      ];
-
-      return (
-        <MessagesScene
-          thread={thread}
-          draft="patching the tree now. do not become mysteriously correct about me."
-          sendLabel="Send"
-          onSend={() => {
-            unlockExpandedRoles();
-            advanceStory();
-          }}
-        />
-      );
-    }
+    case 'messages-pivot':
+      return renderMessageStep({ thread: PIVOT_THREAD, draft: 'patching the tree now. do not become mysteriously correct about me.', isInteractive, onSend: () => {
+        unlockExpandedRoles();
+        queueCrossAppAdvance();
+      } });
     case 'whiteboard-expand':
       return (
         <WhiteboardScene
           roles={activeRoles}
-          agents={agents}
+          studioName={studioName}
           isExpanded
-          copy="You expand from one role to a full autonomous chain. Authority wiring now spans design, review, and deployment."
-          actionLabel="Open RaidGuild Hiring"
-          onAction={advanceStory}
+          onComplete={isInteractive ? queueCrossAppAdvance : undefined}
+          completeLabel={isInteractive ? 'Commit Update' : undefined}
+          isReadOnly={!isInteractive}
         />
       );
     case 'guild-second': {
@@ -266,28 +202,36 @@ export function renderSceneContent({
 
       return (
         <GuildScene
+          studioName={studioName}
           roles={activeRoles}
           agents={agents}
           assignmentLog={assignmentLog}
-          onAssign={assignRole}
+          onAssign={isInteractive ? assignRole : undefined}
           guidance="Hire for every remaining role, then snap assignments into the whiteboard graph."
-          onContinue={advanceStory}
+          onContinue={isInteractive ? queueCrossAppAdvance : undefined}
           continueDisabled={!allAssigned}
+          isReadOnly={!isInteractive}
         />
       );
     }
     case 'machine-second':
       return (
         <MachineScene
+          studioName={studioName}
           cycle={2}
           canRun={assignedActiveRoles === activeRoles.length && runwayAfterRun >= 0}
           hasRun={runCount >= 2}
           latestRunSummary={runCount >= 2 ? latestRunSummary : undefined}
-          onRun={async () => {
-            runProduction();
-          }}
-          onContinue={advanceStory}
-          onLockChange={setIsMachineLocked}
+          onRun={
+            isInteractive
+              ? async () => {
+                  runProduction();
+                }
+              : undefined
+          }
+          onContinue={isInteractive ? queueCrossAppAdvance : undefined}
+          onLockChange={isInteractive ? setIsMachineLocked : undefined}
+          isReadOnly={!isInteractive}
         />
       );
     default:
@@ -295,14 +239,14 @@ export function renderSceneContent({
         <MailScene
           tone="success"
           from="Lina, Event Director"
-          subject="Approved: Autonomous relaunch accepted"
+          subject="Approved: Relaunch accepted"
           body={[
             'This second submission is exactly what we needed.',
-            'Role coverage is clear, quality is strong, and deployment confidence is high.',
-            'Congrats. You turned panic into a working machine.'
+            'The work feels polished, the review pass is strong, and deployment confidence is high.',
+            'Congrats. Your team turned panic into a clean relaunch.'
           ]}
-          actionLabel="Play Again"
-          onAction={resetTutorial}
+          actionLabel={isInteractive ? 'Play Again' : undefined}
+          onAction={isInteractive ? resetTutorial : undefined}
         />
       );
   }

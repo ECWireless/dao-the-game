@@ -33,10 +33,34 @@ export const STORY_SCENES: StoryScene[] = [
     subtitle: 'Frantic client request'
   },
   {
+    id: 'messages-offer-share',
+    app: 'messages',
+    title: 'Messages',
+    subtitle: 'Unexpected offer'
+  },
+  {
+    id: 'messages-offer-doubt',
+    app: 'messages',
+    title: 'Messages',
+    subtitle: 'This cannot be real'
+  },
+  {
     id: 'messages-convince',
     app: 'messages',
     title: 'Messages',
     subtitle: 'Gremlin persuasion protocol'
+  },
+  {
+    id: 'messages-start-where',
+    app: 'messages',
+    title: 'Messages',
+    subtitle: 'No idea where to start'
+  },
+  {
+    id: 'messages-board-drop',
+    app: 'messages',
+    title: 'Messages',
+    subtitle: 'Planning board incoming'
   },
   {
     id: 'whiteboard-first',

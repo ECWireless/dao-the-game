@@ -1,26 +1,24 @@
 import type { CSSProperties } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getScene, type StoryApp } from '../levels/story';
-import {
-  countAssignedRoles,
-  estimateRunwayAfterRun,
-  getActiveRoles,
-  useGameStore
-} from '../state/gameStore';
+import { countAssignedRoles, estimateRunwayAfterRun, getActiveRoles, useGameStore } from '../state/gameStore';
 import { APP_META } from './game-screen/constants';
 import { AppDock } from './game-screen/components/AppDock';
+import { getCrossAppHandoff } from './game-screen/handoffs';
 import { NotificationBanner, type MessageNotification } from './game-screen/scenes/CommunicationScenes';
+import { MailInboxScene } from './game-screen/scenes/MailScenes';
 import { StatusBar } from './game-screen/components/StatusBar';
 import { renderSceneContent } from './game-screen/sceneContent';
 import { DormantAppPanel } from './game-screen/scenes/OperationsScenes';
 import type { AppSwitchPhase } from './game-screen/types';
-import { getAppLaunchOrigin, getRunSummary, getUnlockedApps } from './game-screen/utils';
+import { getAppLaunchOrigin, getLatestReachedSceneForApp, getRunSummary, getUnlockedApps } from './game-screen/utils';
 import './game-screen.css';
 
 export default function GameScreen() {
   const storySceneIndex = useGameStore((state) => state.storySceneIndex);
   const unlockedRoleCount = useGameStore((state) => state.unlockedRoleCount);
   const treasury = useGameStore((state) => state.treasury);
+  const studioName = useGameStore((state) => state.studioName);
   const roles = useGameStore((state) => state.roles);
   const agents = useGameStore((state) => state.agents);
   const assignmentLog = useGameStore((state) => state.assignmentLog);
@@ -29,29 +27,30 @@ export default function GameScreen() {
 
   const advanceStory = useGameStore((state) => state.advanceStory);
   const retreatStory = useGameStore((state) => state.retreatStory);
+  const setStudioName = useGameStore((state) => state.setStudioName);
+  const configureRole = useGameStore((state) => state.configureRole);
   const unlockExpandedRoles = useGameStore((state) => state.unlockExpandedRoles);
   const assignRole = useGameStore((state) => state.assignRole);
   const runProduction = useGameStore((state) => state.runProduction);
   const resetTutorial = useGameStore((state) => state.resetTutorial);
 
   const scene = getScene(storySceneIndex);
+  const nextScene = getScene(storySceneIndex + 1);
+  const nextHandoff = getCrossAppHandoff(nextScene.id);
   const unlockedApps = useMemo(() => getUnlockedApps(storySceneIndex), [storySceneIndex]);
-  const previousUnlockedAppsRef = useRef<StoryApp[]>(
-    storySceneIndex === 0 && unlockedApps.includes('mail')
-      ? unlockedApps.filter((app) => app !== 'mail')
-      : unlockedApps
-  );
+  const previousUnlockedAppsRef = useRef<StoryApp[]>(storySceneIndex === 0 && unlockedApps.includes('mail') ? unlockedApps.filter((app) => app !== 'mail') : unlockedApps);
+  const resetTapRef = useRef<{ count: number; timerId: number | null }>({ count: 0, timerId: null });
 
   const [currentApp, setCurrentApp] = useState<StoryApp>(scene.app);
   const [pendingApp, setPendingApp] = useState<StoryApp | null>(null);
   const [switchPhase, setSwitchPhase] = useState<AppSwitchPhase>('idle');
-  const [launchOriginX, setLaunchOriginX] = useState<number>(
-    getAppLaunchOrigin(scene.app, unlockedApps)
-  );
+  const [launchOriginX, setLaunchOriginX] = useState<number>(getAppLaunchOrigin(scene.app, unlockedApps));
   const [pulseApp, setPulseApp] = useState<StoryApp | null>(null);
   const [installingApp, setInstallingApp] = useState<StoryApp | null>(null);
   const [isMachineLocked, setIsMachineLocked] = useState(false);
-  const [isPhoneNotificationVisible, setIsPhoneNotificationVisible] = useState(false);
+  const [isEmailNotificationVisible, setIsEmailNotificationVisible] = useState(false);
+  const [isMailOfferReplyLocked, setIsMailOfferReplyLocked] = useState(false);
+  const [pendingHandoffSceneId, setPendingHandoffSceneId] = useState<string | null>(null);
 
   const activeRoles = getActiveRoles(roles, unlockedRoleCount);
   const assignedActiveRoles = countAssignedRoles(activeRoles);
@@ -73,13 +72,59 @@ export default function GameScreen() {
     [canSwitchApps, currentApp, switchPhase, unlockedApps]
   );
 
-  const advanceStoryAndOpenApp = useCallback(
+  const clearResetTapState = useCallback(() => {
+    if (resetTapRef.current.timerId !== null) window.clearTimeout(resetTapRef.current.timerId);
+    resetTapRef.current = { count: 0, timerId: null };
+  }, []);
+
+  const handleHiddenReset = useCallback(() => {
+    const resetApps = getUnlockedApps(0);
+    clearResetTapState();
+    resetTutorial();
+    setCurrentApp('messages');
+    setPendingApp(null);
+    setSwitchPhase('idle');
+    setPulseApp(null);
+    setInstallingApp(resetApps.includes('mail') ? 'mail' : null);
+    setIsMachineLocked(false);
+    setIsEmailNotificationVisible(false);
+    setIsMailOfferReplyLocked(false);
+    setPendingHandoffSceneId(null);
+    setLaunchOriginX(getAppLaunchOrigin('messages', resetApps));
+    previousUnlockedAppsRef.current = resetApps;
+  }, [clearResetTapState, resetTutorial]);
+
+  const handleDockOpen = useCallback(
     (targetApp: StoryApp) => {
-      advanceStory();
+      if (targetApp === 'messages') {
+        const nextCount = resetTapRef.current.count + 1;
+        if (resetTapRef.current.timerId !== null) window.clearTimeout(resetTapRef.current.timerId);
+
+        if (nextCount >= 3) {
+          clearResetTapState();
+          if (window.confirm('Confirm demo reset?')) handleHiddenReset();
+          return;
+        }
+
+        resetTapRef.current = {
+          count: nextCount,
+          timerId: window.setTimeout(() => {
+            resetTapRef.current = { count: 0, timerId: null };
+          }, 1200)
+        };
+      } else {
+        clearResetTapState();
+      }
+
       requestAppSwitch(targetApp);
     },
-    [advanceStory, requestAppSwitch]
+    [clearResetTapState, handleHiddenReset, requestAppSwitch]
   );
+
+  const advanceStoryAndOpenApp = useCallback((targetApp: StoryApp) => {
+    advanceStory();
+    requestAppSwitch(targetApp);
+  }, [advanceStory, requestAppSwitch]);
 
   useEffect(() => {
     const previousUnlockedApps = previousUnlockedAppsRef.current;
@@ -87,9 +132,7 @@ export default function GameScreen() {
     previousUnlockedAppsRef.current = unlockedApps;
 
     if (!newlyUnlockedApp) {
-      if (unlockedApps.length < previousUnlockedApps.length) {
-        setInstallingApp(null);
-      }
+      if (unlockedApps.length < previousUnlockedApps.length) setInstallingApp(null);
       return;
     }
 
@@ -101,13 +144,8 @@ export default function GameScreen() {
       return;
     }
 
-    const timer = window.setTimeout(() => {
-      setInstallingApp((current) => (current === installingApp ? null : current));
-    }, 1900);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
+    const timer = window.setTimeout(() => setInstallingApp((current) => (current === installingApp ? null : current)), 1900);
+    return () => window.clearTimeout(timer);
   }, [installingApp]);
 
   useEffect(() => {
@@ -132,10 +170,7 @@ export default function GameScreen() {
       setCurrentApp(pendingApp);
       setSwitchPhase('in');
     }, 180);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
+    return () => window.clearTimeout(timer);
   }, [pendingApp, switchPhase]);
 
   useEffect(() => {
@@ -148,81 +183,123 @@ export default function GameScreen() {
       setPendingApp(null);
       setPulseApp(null);
     }, 220);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
+    return () => window.clearTimeout(timer);
   }, [switchPhase]);
 
-  const frameStyle = {
-    '--launch-origin-x': `${launchOriginX}%`
-  } as CSSProperties;
+  useEffect(() => () => clearResetTapState(), [clearResetTapState]);
 
-  const handlePhoneNotificationOpen = useCallback(() => {
-    setIsPhoneNotificationVisible(false);
+  useEffect(() => {
+    if (storySceneIndex === 0) {
+      setIsEmailNotificationVisible(false);
+      setIsMailOfferReplyLocked(false);
+      setPendingHandoffSceneId(null);
+    }
+  }, [storySceneIndex]);
+
+  const frameStyle = { '--launch-origin-x': `${launchOriginX}%` } as CSSProperties;
+
+  const handleMailNotificationOpen = useCallback(() => {
+    setIsEmailNotificationVisible(false);
     advanceStoryAndOpenApp('mail');
   }, [advanceStoryAndOpenApp]);
+  const handleMailOfferReply = useCallback(() => {
+    setIsMailOfferReplyLocked(true);
+    if (nextHandoff) setPendingHandoffSceneId(nextScene.id);
+    advanceStory();
+  }, [advanceStory, nextHandoff, nextScene.id]);
+  const queueCrossAppAdvance = useCallback(() => {
+    if (nextHandoff) setPendingHandoffSceneId(nextScene.id);
+    advanceStory();
+  }, [advanceStory, nextHandoff, nextScene.id]);
+  const pendingHandoff = pendingHandoffSceneId ? getCrossAppHandoff(pendingHandoffSceneId) : undefined;
+  const handleHandoffNotificationOpen = useCallback(() => {
+    if (!pendingHandoff) return;
+    setPendingHandoffSceneId(null);
+    requestAppSwitch(pendingHandoff.targetApp);
+  }, [pendingHandoff, requestAppSwitch]);
 
-  const hasPhoneNotification = scene.id === 'messages-notification';
-  const activePhoneNotification: MessageNotification | null = hasPhoneNotification
+  const hasEmailNotification = scene.id === 'messages-notification';
+  const activePhoneNotification: MessageNotification | null = pendingHandoff
     ? {
+        appName: pendingHandoff.appName,
+        title: pendingHandoff.title,
+        preview: pendingHandoff.preview,
+        icon: pendingHandoff.icon,
+        onOpen: handleHandoffNotificationOpen
+      }
+    : hasEmailNotification && isEmailNotificationVisible
+      ? {
         appName: 'Mail',
         title: 'URGENT: Full rebrand needed in 48 hours',
         preview: 'Lina, Event Director',
-        onOpen: handlePhoneNotificationOpen
+        icon: 'mail',
+        onOpen: handleMailNotificationOpen
       }
-    : null;
-
-  const showAppSubtitle = !(currentApp === 'messages' && scene.app === currentApp);
-  const appSubtitle = scene.app === currentApp ? scene.subtitle : 'Background app';
+      : null;
+  const mailInboxStoryItem = hasEmailNotification
+    ? {
+        sender: 'Lina, Event Director',
+        subject: 'URGENT: Full rebrand needed in 48 hours',
+        preview: 'Our conference brand is collapsing and our website is unusable.',
+        timestamp: 'now',
+        onOpen: handleMailNotificationOpen
+      }
+    : undefined;
 
   useEffect(() => {
-    if (!hasPhoneNotification) {
-      setIsPhoneNotificationVisible(false);
+    if (!hasEmailNotification) {
+      setIsEmailNotificationVisible(false);
       return;
     }
+    setIsEmailNotificationVisible(false);
+    const timer = window.setTimeout(() => setIsEmailNotificationVisible(true), 3000);
+    return () => window.clearTimeout(timer);
+  }, [hasEmailNotification]);
 
-    setIsPhoneNotificationVisible(false);
-    const timer = window.setTimeout(() => {
-      setIsPhoneNotificationVisible(true);
-    }, 2000);
+  useEffect(() => {
+    if (scene.id !== 'messages-board-drop' || currentApp !== 'messages' || pendingHandoffSceneId) return;
+    const timer = window.setTimeout(() => queueCrossAppAdvance(), 1700);
+    return () => window.clearTimeout(timer);
+  }, [currentApp, pendingHandoffSceneId, queueCrossAppAdvance, scene.id]);
 
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [hasPhoneNotification]);
+  useEffect(() => {
+    if (pendingHandoffSceneId && (pendingHandoffSceneId !== scene.id || currentApp === scene.app)) {
+      setPendingHandoffSceneId(null);
+    }
+  }, [currentApp, pendingHandoffSceneId, scene.app, scene.id]);
 
-  const sceneContent = renderSceneContent({
-    sceneId: scene.id,
-    activeRoles,
-    agents,
-    assignmentLog,
-    assignedActiveRoles,
-    latestRunSummary,
-    runCount,
-    runwayAfterRun,
-    advanceStory,
-    unlockExpandedRoles,
-    assignRole,
-    runProduction,
-    resetTutorial,
-    setIsMachineLocked
-  });
-
-  const appContent =
-    currentApp === scene.app ? (
-      sceneContent
-    ) : (
-      <DormantAppPanel
-        app={currentApp}
-        targetApp={scene.app}
-        onReturn={() => requestAppSwitch(scene.app)}
-        activeRoles={activeRoles}
-        assignedRoles={assignedActiveRoles}
-        runCount={runCount}
-        latestRun={latestRun}
-      />
-    );
+  const displayedScene = currentApp === scene.app ? scene : getLatestReachedSceneForApp(storySceneIndex, currentApp);
+  const isSceneInteractive = currentApp === scene.app;
+  const sceneContent = displayedScene
+    ? renderSceneContent({
+        sceneId: displayedScene.id,
+        isInteractive: isSceneInteractive,
+        studioName,
+        activeRoles,
+        agents,
+        assignmentLog,
+        assignedActiveRoles,
+        latestRunSummary,
+        runCount,
+        runwayAfterRun,
+        advanceStory,
+        onMailOfferReply: handleMailOfferReply,
+        queueCrossAppAdvance,
+        setStudioName,
+        configureRole,
+        mailOfferReplyLocked: isMailOfferReplyLocked,
+        unlockExpandedRoles,
+        assignRole,
+        runProduction,
+        resetTutorial,
+        setIsMachineLocked
+      })
+    : null;
+  const appContent = sceneContent ? sceneContent : currentApp === 'mail'
+    ? <MailInboxScene storyItem={mailInboxStoryItem} />
+    : <DormantAppPanel app={currentApp} targetApp={scene.app} onReturn={() => requestAppSwitch(scene.app)} activeRoles={activeRoles} assignedRoles={assignedActiveRoles} runCount={runCount} latestRun={latestRun} />;
+  const showAppSubtitle = currentApp !== 'messages' && Boolean(displayedScene?.subtitle);
+  const appSubtitle = displayedScene?.subtitle ?? scene.subtitle;
 
   return (
     <main className="game-root">
@@ -233,7 +310,7 @@ export default function GameScreen() {
 
           <StatusBar sceneIndex={storySceneIndex} treasury={treasury} />
 
-          {activePhoneNotification && isPhoneNotificationVisible ? (
+          {activePhoneNotification ? (
             <div className="phone-notification-tray">
               <NotificationBanner notification={activePhoneNotification} />
             </div>
@@ -281,7 +358,7 @@ export default function GameScreen() {
               targetApp={scene.app}
               pulseApp={pulseApp}
               installingApp={installingApp}
-              onOpen={requestAppSwitch}
+              onOpen={handleDockOpen}
               disabled={!canSwitchApps || switchPhase !== 'idle'}
             />
           </footer>
