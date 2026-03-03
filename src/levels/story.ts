@@ -111,6 +111,12 @@ export const STORY_SCENES: StoryScene[] = [
     subtitle: 'Patch strategy'
   },
   {
+    id: 'messages-pivot-fix',
+    app: 'messages',
+    title: 'Messages',
+    subtitle: 'Patch received'
+  },
+  {
     id: 'whiteboard-expand',
     app: 'whiteboard',
     title: 'Whiteboard',

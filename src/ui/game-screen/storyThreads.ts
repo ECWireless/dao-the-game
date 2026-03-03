@@ -1,6 +1,7 @@
 import type { ChatLine } from './types';
 
-export const OFFER_INSTALL_REMINDER = 'don\'t forget to install the game before tomorrow.';
+export const OFFER_INSTALL_REMINDER = "don't forget to install the game before tomorrow.";
+export const PIVOT_CHECKIN = 'how did the deployment go?';
 
 export const INTRO_MESSAGES_THREAD: ChatLine[] = [
   {
@@ -47,7 +48,7 @@ export const OFFER_MESSAGES_THREAD: ChatLine[] = [
 
 export const HELP_THREAD: ChatLine[] = [
   { id: 'help-a', author: 'friend', text: 'are you done whiteboarding?' },
-  { id: 'help-b', author: 'player', text: 'can you just do this for me?' },
+  { id: 'help-b', author: 'player', text: "ya, but i can't code. can you just do this for me?" },
   { id: 'help-c', author: 'friend', text: 'absolutely not. i prefer to remain deniable.' },
   {
     id: 'help-d',
@@ -57,14 +58,15 @@ export const HELP_THREAD: ChatLine[] = [
 ];
 
 export const PIVOT_THREAD: ChatLine[] = [
-  { id: 'l', author: 'player', text: 'client hated it. tell me you have a fix.' },
+  { id: 'pivot-a', author: 'friend', text: PIVOT_CHECKIN },
+  { id: 'pivot-b', author: 'player', text: 'client hated it. tell me you have a fix' },
   {
-    id: 'm',
+    id: 'pivot-c',
     author: 'friend',
     text: 'of course. your graph is starving. add Designer, Reviewer, and Deployment.'
   },
   {
-    id: 'n',
+    id: 'pivot-d',
     author: 'friend',
     text: 'same machine, better wiring. patch the tree, hire again, rerun.'
   }

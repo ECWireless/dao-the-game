@@ -5,6 +5,7 @@
 @import './game-screen/styles/guild-avatars.css';
 @import './game-screen/styles/guild-interactions.css';
 @import './game-screen/styles/whiteboard.css';
+@import './game-screen/styles/whiteboard-cues.css';
 @import './game-screen/styles/whiteboard-members.css';
 @import './game-screen/styles/machine-core.css';
 @import './game-screen/styles/machine-preview.css';

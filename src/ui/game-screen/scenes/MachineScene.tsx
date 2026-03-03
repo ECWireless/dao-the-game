@@ -3,7 +3,6 @@ import type { Agent, ArtifactBundle, HatRole, RunResult } from '../../../types';
 import { buildMachineRoleLanes, hasRoleWithKeyword } from '../machineUtils';
 import { usePannableViewport } from '../usePannableViewport';
 import { MachinePreview } from './MachinePreview';
-
 type MachineSceneProps = {
   studioName?: string;
   cycle: 1 | 2;
@@ -13,7 +12,7 @@ type MachineSceneProps = {
   hasRun: boolean;
   latestRun?: RunResult;
   latestArtifacts?: ArtifactBundle;
-  onRun?: () => Promise<void>;
+  onRun?: () => void | Promise<void>;
   onContinue?: () => void;
   onLockChange?: (isLocked: boolean) => void;
   isReadOnly?: boolean;
@@ -101,6 +100,7 @@ export function MachineScene({
   const safePacketIndex = Math.max(0, Math.min(packetIndex, lastPacketIndex));
   const packetPosition = packetStops[safePacketIndex] ?? packetStops[0];
   const packetEnergy = packetStops.length > 1 ? 0.4 + safePacketIndex / (packetStops.length - 1) * 0.8 : 0.7;
+  const isOutputReady = hasRun && !isRunning;
   const packetStyle = {
     left: `${packetPosition.x}px`,
     top: `${packetPosition.y}px`,
@@ -116,7 +116,7 @@ export function MachineScene({
           ? 'Output node fabricating creation'
           : `${roleNodes[safePacketIndex - 2]?.roleName ?? 'Role'} processing`
     : hasRun
-      ? 'Creation staged in output node'
+      ? 'Creation ejected to output node'
       : 'Assembly line armed';
   const statusDetail = isRunning
     ? safePacketIndex <= 1
@@ -125,7 +125,7 @@ export function MachineScene({
         ? 'The final creation is being compressed and pushed into the output node.'
         : `${roleNodes[safePacketIndex - 2]?.operatorName ?? 'Machine core'} is actively shaping this pass.`
     : hasRun
-      ? latestRun?.events[latestRun.events.length - 1] ?? 'Creation is waiting in the output node.'
+      ? latestRun?.events[latestRun.events.length - 1] ?? 'The line has cooled and the deploy preview is latched open.'
       : `Ready to route through ${roleLanes.length} linked role ${roleLanes.length === 1 ? 'node' : 'nodes'}.`;
   const sharedRoleCenterY = roleNodes[0]?.y ? roleNodes[0].y + roleNodes[0].height / 2 : rootNode.y + rootNode.height / 2;
   const pipeSegments: PipeSegment[] = [
@@ -255,7 +255,7 @@ export function MachineScene({
         </span>
       </section>
 
-      <section className="machine-board-shell">
+      <section className={`machine-board-shell ${isOutputReady ? 'is-complete' : ''}`}>
         <div
           className={`machine-board-viewport ${isDragging ? 'is-dragging' : ''}`}
           ref={viewportRef}
@@ -335,7 +335,7 @@ export function MachineScene({
             })}
 
             <button
-              className={`machine-node machine-node-output ${hasRun ? 'is-actionable is-ready' : ''}`}
+              className={`machine-node machine-node-output ${isOutputReady ? 'is-actionable is-ready' : ''}`}
               type="button"
               data-pan-block="true"
               style={{ left: `${outputNode.x}px`, top: `${outputNode.y}px` }}
@@ -344,11 +344,20 @@ export function MachineScene({
             >
               <span className="machine-node-kicker">Output node</span>
               <span className="machine-node-title">
-                {hasRun ? (isPreviewVisible ? 'Creation loaded' : 'View creation') : isRunning ? 'Fabricating...' : 'Awaiting build'}
+                {isOutputReady
+                  ? isPreviewVisible
+                    ? 'Preview Loaded'
+                    : 'Preview Ejected'
+                  : isRunning
+                    ? 'Fabricating...'
+                    : 'Awaiting build'}
               </span>
               <span className="machine-node-meta">
-                {hasRun ? 'Open the generated site' : 'Finished builds eject here'}
+                {isOutputReady ? 'Open the deployed site preview' : 'Finished builds eject here'}
               </span>
+              {isOutputReady ? (
+                <span className="machine-node-callout">{isPreviewVisible ? 'Preview open' : 'Open deploy'}</span>
+              ) : null}
             </button>
           </div>
         </div>

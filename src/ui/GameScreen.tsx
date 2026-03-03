@@ -50,7 +50,6 @@ export default function GameScreen() {
   const [installingApp, setInstallingApp] = useState<StoryApp | null>(null);
   const [isMachineLocked, setIsMachineLocked] = useState(false);
   const [isEmailNotificationVisible, setIsEmailNotificationVisible] = useState(false);
-  const [isMailOfferReplyLocked, setIsMailOfferReplyLocked] = useState(false);
   const [pendingHandoffSceneId, setPendingHandoffSceneId] = useState<string | null>(null);
 
   const activeRoles = getActiveRoles(roles, unlockedRoleCount);
@@ -88,7 +87,6 @@ export default function GameScreen() {
     setInstallingApp(resetApps.includes('mail') ? 'mail' : null);
     setIsMachineLocked(false);
     setIsEmailNotificationVisible(false);
-    setIsMailOfferReplyLocked(false);
     setPendingHandoffSceneId(null);
     setLaunchOriginX(getAppLaunchOrigin('messages', resetApps));
     previousUnlockedAppsRef.current = resetApps;
@@ -191,7 +189,6 @@ export default function GameScreen() {
   useEffect(() => {
     if (storySceneIndex === 0) {
       setIsEmailNotificationVisible(false);
-      setIsMailOfferReplyLocked(false);
       setPendingHandoffSceneId(null);
     }
   }, [storySceneIndex]);
@@ -202,11 +199,6 @@ export default function GameScreen() {
     setIsEmailNotificationVisible(false);
     advanceStoryAndOpenApp('mail');
   }, [advanceStoryAndOpenApp]);
-  const handleMailOfferReply = useCallback(() => {
-    setIsMailOfferReplyLocked(true);
-    if (nextHandoff) setPendingHandoffSceneId(nextScene.id);
-    advanceStory();
-  }, [advanceStory, nextHandoff, nextScene.id]);
   const queueCrossAppAdvance = useCallback(() => {
     if (nextHandoff) setPendingHandoffSceneId(nextScene.id);
     advanceStory();
@@ -245,6 +237,7 @@ export default function GameScreen() {
         onOpen: handleMailNotificationOpen
       }
     : undefined;
+  const dockTargetApp = pendingHandoff?.targetApp ?? (hasEmailNotification && isEmailNotificationVisible ? 'mail' : scene.app);
 
   useEffect(() => {
     if (!hasEmailNotification) {
@@ -257,15 +250,28 @@ export default function GameScreen() {
   }, [hasEmailNotification]);
 
   useEffect(() => {
-    if (currentApp !== 'messages' || pendingHandoffSceneId) return;
+    if (pendingHandoffSceneId) {
+      return;
+    }
 
-    const autoAdvanceDelayMs = scene.id === 'messages-board-drop'
-      ? 1700
-      : scene.id === 'messages-guild-open'
-        ? 2500
-        : null;
+    let autoAdvanceDelayMs: number | null = null;
 
-    if (autoAdvanceDelayMs === null) return;
+    if (currentApp === 'messages') {
+      autoAdvanceDelayMs =
+        scene.id === 'messages-board-drop'
+          ? 1700
+          : scene.id === 'messages-guild-open'
+            ? 2500
+            : scene.id === 'messages-pivot-fix'
+              ? 2900
+              : null;
+    } else if (currentApp === 'mail') {
+      autoAdvanceDelayMs = scene.id === 'mail-offer' || scene.id === 'mail-fail' ? 3600 : null;
+    }
+
+    if (autoAdvanceDelayMs === null) {
+      return;
+    }
 
     const timer = window.setTimeout(() => queueCrossAppAdvance(), autoAdvanceDelayMs);
     return () => window.clearTimeout(timer);
@@ -293,11 +299,9 @@ export default function GameScreen() {
         runCount,
         runwayAfterRun,
         advanceStory,
-        onMailOfferReply: handleMailOfferReply,
         queueCrossAppAdvance,
         setStudioName,
         configureRole,
-        mailOfferReplyLocked: isMailOfferReplyLocked,
         unlockExpandedRoles,
         assignRole,
         runProduction,
@@ -359,7 +363,7 @@ export default function GameScreen() {
             <AppDock
               availableApps={unlockedApps}
               currentApp={currentApp}
-              targetApp={scene.app}
+              targetApp={dockTargetApp}
               pulseApp={pulseApp}
               installingApp={installingApp}
               onOpen={handleDockOpen}

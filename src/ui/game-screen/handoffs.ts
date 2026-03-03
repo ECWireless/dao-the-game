@@ -1,5 +1,5 @@
 import type { StoryApp } from '../../levels/story';
-import { OFFER_INSTALL_REMINDER } from './storyThreads';
+import { OFFER_INSTALL_REMINDER, PIVOT_CHECKIN } from './storyThreads';
 
 export type CrossAppHandoff = {
   targetApp: StoryApp;
@@ -21,7 +21,7 @@ const CROSS_APP_HANDOFFS: Record<string, CrossAppHandoff> = {
     targetApp: 'whiteboard',
     appName: 'Whiteboard',
     title: 'Whiteboard',
-    preview: 'A planning board just appeared.',
+    preview: 'Get started on your next project plan.',
     icon: 'whiteboard'
   },
   'messages-cant-do': {
@@ -49,7 +49,7 @@ const CROSS_APP_HANDOFFS: Record<string, CrossAppHandoff> = {
     targetApp: 'machine',
     appName: 'Machine',
     title: 'Machine Companion',
-    preview: 'Deployment rig is installed. Switch over.',
+    preview: 'Deployment rig is installed. Open Machine to deploy.',
     icon: 'machine'
   },
   'mail-fail': {
@@ -63,7 +63,7 @@ const CROSS_APP_HANDOFFS: Record<string, CrossAppHandoff> = {
     targetApp: 'messages',
     appName: 'Messages',
     title: 'murmur',
-    preview: 'saw that. open chat before you spiral.',
+    preview: PIVOT_CHECKIN,
     icon: 'messages'
   },
   'whiteboard-expand': {
@@ -91,7 +91,7 @@ const CROSS_APP_HANDOFFS: Record<string, CrossAppHandoff> = {
     targetApp: 'machine',
     appName: 'Machine',
     title: 'Machine Companion',
-    preview: 'Updated crew loaded. Switch over.',
+    preview: 'Updated crew loaded. Open Machine to deploy again.',
     icon: 'machine'
   },
   'mail-success': {

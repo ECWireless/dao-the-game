@@ -4,7 +4,8 @@
   display: grid;
   align-content: start;
   gap: 0.7rem;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .eyebrow {
@@ -27,6 +28,7 @@
   flex-direction: column;
   align-content: normal;
   overflow: hidden;
+  overflow-x: hidden;
 }
 
 .messages-contact-bar {
@@ -124,7 +126,8 @@
   align-items: stretch;
   gap: 0.54rem;
   padding: 0.16rem 0 0.4rem;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .chat-bubble {
@@ -225,9 +228,10 @@
 
 .iphone-notification {
   width: 100%;
-  border: 1px solid rgb(255 255 255 / 74%);
-  border-radius: 1.08rem;
-  padding: 0.62rem 0.72rem;
+  position: relative;
+  border: 1px solid rgb(255 255 255 / 82%);
+  border-radius: 1.12rem;
+  padding: 0.68rem 0.76rem;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 0.58rem;
@@ -239,8 +243,18 @@
   -webkit-backdrop-filter: blur(26px) saturate(165%);
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 78%),
-    0 22px 40px rgb(72 87 113 / 18%);
+    0 24px 42px rgb(72 87 113 / 20%);
   animation: notificationIn 320ms cubic-bezier(0.18, 0.92, 0.24, 1.02);
+  overflow: hidden;
+}
+
+.iphone-notification::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 0.14rem;
+  background: linear-gradient(90deg, rgb(103 184 255 / 0%), rgb(103 184 255 / 40%), rgb(103 184 255 / 0%));
+  pointer-events: none;
 }
 
 .iphone-notification-icon {
@@ -287,14 +301,15 @@
 
 .iphone-notification-title {
   color: #22364f;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 800;
   line-height: 1.22;
 }
 
 .iphone-notification-preview {
   color: #445974;
-  font-size: 0.74rem;
+  font-size: 0.75rem;
+  font-weight: 600;
   line-height: 1.22;
 }
 

@@ -186,11 +186,12 @@
 .deployment-preview.is-rough .deployment-footer-band,
 .deployment-preview.is-rough .deployment-panel {
   background: rgb(17 29 45 / 6%);
+  border-radius: 0.52rem;
 }
 
 .deployment-preview.is-rough .deployment-feature-card,
 .deployment-preview.is-rough .deployment-stat-card {
-  border-color: rgb(17 29 45 / 6%);
+  border-color: rgb(17 29 45 / 12%);
 }
 
 .deployment-preview.is-rough .deployment-tag-row span {
