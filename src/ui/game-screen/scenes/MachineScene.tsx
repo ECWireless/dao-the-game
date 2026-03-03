@@ -3,7 +3,6 @@ import type { Agent, ArtifactBundle, HatRole, RunResult } from '../../../types';
 import { buildMachineRoleLanes, hasRoleWithKeyword } from '../machineUtils';
 import { usePannableViewport } from '../usePannableViewport';
 import { MachinePreview } from './MachinePreview';
-
 type MachineSceneProps = {
   studioName?: string;
   cycle: 1 | 2;
@@ -13,7 +12,7 @@ type MachineSceneProps = {
   hasRun: boolean;
   latestRun?: RunResult;
   latestArtifacts?: ArtifactBundle;
-  onRun?: () => Promise<void>;
+  onRun?: () => void | Promise<void>;
   onContinue?: () => void;
   onLockChange?: (isLocked: boolean) => void;
   isReadOnly?: boolean;
@@ -101,6 +100,7 @@ export function MachineScene({
   const safePacketIndex = Math.max(0, Math.min(packetIndex, lastPacketIndex));
   const packetPosition = packetStops[safePacketIndex] ?? packetStops[0];
   const packetEnergy = packetStops.length > 1 ? 0.4 + safePacketIndex / (packetStops.length - 1) * 0.8 : 0.7;
+  const isOutputReady = hasRun && !isRunning;
   const packetStyle = {
     left: `${packetPosition.x}px`,
     top: `${packetPosition.y}px`,
@@ -335,7 +335,7 @@ export function MachineScene({
             })}
 
             <button
-              className={`machine-node machine-node-output ${hasRun ? 'is-actionable is-ready' : ''}`}
+              className={`machine-node machine-node-output ${isOutputReady ? 'is-actionable is-ready' : ''}`}
               type="button"
               data-pan-block="true"
               style={{ left: `${outputNode.x}px`, top: `${outputNode.y}px` }}
@@ -344,11 +344,20 @@ export function MachineScene({
             >
               <span className="machine-node-kicker">Output node</span>
               <span className="machine-node-title">
-                {hasRun ? (isPreviewVisible ? 'Creation loaded' : 'View creation') : isRunning ? 'Fabricating...' : 'Awaiting build'}
+                {isOutputReady
+                  ? isPreviewVisible
+                    ? 'Preview Loaded'
+                    : 'Creation Ready'
+                  : isRunning
+                    ? 'Fabricating...'
+                    : 'Awaiting build'}
               </span>
               <span className="machine-node-meta">
-                {hasRun ? 'Open the generated site' : 'Finished builds eject here'}
+                {isOutputReady ? 'Tap to open the generated preview' : 'Finished builds eject here'}
               </span>
+              {isOutputReady ? (
+                <span className="machine-node-callout">{isPreviewVisible ? 'Preview open' : 'Tap to open'}</span>
+              ) : null}
             </button>
           </div>
         </div>

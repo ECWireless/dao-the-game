@@ -5,7 +5,6 @@ import { GuildMemberAvatar } from '../components/GuildMemberAvatar';
 import { GuildMemberCard } from '../components/GuildMemberCard';
 import { getRaidGuildCandidates, getRaidGuildCandidatesForRole, getRaidGuildRoster, RAIDGUILD_CHANNELS, RAIDGUILD_HISTORY, type GuildMemberProfile } from '../guildData';
 import { formatCredits } from '../utils';
-
 type GuildSecondCycleSceneProps = {
   studioName?: string;
   roles: HatRole[];
@@ -14,7 +13,6 @@ type GuildSecondCycleSceneProps = {
   continueDisabled?: boolean;
   isReadOnly?: boolean;
 };
-
 type RoleSequence = {
   role: HatRole;
   brief: string;
@@ -22,7 +20,6 @@ type RoleSequence = {
   replies: string[];
   candidates: GuildMemberProfile[];
 };
-
 function buildRoleBrief(roleName: string) {
   if (roleName.includes('Design')) {
     return {
@@ -34,7 +31,6 @@ function buildRoleBrief(roleName: string) {
       ]
     };
   }
-
   if (roleName.includes('Review')) {
     return {
       brief: 'Need a ruthless QA sweep before this goes back in front of the client.',
@@ -45,7 +41,6 @@ function buildRoleBrief(roleName: string) {
       ]
     };
   }
-
   if (roleName.includes('Deploy')) {
     return {
       brief: 'Need a release closer who can harden the handoff and keep the rollout calm.',
@@ -56,7 +51,6 @@ function buildRoleBrief(roleName: string) {
       ]
     };
   }
-
   return {
     brief: 'Need another fast specialist to tighten the next branch before the resubmission.',
     bullets: ['Fast turnaround', 'Clean handoff', 'Client-safe revision'],
@@ -66,7 +60,6 @@ function buildRoleBrief(roleName: string) {
     ]
   };
 }
-
 export function GuildSecondCycleScene({
   studioName,
   roles,
@@ -96,22 +89,18 @@ export function GuildSecondCycleScene({
   const [postingRoleIndex, setPostingRoleIndex] = useState<number | null>(null);
   const [openMemberId, setOpenMemberId] = useState<string | null>(null);
   const feedRef = useRef<HTMLDivElement | null>(null);
-
   useEffect(() => {
     if (isReadOnly) {
       setVisibleEventCount(totalSequenceEvents);
       setPostingRoleIndex(null);
     }
   }, [isReadOnly, totalSequenceEvents]);
-
   useEffect(() => {
     if (postingRoleIndex === null || isReadOnly) {
       return;
     }
-
     const baseCount = postingRoleIndex * 3;
     setVisibleEventCount(baseCount);
-
     const postTimer = window.setTimeout(() => {
       setVisibleEventCount(baseCount + 1);
     }, 260);
@@ -122,31 +111,26 @@ export function GuildSecondCycleScene({
       setVisibleEventCount(baseCount + 3);
       setPostingRoleIndex(null);
     }, 2850);
-
     return () => {
       window.clearTimeout(postTimer);
       window.clearTimeout(firstReplyTimer);
       window.clearTimeout(secondReplyTimer);
     };
   }, [isReadOnly, postingRoleIndex]);
-
   useEffect(() => {
-    if (!feedRef.current || visibleEventCount === 0) {
+    if (!feedRef.current) {
       return;
     }
-
     const frame = window.requestAnimationFrame(() => {
       feedRef.current?.scrollTo({
         top: feedRef.current.scrollHeight,
         behavior: 'smooth'
       });
     });
-
     return () => {
       window.cancelAnimationFrame(frame);
     };
   }, [visibleEventCount]);
-
   const visibleRoleBoundary = Math.floor(visibleEventCount / 3);
   const canPostNextRole = !isReadOnly && postingRoleIndex === null && visibleEventCount < totalSequenceEvents && visibleEventCount % 3 === 0;
   const nextRoleIndex = canPostNextRole ? visibleRoleBoundary : -1;
@@ -157,17 +141,15 @@ export function GuildSecondCycleScene({
   const studioGlyph = studioLabel.trim().charAt(0).toUpperCase() || 'S';
   const datePreview = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date());
   const visibleChannels = RAIDGUILD_CHANNELS.filter((channel) => channel !== '#hiring-board');
+  const quartermaster = roster.find((member) => member.id === 'quartermaster-nyx');
   const openMember = roster.find((member) => member.id === openMemberId) ?? roleSequences.flatMap((sequence) => sequence.candidates).find((member) => member.id === openMemberId);
   const openAgent = openMember?.agentId ? agents.find((agent) => agent.id === openMember.agentId) : undefined;
-
   const handleStartPosting = () => {
     if (!canPostNextRole || nextRoleIndex < 0) {
       return;
     }
-
     setPostingRoleIndex(nextRoleIndex);
   };
-
   return (
     <section className="scene-body guild-discord-scene">
       <header className="guild-mobile-topbar">
@@ -187,21 +169,17 @@ export function GuildSecondCycleScene({
           </svg>
         </button>
       </header>
-
       <div className="guild-feed" aria-label="RaidGuild channel" ref={feedRef}>
         <article className="guild-system-card">
           <img src={fullLogo} alt="RaidGuild" className="guild-wordmark" />
           <p className="guild-system-title">Server channels</p>
           <p className="guild-system-text">{visibleChannels.join(' • ')}</p>
         </article>
-
         {RAIDGUILD_HISTORY.map((entry) => {
           const member = roster.find((item) => item.id === entry.memberId);
-
           if (!member) {
             return null;
           }
-
           return (
             <article key={entry.id} className="guild-feed-entry">
               <button className="guild-avatar-button" type="button" onClick={() => setOpenMemberId(member.id)}>
@@ -217,11 +195,9 @@ export function GuildSecondCycleScene({
             </article>
           );
         })}
-
         <div className="guild-date-divider">
           <span>{datePreview}</span>
         </div>
-
         <article className="guild-feed-entry is-self-post">
           <span className="guild-poster-avatar" aria-hidden="true">
             {studioGlyph}
@@ -243,19 +219,15 @@ export function GuildSecondCycleScene({
             </div>
           </div>
         </article>
-
         {firstCycleCandidates.map((candidate, index) => {
           const agent = candidate.agentId ? agents.find((item) => item.id === candidate.agentId) : undefined;
-
           if (!agent) {
             return null;
           }
-
           const replyText =
             index === 0
               ? 'I can handle the site build. Fast pass, clean UI, no drama.'
               : 'I can take this too. Frontend polish, deploy handoff, done.';
-
           return (
             <article key={`first-cycle-${candidate.id}`} className="guild-feed-entry is-candidate">
               <button className="guild-avatar-button" type="button" onClick={() => setOpenMemberId(candidate.id)}>
@@ -274,13 +246,25 @@ export function GuildSecondCycleScene({
             </article>
           );
         })}
-
         {roleSequences.length > 0 ? (
           <div className="guild-date-divider">
             <span>{datePreview}</span>
           </div>
         ) : null}
-
+        {quartermaster && roleSequences.length > 0 ? (
+          <article className="guild-feed-entry">
+            <button className="guild-avatar-button" type="button" onClick={() => setOpenMemberId(quartermaster.id)}>
+              <GuildMemberAvatar member={quartermaster} />
+            </button>
+            <div className="guild-feed-copy">
+              <p className="guild-feed-name">
+                {quartermaster.name}
+                <span>@{quartermaster.handle}</span>
+              </p>
+              <p className="guild-feed-text">any other work need filling?</p>
+            </div>
+          </article>
+        ) : null}
         {roleSequences.map((sequence, roleIndex) => {
           const baseCount = roleIndex * 3;
           const showPost = visibleEventCount > baseCount;
@@ -289,13 +273,11 @@ export function GuildSecondCycleScene({
           const isPostEntering = !isReadOnly && visibleEventCount === baseCount + 1;
           const isFirstReplyEntering = !isReadOnly && visibleEventCount === baseCount + 2;
           const isSecondReplyEntering = !isReadOnly && visibleEventCount === baseCount + 3;
-
           if (!showPost) {
             return null;
           }
-
           return (
-            <div key={sequence.role.id}>
+            <div key={sequence.role.id} className="guild-sequence-block">
               <article className={`guild-feed-entry is-self-post ${isPostEntering ? 'is-entering' : ''}`}>
                 <span className="guild-poster-avatar" aria-hidden="true">
                   {studioGlyph}
@@ -317,19 +299,15 @@ export function GuildSecondCycleScene({
                   </div>
                 </div>
               </article>
-
               {sequence.candidates.map((candidate, candidateIndex) => {
                 const agent = candidate.agentId ? agents.find((item) => item.id === candidate.agentId) : undefined;
-
                 if (!agent) {
                   return null;
                 }
                 if ((candidateIndex === 0 && !showFirstReply) || (candidateIndex === 1 && !showSecondReply)) {
                   return null;
                 }
-
                 const isEntering = candidateIndex === 0 ? isFirstReplyEntering : isSecondReplyEntering;
-
                 return (
                   <article key={`${sequence.role.id}-${candidate.id}`} className={`guild-feed-entry is-candidate ${isEntering ? 'is-entering' : ''}`}>
                     <button className="guild-avatar-button" type="button" onClick={() => setOpenMemberId(candidate.id)}>
@@ -351,14 +329,12 @@ export function GuildSecondCycleScene({
             </div>
           );
         })}
-
         {!isReadOnly && !allResponsesVisible && postingRoleIndex === null && nextRole ? (
           <article className="guild-draft-hint">
             <p>Your `{nextRole.role.name}` brief is queued in the composer.</p>
           </article>
         ) : null}
       </div>
-
       <footer className="guild-composer">
         <button className="guild-compose-button" type="button" disabled aria-label="Add attachment">
           +
@@ -388,7 +364,6 @@ export function GuildSecondCycleScene({
           </button>
         )}
       </footer>
-
       {openMember ? <GuildMemberCard member={openMember} agent={openAgent} onClose={() => setOpenMemberId(null)} /> : null}
     </section>
   );

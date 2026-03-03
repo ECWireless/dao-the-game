@@ -168,6 +168,11 @@
   align-items: start;
 }
 
+.guild-sequence-block {
+  display: grid;
+  gap: 0.88rem;
+}
+
 .guild-avatar-button {
   border: 0;
   padding: 0;

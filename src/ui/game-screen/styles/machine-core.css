@@ -166,11 +166,17 @@
   opacity: 0;
 }
 
-.machine-pipe.is-active .machine-pipe-flow,
-.machine-pipe.is-done .machine-pipe-flow {
+.machine-pipe.is-active .machine-pipe-flow {
   opacity: 1;
   stroke: rgb(122 230 255 / 72%);
   animation: pipeFlow 620ms linear infinite;
+}
+
+.machine-pipe.is-done .machine-pipe-flow {
+  opacity: 0.72;
+  stroke: rgb(103 221 184 / 46%);
+  stroke-dasharray: 18 0;
+  animation: none;
 }
 
 .machine-pipe.is-done .machine-pipe-core {
@@ -248,6 +254,17 @@
   cursor: pointer;
 }
 
+.machine-node-output.is-ready {
+  border-color: rgb(103 221 184 / 34%);
+  background:
+    linear-gradient(180deg, rgb(58 181 120 / 10%), rgb(255 255 255 / 2%)),
+    rgb(20 27 42 / 86%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 4%),
+    0 0 0 2px rgb(103 221 184 / 10%),
+    0 16px 28px rgb(3 8 15 / 28%);
+}
+
 .machine-node-output.is-actionable::after {
   content: '';
   position: absolute;
@@ -255,6 +272,23 @@
   border-radius: 1rem;
   border: 1px solid rgb(122 230 255 / 16%);
   animation: outputPulse 900ms ease-in-out infinite alternate;
+}
+
+.machine-node-callout {
+  margin-top: 0.12rem;
+  justify-self: start;
+  min-height: 1.4rem;
+  border-radius: 999px;
+  padding: 0 0.48rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(103 221 184 / 14%);
+  color: #d5ffe9;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .machine-packet {
