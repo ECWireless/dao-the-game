@@ -1,6 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent } from 'react';
 import type { Agent, HatRole } from '../../../types';
 import { findRaidGuildMember, getRaidGuildCandidatesForRole } from '../guildData';
+import {
+  WhiteboardEdgeCue,
+  WhiteboardHud,
+  WhiteboardIntegrateCard
+} from '../components/WhiteboardChrome';
+import { WhiteboardSheet } from '../components/WhiteboardSheet';
 import {
   buildWhiteboardLinks,
   getWhiteboardBranchTriggerPosition,
@@ -29,6 +35,7 @@ const STUDIO_NAME_LIMIT = 20;
 const DEFAULT_ROLE_NAME = WHITEBOARD_ROLE_BLUEPRINTS[0].label;
 const CUE_SIZE = 32;
 const CUE_MARGIN = 9;
+const DRAG_START_THRESHOLD = 6;
 
 function clamp(value: number, min: number, max: number) { return Math.max(min, Math.min(value, max)); }
 
@@ -59,7 +66,8 @@ export function WhiteboardScene({
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const branchTriggerRef = useRef<HTMLButtonElement | null>(null);
   const nodeRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-  const dragRef = useRef<{ pointerId: number; originX: number; originY: number; startX: number; startY: number } | null>(null);
+  const dragRef = useRef<{ pointerId: number; originX: number; originY: number; startX: number; startY: number; hasMoved: boolean } | null>(null);
+  const suppressClickUntilRef = useRef(0);
 
   useEffect(() => setStudioDraft(studioName), [studioName]);
 
@@ -90,6 +98,12 @@ export function WhiteboardScene({
   const activeRoleIndex = activeRole ? roles.findIndex((role) => role.id === activeRole.id) : -1;
   const activeRoleBlueprint = activeRoleIndex >= 0 ? WHITEBOARD_ROLE_BLUEPRINTS[activeRoleIndex] ?? WHITEBOARD_ROLE_BLUEPRINTS[WHITEBOARD_ROLE_BLUEPRINTS.length - 1] : null;
   const guildCandidates = activeRole ? getRaidGuildCandidatesForRole(agents, activeRole.id, 2) : [];
+  const candidateOptions = guildCandidates.flatMap((candidate) => {
+    const agent = candidate.agentId ? agents.find((item) => item.id === candidate.agentId) : undefined;
+    return agent && candidate.agentId
+      ? [{ ...candidate, agentId: candidate.agentId, roleAffinity: agent.roleAffinity, reliability: agent.reliability, speed: agent.speed }]
+      : [];
+  });
   const boardLinks = buildWhiteboardLinks(visibleRoles, isExpanded);
   const addBranchPosition = getWhiteboardBranchTriggerPosition(isExpanded ? nextRole?.id : firstRole?.id, isExpanded);
   const boardOffsetClampX = isExpanded ? 320 : 220;
@@ -204,31 +218,50 @@ export function WhiteboardScene({
 
   const handleBoardPointerDown = (event: PointerEvent<HTMLElement>) => {
     const target = event.target as HTMLElement;
-    if (target.closest('[data-drag-block="true"], input, textarea, label')) return;
+    if (target.closest('input, textarea, label')) return;
     dragRef.current = {
       pointerId: event.pointerId,
       originX: offset.x,
       originY: offset.y,
       startX: event.clientX,
-      startY: event.clientY
+      startY: event.clientY,
+      hasMoved: false
     };
-    setIsDragging(true);
-    event.currentTarget.setPointerCapture(event.pointerId);
   };
 
   const handleBoardPointerMove = (event: PointerEvent<HTMLElement>) => {
     if (!dragRef.current || dragRef.current.pointerId !== event.pointerId) return;
+    const deltaX = event.clientX - dragRef.current.startX;
+    const deltaY = event.clientY - dragRef.current.startY;
+    if (!dragRef.current.hasMoved) {
+      if (Math.hypot(deltaX, deltaY) < DRAG_START_THRESHOLD) {
+        return;
+      }
+      dragRef.current.hasMoved = true;
+      setIsDragging(true);
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
     setOffset({
-      x: clamp(dragRef.current.originX + (event.clientX - dragRef.current.startX), -boardOffsetClampX, boardOffsetClampX),
-      y: clamp(dragRef.current.originY + (event.clientY - dragRef.current.startY), -150, 150)
+      x: clamp(dragRef.current.originX + deltaX, -boardOffsetClampX, boardOffsetClampX),
+      y: clamp(dragRef.current.originY + deltaY, -150, 150)
     });
   };
 
   const handleBoardPointerEnd = (event: PointerEvent<HTMLElement>) => {
     if (!dragRef.current || dragRef.current.pointerId !== event.pointerId) return;
+    if (dragRef.current.hasMoved) {
+      suppressClickUntilRef.current = window.performance.now() + 160;
+    }
     dragRef.current = null;
     setIsDragging(false);
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+
+  const handleBoardClickCapture = (event: MouseEvent<HTMLElement>) => {
+    if (window.performance.now() < suppressClickUntilRef.current) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
   };
 
   return (
@@ -239,13 +272,10 @@ export function WhiteboardScene({
         onPointerMove={handleBoardPointerMove}
         onPointerUp={handleBoardPointerEnd}
         onPointerCancel={handleBoardPointerEnd}
+        onClickCapture={handleBoardClickCapture}
       >
         <div className="whiteboard-viewport" ref={viewportRef}>
-          {cueState ? (
-            <span className={`whiteboard-edge-cue is-${cueState.side}`} style={{ top: `${cueState.top}px` }} aria-hidden="true">
-              <span style={{ transform: `rotate(${cueState.angle}deg)` }}>→</span>
-            </span>
-          ) : null}
+          <WhiteboardEdgeCue cueState={cueState} />
           <div className="whiteboard-canvas" style={{ transform: `translate(${offset.x}px, ${offset.y}px)` }} aria-label="Org chart board">
             {visibleRoles.length > 0 ? <svg className="whiteboard-links" viewBox="0 0 920 520" aria-hidden="true">{boardLinks.map((path) => <path key={path} d={path} />)}</svg> : null}
             <button
@@ -320,80 +350,28 @@ export function WhiteboardScene({
             })}
           </div>
         </div>
-        <div className="whiteboard-hud" aria-hidden="true">
-          <span>Planning board</span>
-          <span>{studioName || 'Unnamed studio'}</span>
-        </div>
+        <WhiteboardHud studioName={studioName} />
       </section>
 
-      {canIntegrateGuild && !sheetMode ? (
-        <section className="whiteboard-integrate-card">
-          <p>
-            {currentImportTargetRole
-              ? `Tap ${currentImportTargetRole.name} to choose who fills it.`
-              : 'RaidGuild applicants are queued for your open branch.'}
-          </p>
-        </section>
-      ) : null}
+      {canIntegrateGuild && !sheetMode ? <WhiteboardIntegrateCard roleName={currentImportTargetRole?.name} /> : null}
 
       {sheetMode ? (
-        <div className="whiteboard-sheet-scrim">
-          <section className="whiteboard-sheet" aria-label={sheetMode === 'studio' ? 'Name your studio' : sheetMode === 'integrate' ? 'Import a contractor' : 'Add role'}>
-            <p className="whiteboard-sheet-kicker">{sheetMode === 'studio' ? 'Studio' : sheetMode === 'integrate' ? 'RaidGuild' : 'Role'}</p>
-            <h2>{sheetMode === 'studio' ? 'Name your studio' : sheetMode === 'integrate' ? 'Import a contractor' : 'Create role'}</h2>
-            <p className="whiteboard-sheet-copy">
-              {sheetMode === 'studio'
-                ? 'This name will appear anywhere the studio is referenced.'
-                : sheetMode === 'integrate'
-                  ? `Pick one applicant who offered for ${activeRole?.name ?? 'this role'}.`
-                  : 'Review the prefilled role details, then create it.'}
-            </p>
-
-            {sheetMode === 'studio' ? (
-              <label className="whiteboard-field">
-                <span>Studio name</span>
-                <input autoFocus maxLength={STUDIO_NAME_LIMIT} value={studioDraft} onChange={(event) => setStudioDraft(event.target.value)} />
-              </label>
-            ) : sheetMode === 'role' ? (
-              <div className="whiteboard-summary">
-                <div className="whiteboard-summary-row"><span>Role name</span><strong>{activeRoleBlueprint?.label ?? DEFAULT_ROLE_NAME}</strong></div>
-                <div className="whiteboard-summary-row"><span>Reports to</span><strong>{studioName}</strong></div>
-                <div className="whiteboard-summary-row"><span>Scope</span><strong>{activeRoleBlueprint?.scope ?? 'Build the site'}</strong></div>
-              </div>
-            ) : (
-              <div className="whiteboard-candidate-list">
-                {guildCandidates.map((candidate) => {
-                  const agent = candidate.agentId ? agents.find((item) => item.id === candidate.agentId) : undefined;
-                  if (!agent || !candidate.agentId) return null;
-                  return (
-                    <button key={candidate.id} className="whiteboard-candidate-row" type="button" onClick={() => commitCandidate(candidate.agentId!)}>
-                      <span className="whiteboard-candidate-avatar" aria-hidden="true" style={{ '--guild-avatar-accent': candidate.accent, '--guild-avatar-shadow': candidate.shadow } as CSSProperties}>
-                        {candidate.name.charAt(0)}
-                      </span>
-                      <span className="whiteboard-candidate-copy">
-                        <span className="whiteboard-candidate-name">{candidate.name}</span>
-                        <span className="whiteboard-candidate-meta">{agent.roleAffinity} | rel {agent.reliability} | spd {agent.speed}</span>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            <div className="whiteboard-sheet-actions">
-              {sheetMode === 'studio' ? (
-                <>
-                  <button className="secondary-action" type="button" onClick={() => setSheetMode(null)}>Cancel</button>
-                  <button className="primary-action" type="button" disabled={!studioReady} onClick={commitStudioName}>Save Studio</button>
-                </>
-              ) : sheetMode === 'role' ? (
-                <button className="primary-action whiteboard-create-role" type="button" onClick={commitRole}>Create Role</button>
-              ) : (
-                <button className="secondary-action whiteboard-create-role" type="button" onClick={() => setSheetMode(null)}>Close</button>
-              )}
-            </div>
-          </section>
-        </div>
+        <WhiteboardSheet
+          mode={sheetMode}
+          studioDraft={studioDraft}
+          studioName={studioName}
+          studioReady={studioReady}
+          studioNameLimit={STUDIO_NAME_LIMIT}
+          activeRoleName={activeRole?.name}
+          roleLabel={activeRoleBlueprint?.label ?? DEFAULT_ROLE_NAME}
+          roleScope={activeRoleBlueprint?.scope ?? 'Build the site'}
+          candidates={candidateOptions}
+          onStudioDraftChange={setStudioDraft}
+          onCommitStudioName={commitStudioName}
+          onCommitRole={commitRole}
+          onCommitCandidate={commitCandidate}
+          onClose={() => setSheetMode(null)}
+        />
       ) : null}
     </section>
   );

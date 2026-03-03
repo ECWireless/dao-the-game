@@ -49,7 +49,7 @@ const CROSS_APP_HANDOFFS: Record<string, CrossAppHandoff> = {
     targetApp: 'machine',
     appName: 'Machine',
     title: 'Machine Companion',
-    preview: 'Deployment rig is installed. Switch over.',
+    preview: 'Deployment rig is installed. Open Machine to deploy.',
     icon: 'machine'
   },
   'mail-fail': {
@@ -91,7 +91,7 @@ const CROSS_APP_HANDOFFS: Record<string, CrossAppHandoff> = {
     targetApp: 'machine',
     appName: 'Machine',
     title: 'Machine Companion',
-    preview: 'Updated crew loaded. Switch over.',
+    preview: 'Updated crew loaded. Open Machine to deploy again.',
     icon: 'machine'
   },
   'mail-success': {

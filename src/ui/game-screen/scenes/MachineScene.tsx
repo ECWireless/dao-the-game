@@ -116,7 +116,7 @@ export function MachineScene({
           ? 'Output node fabricating creation'
           : `${roleNodes[safePacketIndex - 2]?.roleName ?? 'Role'} processing`
     : hasRun
-      ? 'Creation staged in output node'
+      ? 'Creation ejected to output node'
       : 'Assembly line armed';
   const statusDetail = isRunning
     ? safePacketIndex <= 1
@@ -125,7 +125,7 @@ export function MachineScene({
         ? 'The final creation is being compressed and pushed into the output node.'
         : `${roleNodes[safePacketIndex - 2]?.operatorName ?? 'Machine core'} is actively shaping this pass.`
     : hasRun
-      ? latestRun?.events[latestRun.events.length - 1] ?? 'Creation is waiting in the output node.'
+      ? latestRun?.events[latestRun.events.length - 1] ?? 'The line has cooled and the deploy preview is latched open.'
       : `Ready to route through ${roleLanes.length} linked role ${roleLanes.length === 1 ? 'node' : 'nodes'}.`;
   const sharedRoleCenterY = roleNodes[0]?.y ? roleNodes[0].y + roleNodes[0].height / 2 : rootNode.y + rootNode.height / 2;
   const pipeSegments: PipeSegment[] = [
@@ -255,7 +255,7 @@ export function MachineScene({
         </span>
       </section>
 
-      <section className="machine-board-shell">
+      <section className={`machine-board-shell ${isOutputReady ? 'is-complete' : ''}`}>
         <div
           className={`machine-board-viewport ${isDragging ? 'is-dragging' : ''}`}
           ref={viewportRef}
@@ -347,16 +347,16 @@ export function MachineScene({
                 {isOutputReady
                   ? isPreviewVisible
                     ? 'Preview Loaded'
-                    : 'Creation Ready'
+                    : 'Preview Ejected'
                   : isRunning
                     ? 'Fabricating...'
                     : 'Awaiting build'}
               </span>
               <span className="machine-node-meta">
-                {isOutputReady ? 'Tap to open the generated preview' : 'Finished builds eject here'}
+                {isOutputReady ? 'Open the deployed site preview' : 'Finished builds eject here'}
               </span>
               {isOutputReady ? (
-                <span className="machine-node-callout">{isPreviewVisible ? 'Preview open' : 'Tap to open'}</span>
+                <span className="machine-node-callout">{isPreviewVisible ? 'Preview open' : 'Open deploy'}</span>
               ) : null}
             </button>
           </div>

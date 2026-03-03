@@ -113,6 +113,7 @@
 
 .deployment-preview.is-rough {
   font-family: 'Trebuchet MS', 'Verdana', sans-serif;
+  background: linear-gradient(180deg, #ffffff, #eef3ff);
 }
 
 .deployment-preview.is-polished {
@@ -127,8 +128,10 @@
 }
 
 .deployment-preview.is-rough .deployment-hero {
-  background: linear-gradient(180deg, #5f8ff9, #7b8cff);
+  border: 1px solid rgb(28 56 132 / 18%);
+  background: linear-gradient(180deg, #4f80ff, #7d8af9);
   color: #fdfefe;
+  box-shadow: 0 0.4rem 1rem rgb(61 94 173 / 14%);
 }
 
 .deployment-preview.is-polished .deployment-hero {
@@ -161,6 +164,25 @@
   opacity: 0.9;
 }
 
+.deployment-quality-strip {
+  margin-top: 0.04rem;
+  display: flex;
+  gap: 0.28rem;
+  flex-wrap: wrap;
+}
+
+.deployment-quality-strip span {
+  min-height: 1.25rem;
+  border-radius: 999px;
+  padding: 0 0.42rem;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.54rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .deployment-hero-actions {
   margin-top: 0.08rem;
   display: flex;
@@ -181,6 +203,16 @@
 
 .deployment-hero-actions span {
   background: rgb(255 255 255 / 16%);
+}
+
+.deployment-preview.is-rough .deployment-quality-strip span {
+  background: rgb(255 255 255 / 18%);
+  color: rgb(247 252 255 / 94%);
+}
+
+.deployment-preview.is-polished .deployment-quality-strip span {
+  background: rgb(255 255 255 / 14%);
+  color: rgb(242 255 254 / 92%);
 }
 
 .deployment-panel p,
@@ -209,6 +241,15 @@
 
 .deployment-panel.is-primary {
   background: rgb(17 29 45 / 14%);
+}
+
+.deployment-preview.is-rough .deployment-hero-actions .is-primary {
+  background: #ffffff;
+  color: #1a3e72;
+}
+
+.deployment-preview.is-rough .deployment-panel.is-primary {
+  background: rgb(36 78 168 / 10%);
 }
 
 .deployment-metrics {

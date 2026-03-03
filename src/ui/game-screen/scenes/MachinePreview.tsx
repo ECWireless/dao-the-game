@@ -74,21 +74,37 @@ export function MachinePreview({
 
         <div className={`deployment-preview is-${deploymentTone}`}>
           <section className="deployment-hero">
-            <p className="deployment-hero-kicker">Web3 conference relaunch</p>
+            <p className="deployment-hero-kicker">
+              {deploymentTone === 'rough' ? 'Emergency conference rebuild' : 'Web3 conference relaunch'}
+            </p>
             <h4>{conferenceName}</h4>
             <p>
               {deploymentTone === 'rough'
                 ? 'A real landing page exists now, but it still feels like one sharp builder shipped it alone under time pressure.'
                 : 'The relaunch now feels like a polished flagship event page with a clean conference narrative.'}
             </p>
+            <div className={`deployment-quality-strip ${deploymentTone === 'polished' ? 'is-polished' : ''}`}>
+              {deploymentTone === 'rough' ? (
+                <>
+                  <span>Live draft</span>
+                  <span>No QA pass</span>
+                </>
+              ) : (
+                <>
+                  <span>Design approved</span>
+                  <span>QA cleared</span>
+                  <span>Launch ready</span>
+                </>
+              )}
+            </div>
             <div className="deployment-hero-meta">
               <span>Denver • May 2026</span>
               <span>Wallet-native ticketing</span>
             </div>
             <div className="deployment-hero-actions">
-              <span className="is-primary">Get Tickets</span>
-              <span>View Speakers</span>
-              <span>Side Events</span>
+              <span className="is-primary">{deploymentTone === 'rough' ? 'Tickets' : 'Get Tickets'}</span>
+              <span>{deploymentTone === 'rough' ? 'Speakers' : 'View Speakers'}</span>
+              <span>{deploymentTone === 'rough' ? 'Schedule' : 'Side Events'}</span>
             </div>
           </section>
 

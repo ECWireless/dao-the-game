@@ -260,9 +260,9 @@ export function renderSceneContent({
           from="Lina, Event Director"
           subject="Re: URGENT rebrand"
           body={[
-            'I just pulled this up and I am honestly stressing out.',
-            'This still does not feel ready to put in front of attendees.',
-            'Please clean this up fast and send me a stronger revision.'
+            'I just opened this and my stomach dropped.',
+            'I cannot put this in front of attendees like this, and we are running out of time.',
+            'Please clean this up fast and send me something stronger before I completely lose my mind.'
           ]}
         />
       );
@@ -345,9 +345,9 @@ export function renderSceneContent({
           from="Lina, Event Director"
           subject="Approved: Relaunch accepted"
           body={[
-            'This second submission is exactly what we needed.',
-            'The work feels polished, the review pass is strong, and deployment confidence is high.',
-            'Congrats. Your team turned panic into a clean relaunch.'
+            `This is exactly what we needed, ${studioName || 'team'}.`,
+            'I can finally breathe again. The site looks polished, the experience feels intentional, and I am comfortable putting this in front of attendees.',
+            'Thank you for pulling this off under pressure. I am wiring the $15,000 over ASAP.'
           ]}
           actionLabel={isInteractive ? 'Play Again' : undefined}
           onAction={isInteractive ? resetTutorial : undefined}
