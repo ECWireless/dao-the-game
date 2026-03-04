@@ -275,6 +275,7 @@ export const useGameStore = create<GameStore>()(
         const state = get();
         const activeRoles = getActiveRoles(state.roles, state.unlockedRoleCount);
         const runnableRoles = getConfiguredRunRoles(activeRoles);
+        const cycle = state.runCount === 0 ? 1 : 2;
 
         if (!areRolesFullyAssigned(runnableRoles)) {
           return undefined;
@@ -291,7 +292,9 @@ export const useGameStore = create<GameStore>()(
 
         const artifacts = generateArtifacts({
           result,
-          brief: TUTORIAL_BRIEF
+          brief: TUTORIAL_BRIEF,
+          cycle,
+          studioName: state.studioName
         });
 
         set({

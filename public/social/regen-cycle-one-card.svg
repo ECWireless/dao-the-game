@@ -1,0 +1,38 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="116" y1="70" x2="1084" y2="566" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3E5FD8" />
+      <stop offset="1" stop-color="#7A8EF1" />
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#F9FBFF" />
+      <stop offset="1" stop-color="#E9EFFB" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" rx="36" fill="url(#bg)" />
+  <circle cx="972" cy="110" r="92" fill="#FFFFFF" fill-opacity="0.12" />
+  <path d="M0 462C136 392 224 420 332 372C454 317 550 204 690 210C824 216 936 332 1200 258V630H0V462Z" fill="#3152C5" fill-opacity="0.82" />
+  <rect x="76" y="82" width="1048" height="466" rx="34" fill="#FFFFFF" fill-opacity="0.08" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2" />
+  <rect x="114" y="120" width="478" height="390" rx="28" fill="url(#panel)" />
+  <rect x="146" y="156" width="182" height="22" rx="11" fill="#D4DEF3" />
+  <rect x="146" y="204" width="260" height="128" rx="24" fill="#FFFFFF" stroke="#D8E2F4" stroke-width="2" />
+  <rect x="174" y="236" width="210" height="18" rx="9" fill="#CDD9EF" />
+  <rect x="174" y="268" width="154" height="14" rx="7" fill="#E2E9F7" />
+  <rect x="174" y="304" width="138" height="42" rx="18" fill="#FFFFFF" />
+  <rect x="146" y="368" width="414" height="108" rx="24" fill="#FFFFFF" stroke="#D8E2F4" stroke-width="2" />
+  <rect x="176" y="396" width="116" height="14" rx="7" fill="#D2DDF2" />
+  <rect x="176" y="422" width="232" height="14" rx="7" fill="#E6ECF8" />
+  <rect x="632" y="156" width="428" height="366" rx="28" fill="#FFFFFF" fill-opacity="0.08" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2" />
+  <g>
+    <text x="668" y="208" fill="#DCE7FF" font-family="Trebuchet MS, Verdana, sans-serif" font-size="22" font-weight="700" letter-spacing="4">CYCLE ONE</text>
+    <text x="668" y="278" fill="#FFFFFF" font-family="Georgia, 'Times New Roman', serif" font-size="54" font-weight="700">Regen Frontier</text>
+    <text x="668" y="334" fill="#F4F7FF" font-family="Trebuchet MS, Verdana, sans-serif" font-size="28">Functional, but clearly rushed.</text>
+    <text x="668" y="382" fill="#E4ECFF" font-family="Trebuchet MS, Verdana, sans-serif" font-size="20">
+      <tspan x="668" dy="0">Ticketing, lineup, and schedule are</tspan>
+      <tspan x="668" dy="28">back online again, but the brand</tspan>
+      <tspan x="668" dy="28">still feels generic and underdone.</tspan>
+    </text>
+    <rect x="668" y="440" width="174" height="56" rx="28" fill="#FFFFFF" fill-opacity="0.9" />
+    <text x="716" y="476" fill="#2C4AA2" font-family="Trebuchet MS, Verdana, sans-serif" font-size="20" font-weight="700">Live Draft</text>
+  </g>
+</svg>

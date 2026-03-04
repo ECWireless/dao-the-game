@@ -1,0 +1,46 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="124" y1="62" x2="1080" y2="570" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#14353A" />
+      <stop offset="1" stop-color="#2D786E" />
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#F8FAF5" />
+      <stop offset="1" stop-color="#E7F1EC" />
+    </linearGradient>
+    <linearGradient id="cardA" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#163C41" />
+      <stop offset="1" stop-color="#4AB8A8" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" rx="36" fill="url(#bg)" />
+  <circle cx="1016" cy="108" r="112" fill="#A9F3DE" fill-opacity="0.08" />
+  <path d="M0 476C138 414 254 432 368 384C486 334 584 232 714 236C864 242 982 350 1200 302V630H0V476Z" fill="#1C4B4C" fill-opacity="0.54" />
+  <rect x="74" y="80" width="1052" height="470" rx="34" fill="#FFFFFF" fill-opacity="0.06" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2" />
+  <rect x="116" y="116" width="490" height="398" rx="30" fill="url(#panel)" />
+  <rect x="152" y="152" width="194" height="24" rx="12" fill="#D8E8E2" />
+  <rect x="152" y="200" width="274" height="134" rx="28" fill="#FFFFFF" />
+  <rect x="186" y="236" width="224" height="20" rx="10" fill="#D0E4DD" />
+  <rect x="186" y="270" width="162" height="14" rx="7" fill="#E4EEEA" />
+  <rect x="186" y="308" width="146" height="44" rx="22" fill="#163C41" />
+  <rect x="362" y="308" width="154" height="44" rx="22" fill="#E2EFEA" />
+  <rect x="152" y="374" width="420" height="108" rx="24" fill="#FFFFFF" />
+  <rect x="184" y="402" width="124" height="14" rx="7" fill="#D7E8E2" />
+  <rect x="184" y="428" width="246" height="14" rx="7" fill="#E5EEEA" />
+  <rect x="430" y="212" width="112" height="92" rx="22" fill="url(#cardA)" />
+  <circle cx="486" cy="246" r="18" fill="#F8FAF5" fill-opacity="0.16" />
+  <rect x="452" y="274" width="68" height="10" rx="5" fill="#F8FAF5" fill-opacity="0.16" />
+  <rect x="632" y="152" width="440" height="370" rx="28" fill="#FFFFFF" fill-opacity="0.08" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2" />
+  <g>
+    <text x="668" y="204" fill="#B9F1E0" font-family="Trebuchet MS, Verdana, sans-serif" font-size="22" font-weight="700" letter-spacing="4">CYCLE TWO</text>
+    <text x="668" y="278" fill="#FFFFFF" font-family="Georgia, 'Times New Roman', serif" font-size="54" font-weight="700">Regen Frontier</text>
+    <text x="668" y="334" fill="#F2F8F3" font-family="Trebuchet MS, Verdana, sans-serif" font-size="28">A polished flagship relaunch.</text>
+    <text x="668" y="382" fill="#E2F1EA" font-family="Trebuchet MS, Verdana, sans-serif" font-size="20">
+      <tspan x="668" dy="0">Clear narrative, stronger brand, and</tspan>
+      <tspan x="668" dy="28">a premium registration flow for a</tspan>
+      <tspan x="668" dy="28">real flagship event.</tspan>
+    </text>
+    <rect x="668" y="440" width="214" height="56" rx="28" fill="#F8FAF5" />
+    <text x="712" y="476" fill="#163C41" font-family="Trebuchet MS, Verdana, sans-serif" font-size="18" font-weight="700">Launch Ready</text>
+  </g>
+</svg>
