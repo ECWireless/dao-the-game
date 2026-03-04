@@ -1,0 +1,973 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="A polished flagship relaunch for Regen Frontier Global Conference with premium registration, programming, and venue flow."
+    />
+    <meta name="theme-color" content="#1b4f52" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Regen Frontier Global Conference" />
+    <meta
+      property="og:description"
+      content="Cycle two: a polished conference relaunch with stronger branding, clearer ticketing, and a premium event feel."
+    />
+    <meta property="og:image" content="/social/regen-cycle-two-card.svg" />
+    <meta property="og:image:type" content="image/svg+xml" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Regen Frontier Global Conference" />
+    <meta
+      name="twitter:description"
+      content="Cycle two: a premium relaunch for a real flagship web3 conference."
+    />
+    <meta name="twitter:image" content="/social/regen-cycle-two-card.svg" />
+    <title>Regen Frontier Global Conference</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f5f6ef;
+        --surface: rgba(255, 255, 255, 0.84);
+        --surface-strong: rgba(255, 255, 255, 0.92);
+        --line: rgba(20, 38, 42, 0.08);
+        --ink: #15262b;
+        --muted: #5a6b6f;
+        --muted-strong: #405257;
+        --accent: #1b4f52;
+        --accent-2: #2f7f77;
+        --accent-soft: #d8eee9;
+        --sand: #f0e7d2;
+        font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+        background: var(--bg);
+        color: var(--ink);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at top right, rgba(79, 184, 165, 0.14), transparent 28%),
+          radial-gradient(circle at 8% 18%, rgba(241, 201, 126, 0.1), transparent 26%),
+          linear-gradient(180deg, #fafaf6 0%, #eef2ec 52%, #edf1eb 100%);
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .shell {
+        width: min(1200px, calc(100% - 28px));
+        margin: 0 auto;
+        padding: 14px 0 40px;
+      }
+
+      .announce {
+        min-height: 42px;
+        border-radius: 999px;
+        padding: 0 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        background: rgba(21, 39, 43, 0.05);
+        color: var(--muted-strong);
+        font-family: "Trebuchet MS", Verdana, sans-serif;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .announce strong {
+        color: var(--accent);
+      }
+
+      .topbar {
+        margin-top: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .brandmark {
+        width: 46px;
+        height: 46px;
+        border-radius: 15px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #16363c, #2f7f77);
+        color: #f6f8f2;
+        font-family: "Trebuchet MS", Verdana, sans-serif;
+        font-size: 18px;
+        font-weight: 800;
+        box-shadow: 0 18px 30px rgba(23, 55, 57, 0.14);
+      }
+
+      .brandcopy {
+        display: grid;
+        gap: 2px;
+      }
+
+      .brandcopy strong {
+        font-family: "Trebuchet MS", Verdana, sans-serif;
+        font-size: 14px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--ink);
+      }
+
+      .brandcopy span {
+        font-family: "Trebuchet MS", Verdana, sans-serif;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        font-family: "Trebuchet MS", Verdana, sans-serif;
+      }
+
+      .nav a,
+      .nav .primary {
+        min-height: 40px;
+        padding: 0 15px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+      }
+
+      .nav a {
+        background: rgba(21, 39, 43, 0.05);
+        color: var(--muted-strong);
+      }
+
+      .nav .primary {
+        background: var(--accent);
+        color: #f7f8f1;
+      }
+
+      .hero {
+        margin-top: 18px;
+        padding: clamp(22px, 4vw, 44px);
+        border-radius: 34px;
+        display: grid;
+        gap: 26px;
+        background:
+          radial-gradient(circle at top right, rgba(163, 244, 226, 0.22), transparent 28%),
+          radial-gradient(circle at 18% 26%, rgba(255, 255, 255, 0.08), transparent 18%),
+          linear-gradient(135deg, #143338 0%, #1e5852 52%, #327d72 100%);
+        color: #f6f8f1;
+        box-shadow: 0 34px 58px rgba(20, 53, 56, 0.16);
+      }
+
+      .hero-grid {
+        display: grid;
+        gap: 24px;
+      }
+
+      .eyebrow,
+      .section-label,
+      .card-kicker,
+      .label {
+        margin: 0;
+        font-family: "Trebuchet MS", Verdana, sans-serif;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .eyebrow,
+      .section-label,
+      .card-kicker {
+        opacity: 0.8;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        margin-top: 12px;
+        max-width: 8.2ch;
+        font-size: clamp(56px, 8vw, 96px);
+        line-height: 0.9;
+        letter-spacing: -0.05em;
+      }
+
+      .hero-copy {
+        margin-top: 16px;
+        max-width: 42rem;
+        font-size: 18px;
+        line-height: 1.7;
+        color: rgba(246, 248, 241, 0.9);
+      }
+
+      .hero-meta,
+      .hero-actions,
+      .tag-row,
+      .highlight-tags,
+      .sponsor-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .hero-meta,
+      .hero-actions {
+        margin-top: 18px;
+      }
+
+      .hero-meta span,
+      .hero-actions a,
+      .tag-row span,
+      .highlight-tags span,
+      .sponsor-row span {
+        min-height: 40px;
+        padding: 0 14px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        font-family: "Trebuchet MS", Verdana, sans-serif;
+      }
+
+      .hero-meta span {
+        background: rgba(255, 255, 255, 0.12);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .hero-actions a {
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .hero-actions a:first-child {
+        background: #f6f8f1;
+        color: #16393d;
+      }
+
+      .hero-actions a:not(:first-child) {
+        background: rgba(255, 255, 255, 0.12);
+        color: #f6f8f1;
+      }
+
+      .hero-visual {
+        border-radius: 26px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(10, 22, 25, 0.14);
+      }
+
+      .hero-visual svg {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .stats {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .stat,
+      .card,
+      .program-item,
+      .speaker,
+      .ticket,
+      .faq-item,
+      .venue-card {
+        border-radius: 22px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      }
+
+      .stat {
+        padding: 18px;
+      }
+
+      .stat .label {
+        color: #6c7f82;
+      }
+
+      .stat strong {
+        display: block;
+        margin-top: 8px;
+        font-family: "Trebuchet MS", Verdana, sans-serif;
+        font-size: 32px;
+        line-height: 1;
+        color: var(--ink);
+      }
+
+      .content-grid {
+        margin-top: 18px;
+        display: grid;
+        gap: 16px;
+      }
+
+      .card,
+      .venue-card {
+        padding: 22px;
+      }
+
+      .card h2,
+      .venue-card h2 {
+        margin-top: 12px;
+        font-size: 31px;
+        line-height: 1.03;
+        color: var(--ink);
+      }
+
+      .card p,
+      .venue-card p,
+      .faq-item p,
+      .program-item p,
+      .speaker p,
+      .ticket p {
+        margin-top: 10px;
+        font-size: 15px;
+        line-height: 1.72;
+        color: var(--muted);
+      }
+
+      .program,
+      .speaker-list,
+      .ticket-grid,
+      .faq,
+      .highlight-grid {
+        margin-top: 18px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .program-item {
+        padding: 16px;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 14px;
+      }
+
+      .time {
+        min-width: 74px;
+        color: var(--accent);
+        font-family: "Trebuchet MS", Verdana, sans-serif;
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+      }
+
+      .program-item strong,
+      .speaker strong,
+      .ticket strong,
+      .faq-item strong {
+        display: block;
+        color: var(--ink);
+        font-size: 16px;
+      }
+
+      .speaker {
+        padding: 14px;
+        display: grid;
+        grid-template-columns: 56px minmax(0, 1fr);
+        gap: 12px;
+        align-items: center;
+      }
+
+      .avatar {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #173d42, #4ab7a8);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.34);
+      }
+
+      .highlight-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .highlight-card {
+        padding: 18px;
+        border-radius: 20px;
+        background: var(--surface-strong);
+        border: 1px solid var(--line);
+      }
+
+      .highlight-card h3 {
+        margin-top: 8px;
+        font-size: 20px;
+        line-height: 1.08;
+      }
+
+      .highlight-card p {
+        margin-top: 10px;
+        font-size: 14px;
+        line-height: 1.65;
+        color: var(--muted);
+      }
+
+      .highlight-tags,
+      .tag-row,
+      .sponsor-row {
+        margin-top: 16px;
+      }
+
+      .highlight-tags span,
+      .tag-row span,
+      .sponsor-row span {
+        background: rgba(21, 39, 43, 0.05);
+        color: var(--muted-strong);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .ticket-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .ticket {
+        padding: 18px;
+      }
+
+      .ticket .price {
+        display: block;
+        margin-top: 10px;
+        font-family: "Trebuchet MS", Verdana, sans-serif;
+        font-size: 30px;
+        line-height: 1;
+        color: var(--ink);
+      }
+
+      .ticket ul {
+        margin: 14px 0 0;
+        padding-left: 18px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.65;
+      }
+
+      .ticket li + li {
+        margin-top: 5px;
+      }
+
+      .ticket.is-featured {
+        background: linear-gradient(180deg, rgba(218, 239, 233, 0.9), rgba(255, 255, 255, 0.95));
+        border-color: rgba(47, 127, 119, 0.18);
+      }
+
+      .venue-card {
+        display: grid;
+        gap: 18px;
+      }
+
+      .venue-grid {
+        display: grid;
+        gap: 14px;
+      }
+
+      .venue-map {
+        min-height: 220px;
+        border-radius: 22px;
+        overflow: hidden;
+        background: linear-gradient(135deg, #e8efe8, #dde9e2);
+        border: 1px solid rgba(21, 39, 43, 0.06);
+      }
+
+      .venue-map svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+
+      .faq {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .faq-item {
+        padding: 18px;
+      }
+
+      .cta {
+        margin-top: 18px;
+        padding: 20px 22px;
+        border-radius: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        background: rgba(21, 39, 43, 0.05);
+        border: 1px solid rgba(21, 39, 43, 0.06);
+      }
+
+      .cta h3 {
+        font-size: 24px;
+        line-height: 1.05;
+      }
+
+      .cta p {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.65;
+      }
+
+      .cta a {
+        min-height: 46px;
+        padding: 0 18px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--accent);
+        color: #f7f8f1;
+        text-decoration: none;
+        font-family: "Trebuchet MS", Verdana, sans-serif;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+
+      .footer {
+        margin-top: 16px;
+        padding: 6px 2px 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        color: #647579;
+        font-family: "Trebuchet MS", Verdana, sans-serif;
+        font-size: 12px;
+      }
+
+      .footer strong {
+        color: var(--muted-strong);
+      }
+
+      @media (min-width: 960px) {
+        .hero-grid {
+          grid-template-columns: 1.02fr 0.98fr;
+          align-items: center;
+        }
+
+        .content-grid {
+          grid-template-columns: 1.05fr 0.95fr;
+          align-items: start;
+        }
+
+        .venue-grid {
+          grid-template-columns: 1fr 0.9fr;
+          align-items: start;
+        }
+      }
+
+      @media (max-width: 900px) {
+        .stats,
+        .ticket-grid,
+        .faq {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 720px) {
+        .topbar,
+        .cta,
+        .footer {
+          display: grid;
+          justify-content: stretch;
+        }
+
+        .hero-actions a,
+        .nav .primary {
+          flex: 1 1 auto;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .stats,
+        .highlight-grid,
+        .ticket-grid,
+        .faq {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .announce {
+          min-height: 0;
+          padding: 10px 14px;
+          display: grid;
+          justify-content: stretch;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <div class="announce">
+        <span><strong>Registration is live.</strong> Ticketing, speaker lineup, venue guide, and side events are all open.</span>
+        <span>May 23–25 • Denver, CO</span>
+      </div>
+
+      <header class="topbar">
+        <div class="brand">
+          <span class="brandmark">RF</span>
+          <div class="brandcopy">
+            <strong>Regen Frontier</strong>
+            <span>Global Conference for Protocol Operators, Builders, and Founders</span>
+          </div>
+        </div>
+        <nav class="nav">
+          <a href="#experience">Experience</a>
+          <a href="#speakers">Speakers</a>
+          <a href="#schedule">Program</a>
+          <a href="#venue">Venue</a>
+          <span class="primary">Get Tickets</span>
+        </nav>
+      </header>
+
+      <section class="hero">
+        <div class="hero-grid">
+          <div>
+            <p class="eyebrow">A flagship summit for the teams shipping the next web3 cycle</p>
+            <h1>Regen Frontier Global Conference</h1>
+            <p class="hero-copy">
+              Three days of operator strategy, product launches, governance clinics, and live ecosystem demos. Regen
+              Frontier brings protocol teams, founders, and ecosystem builders into one clear event narrative with a
+              premium, trustworthy registration experience.
+            </p>
+            <div class="hero-meta">
+              <span>Denver • Riverfront Campus + Civic Hall</span>
+              <span>Wallet-native check-in & gated sessions</span>
+              <span>5 tracks • 18 side events • nightly meetups</span>
+            </div>
+            <div class="hero-actions">
+              <a href="#tickets">Get Tickets</a>
+              <a href="#speakers">Meet Speakers</a>
+              <a href="#schedule">View Program</a>
+            </div>
+          </div>
+
+          <div class="hero-visual" aria-hidden="true">
+            <svg viewBox="0 0 620 440" role="presentation" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+                  <stop offset="0%" stop-color="#102c31" />
+                  <stop offset="55%" stop-color="#1d5650" />
+                  <stop offset="100%" stop-color="#2d7d73" />
+                </linearGradient>
+                <linearGradient id="panelA" x1="0" x2="1" y1="0" y2="1">
+                  <stop offset="0%" stop-color="#123238" />
+                  <stop offset="100%" stop-color="#4cc0ae" />
+                </linearGradient>
+                <linearGradient id="panelB" x1="0" x2="1" y1="0" y2="1">
+                  <stop offset="0%" stop-color="#f4e0a6" />
+                  <stop offset="100%" stop-color="#f3b76f" />
+                </linearGradient>
+              </defs>
+              <rect width="620" height="440" rx="26" fill="url(#bg)" />
+              <circle cx="500" cy="84" r="60" fill="#f7f8f1" opacity="0.08" />
+              <circle cx="468" cy="126" r="22" fill="#f7f8f1" opacity="0.06" />
+              <path d="M0 312C88 242 156 262 244 214C322 172 390 102 470 108C534 113 579 158 620 142V440H0Z" fill="#183d43" />
+              <path d="M0 360C94 318 164 328 252 286C334 247 392 196 472 202C532 207 581 241 620 232V440H0Z" fill="#2b6b63" />
+              <rect x="42" y="42" width="188" height="24" rx="12" fill="rgba(247,248,241,0.16)" />
+              <rect x="42" y="84" width="266" height="124" rx="26" fill="rgba(247,248,241,0.08)" />
+              <rect x="42" y="230" width="124" height="18" rx="9" fill="rgba(247,248,241,0.16)" />
+              <rect x="42" y="260" width="248" height="18" rx="9" fill="rgba(247,248,241,0.11)" />
+              <rect x="42" y="310" width="146" height="48" rx="24" fill="#f7f8f1" />
+              <rect x="202" y="310" width="154" height="48" rx="24" fill="rgba(247,248,241,0.14)" />
+              <rect x="382" y="98" width="182" height="128" rx="28" fill="url(#panelA)" opacity="0.96" />
+              <rect x="412" y="244" width="152" height="118" rx="24" fill="#f7f8f1" opacity="0.92" />
+              <rect x="402" y="112" width="142" height="14" rx="7" fill="rgba(247,248,241,0.18)" />
+              <rect x="402" y="138" width="92" height="74" rx="20" fill="rgba(247,248,241,0.12)" />
+              <rect x="506" y="138" width="38" height="74" rx="19" fill="url(#panelB)" />
+              <circle cx="448" cy="278" r="28" fill="#16393d" />
+              <circle cx="516" cy="278" r="28" fill="#2f7f77" />
+              <rect x="444" y="324" width="84" height="12" rx="6" fill="rgba(21,39,43,0.22)" />
+              <rect x="444" y="344" width="62" height="12" rx="6" fill="rgba(21,39,43,0.14)" />
+            </svg>
+          </div>
+        </div>
+      </section>
+
+      <section class="stats">
+        <article class="stat">
+          <p class="label">Expected Attendees</p>
+          <strong>3,400</strong>
+        </article>
+        <article class="stat">
+          <p class="label">Conference Tracks</p>
+          <strong>5</strong>
+        </article>
+        <article class="stat">
+          <p class="label">Side Events</p>
+          <strong>18</strong>
+        </article>
+        <article class="stat">
+          <p class="label">Partner Lounges</p>
+          <strong>11</strong>
+        </article>
+      </section>
+
+      <section class="content-grid">
+        <div>
+          <article class="card" id="schedule">
+            <p class="section-label">Program</p>
+            <h2>A full operating schedule, not just a stage lineup</h2>
+            <p>
+              Regen Frontier is built around real operator needs: keynotes that matter, workshops with actionable depth,
+              and a live ship floor where products, grants, and partnerships actually move.
+            </p>
+            <div class="program">
+              <div class="program-item">
+                <span class="time">09:00</span>
+                <div>
+                  <strong>Main Stage Keynotes</strong>
+                  <p>Protocol state, treasury strategy, ecosystem health, and the highest-signal launches of the cycle.</p>
+                </div>
+              </div>
+              <div class="program-item">
+                <span class="time">11:30</span>
+                <div>
+                  <strong>Governance Clinics</strong>
+                  <p>Working sessions on token design, contributor incentives, and operating models that survive scale.</p>
+                </div>
+              </div>
+              <div class="program-item">
+                <span class="time">15:00</span>
+                <div>
+                  <strong>Ship Floor Demos</strong>
+                  <p>Product launches, live demos, grant pitches, and client relaunch reveals from ecosystem teams.</p>
+                </div>
+              </div>
+              <div class="program-item">
+                <span class="time">19:30</span>
+                <div>
+                  <strong>Night Campus</strong>
+                  <p>Partner dinners, founder lounges, and curated late builder meetups across the riverfront campus.</p>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="card" id="experience">
+            <p class="section-label">Why Attend</p>
+            <h2>A conference designed for teams that are already shipping</h2>
+            <div class="highlight-grid">
+              <article class="highlight-card">
+                <p class="card-kicker">Builder Floor</p>
+                <h3>Launch in public</h3>
+                <p>Ship, demo, recruit, and announce directly from the same floor the ecosystem is walking through.</p>
+              </article>
+              <article class="highlight-card">
+                <p class="card-kicker">Operator Sessions</p>
+                <h3>Get practical signal</h3>
+                <p>Sessions prioritize operating leverage over hype: treasury, coordination, governance, and growth.</p>
+              </article>
+              <article class="highlight-card">
+                <p class="card-kicker">Side Events</p>
+                <h3>Curated off-stage flow</h3>
+                <p>Dinners, clinics, and smaller partner gatherings turn the conference into a full ecosystem campus.</p>
+              </article>
+              <article class="highlight-card">
+                <p class="card-kicker">Registration</p>
+                <h3>Fast ticket conversion</h3>
+                <p>Clear pricing, simple calls to action, and a wallet-native check-in flow reduce purchase friction.</p>
+              </article>
+            </div>
+            <div class="highlight-tags">
+              <span>Founder meetings</span>
+              <span>Token design workshops</span>
+              <span>Ecosystem hiring</span>
+              <span>Live ecosystem demos</span>
+            </div>
+          </article>
+
+          <article class="card" id="tickets">
+            <p class="section-label">Tickets</p>
+            <h2>Simple pricing tiers with obvious upgrade paths</h2>
+            <p>
+              Ticketing is positioned for teams of different sizes and urgency, from solo builders to protocol operators and sponsors.
+            </p>
+            <div class="ticket-grid">
+              <article class="ticket">
+                <p class="card-kicker">General</p>
+                <strong class="price">$249</strong>
+                <p>Full conference access for individual builders and community contributors.</p>
+                <ul>
+                  <li>All main-stage sessions</li>
+                  <li>Builder floor access</li>
+                  <li>Evening community events</li>
+                </ul>
+              </article>
+              <article class="ticket is-featured">
+                <p class="card-kicker">Operator</p>
+                <strong class="price">$699</strong>
+                <p>The most common pass for protocol leads, product owners, and ecosystem operators.</p>
+                <ul>
+                  <li>Priority seating + all core tracks</li>
+                  <li>Governance and treasury clinics</li>
+                  <li>Curated partner dinners</li>
+                </ul>
+              </article>
+              <article class="ticket">
+                <p class="card-kicker">Partner</p>
+                <strong class="price">$1,250</strong>
+                <p>Designed for sponsors, venture partners, and teams hosting side events on site.</p>
+                <ul>
+                  <li>Partner lounge access</li>
+                  <li>Side-event hosting support</li>
+                  <li>Priority network introductions</li>
+                </ul>
+              </article>
+            </div>
+          </article>
+        </div>
+
+        <div>
+          <article class="card" id="speakers">
+            <p class="section-label">Featured Speakers</p>
+            <h2>Credible signal from teams actively operating this cycle</h2>
+            <p>
+              The lineup emphasizes operators, product leaders, and ecosystem builders with real execution context.
+            </p>
+            <div class="speaker-list">
+              <div class="speaker">
+                <span class="avatar"></span>
+                <div>
+                  <strong>Lattice Morrow</strong>
+                  <p>Protocol strategy, governance loops, and operator systems at scale.</p>
+                </div>
+              </div>
+              <div class="speaker">
+                <span class="avatar" style="background: linear-gradient(135deg, #eb9257, #f2cb64);"></span>
+                <div>
+                  <strong>Aya Nakamoto</strong>
+                  <p>Ecosystem growth, community flywheels, and launch readiness for network teams.</p>
+                </div>
+              </div>
+              <div class="speaker">
+                <span class="avatar" style="background: linear-gradient(135deg, #2c716b, #86dcc1);"></span>
+                <div>
+                  <strong>Rune Mercer</strong>
+                  <p>Build systems, deployment pipelines, and resilient frontend delivery.</p>
+                </div>
+              </div>
+            </div>
+            <div class="tag-row">
+              <span>Governance clinics</span>
+              <span>Founder lounges</span>
+              <span>Ship floor</span>
+              <span>Night sessions</span>
+            </div>
+          </article>
+
+          <article class="venue-card" id="venue">
+            <div>
+              <p class="section-label">Venue</p>
+              <h2>One connected campus across Civic Hall and the riverfront</h2>
+              <p>
+                The venue layout supports continuous movement between keynotes, workshops, sponsor lounges, and evening meetups without losing the conference flow.
+              </p>
+            </div>
+            <div class="venue-grid">
+              <div class="venue-map" aria-hidden="true">
+                <svg viewBox="0 0 420 260" role="presentation" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="420" height="260" fill="#e4ede7" />
+                  <path d="M0 206C74 182 122 194 174 172C232 146 264 94 320 92C360 91 388 112 420 108V260H0Z" fill="#d0e3da" />
+                  <path d="M0 226C82 208 124 214 178 196C232 178 271 154 324 154C364 154 392 166 420 164V260H0Z" fill="#bdd7cb" />
+                  <rect x="34" y="46" width="142" height="74" rx="18" fill="#ffffff" stroke="#8cb4a4" stroke-width="3" />
+                  <rect x="206" y="38" width="180" height="96" rx="22" fill="#ffffff" stroke="#7ca99d" stroke-width="3" />
+                  <rect x="94" y="152" width="226" height="66" rx="20" fill="#ffffff" stroke="#8cb4a4" stroke-width="3" />
+                  <circle cx="112" cy="83" r="8" fill="#2f7f77" />
+                  <circle cx="252" cy="78" r="8" fill="#2f7f77" />
+                  <circle cx="150" cy="184" r="8" fill="#2f7f77" />
+                  <path d="M176 82H206" stroke="#2f7f77" stroke-width="6" stroke-linecap="round" stroke-dasharray="10 10" />
+                  <path d="M254 134V152" stroke="#2f7f77" stroke-width="6" stroke-linecap="round" stroke-dasharray="10 10" />
+                  <text x="58" y="78" fill="#1b4f52" font-size="16" font-family="Trebuchet MS, Verdana, sans-serif" font-weight="700">Civic Hall</text>
+                  <text x="58" y="102" fill="#58706c" font-size="11" font-family="Trebuchet MS, Verdana, sans-serif">Main stage + operator sessions</text>
+                  <text x="228" y="78" fill="#1b4f52" font-size="16" font-family="Trebuchet MS, Verdana, sans-serif" font-weight="700">Riverfront Campus</text>
+                  <text x="228" y="102" fill="#58706c" font-size="11" font-family="Trebuchet MS, Verdana, sans-serif">Ship floor + partner lounges</text>
+                  <text x="118" y="186" fill="#1b4f52" font-size="16" font-family="Trebuchet MS, Verdana, sans-serif" font-weight="700">Night Campus</text>
+                  <text x="118" y="208" fill="#58706c" font-size="11" font-family="Trebuchet MS, Verdana, sans-serif">Dinners, workshops, late meetups</text>
+                </svg>
+              </div>
+              <div>
+                <div class="sponsor-row">
+                  <span>Protocol Labs</span>
+                  <span>Stable Layer</span>
+                  <span>River DAO</span>
+                  <span>Onchain Works</span>
+                </div>
+                <div class="faq">
+                  <article class="faq-item">
+                    <strong>What makes this different?</strong>
+                    <p>The event is built around operators and active teams, not pure keynote theater.</p>
+                  </article>
+                  <article class="faq-item">
+                    <strong>Is it beginner friendly?</strong>
+                    <p>Yes, but the deepest value is for teams already building, hiring, and shipping.</p>
+                  </article>
+                  <article class="faq-item">
+                    <strong>Are side events included?</strong>
+                    <p>Most are included with Operator and Partner passes, with RSVP handled in registration.</p>
+                  </article>
+                  <article class="faq-item">
+                    <strong>How fast is check-in?</strong>
+                    <p>Wallet-native registration and pre-routed badges make the arrival flow fast and obvious.</p>
+                  </article>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="cta">
+        <div>
+          <h3>Bring your team, launch in public, and leave with real operator signal.</h3>
+          <p>Tickets, sessions, venue logistics, and side events are now aligned into one clear conference path.</p>
+        </div>
+        <a href="#tickets">Reserve Your Pass</a>
+      </section>
+
+      <footer class="footer">
+        <span><strong>Regen Frontier Global Conference</strong> • Denver, Colorado • May 23–25, 2026</span>
+        <span>Speaker lineup, ticketing, venue guide, and partner programming all live.</span>
+      </footer>
+    </main>
+  </body>
+</html>

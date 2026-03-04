@@ -26,6 +26,7 @@ export type Brief = {
 export type ArtifactBundle = {
   siteTitle: string;
   publicUrl: string;
+  previewUrl?: string;
   ensName: string;
   cid: string;
   notes: string[];
@@ -80,4 +81,6 @@ export type RunState = {
 export type RunArtifactsInput = {
   result: RunResult;
   brief: Brief;
+  cycle: 1 | 2;
+  studioName?: string;
 };

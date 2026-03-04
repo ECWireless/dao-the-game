@@ -100,6 +100,26 @@ describe('gameStore narrative run shaping', () => {
     expect(secondRun?.qualityScore).toBeGreaterThanOrEqual(72);
   });
 
+  it('attaches the prebuilt deployment preview to generated artifacts', () => {
+    useGameStore.getState().setStudioName('Coopa LLC');
+    assignAllVisibleRoles();
+    useGameStore.getState().runProduction();
+
+    const firstCycleArtifacts = useGameStore.getState().latestArtifacts;
+
+    expect(firstCycleArtifacts?.previewUrl).toBe('/deployments/cycle-one/index.html');
+    expect(firstCycleArtifacts?.publicUrl).toBe('https://cycle1.coopa-llc.daothegame.com');
+
+    useGameStore.getState().unlockExpandedRoles();
+    assignAllVisibleRoles();
+    useGameStore.getState().runProduction();
+
+    const secondCycleArtifacts = useGameStore.getState().latestArtifacts;
+
+    expect(secondCycleArtifacts?.previewUrl).toBe('/deployments/cycle-two/index.html');
+    expect(secondCycleArtifacts?.publicUrl).toBe('https://cycle2.coopa-llc.daothegame.com');
+  });
+
   it('allows second cycle to run with configured branches even if later unlocked roles stay unconfigured', () => {
     assignAllVisibleRoles();
     useGameStore.getState().runProduction();

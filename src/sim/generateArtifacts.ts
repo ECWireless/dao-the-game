@@ -1,34 +1,9 @@
+import { getDeploymentTarget } from '../levels/deployments';
 import type { ArtifactBundle, RunArtifactsInput } from '../types';
 
-function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)+/g, '');
-}
-
-function tierFromScore(score: number): 'flagship' | 'stable' | 'recovery' {
-  if (score >= 85) {
-    return 'flagship';
-  }
-
-  if (score >= 65) {
-    return 'stable';
-  }
-
-  return 'recovery';
-}
-
 export function generateArtifacts(input: RunArtifactsInput): ArtifactBundle {
-  const { result, brief } = input;
-  const slug = slugify(brief.clientName);
-  const tier = tierFromScore(result.qualityScore);
-
-  const siteTitleByTier: Record<typeof tier, string> = {
-    flagship: `${brief.clientName} Autonomous Flagship`,
-    stable: `${brief.clientName} DAO Relaunch`,
-    recovery: `${brief.clientName} Recovery Console`
-  };
+  const { result, brief, cycle, studioName } = input;
+  const target = getDeploymentTarget(brief, cycle, studioName);
 
   const notes = result.passed
     ? [
@@ -43,10 +18,11 @@ export function generateArtifacts(input: RunArtifactsInput): ArtifactBundle {
       ];
 
   return {
-    siteTitle: siteTitleByTier[tier],
-    publicUrl: `https://${slug}-autonomous.sim`,
-    ensName: `${slug}.dao.eth`,
-    cid: result.cid,
+    siteTitle: target.siteTitle,
+    publicUrl: target.publicUrl,
+    previewUrl: target.previewUrl,
+    ensName: target.ensName,
+    cid: target.pinnedCid ?? result.cid,
     notes
   };
 }
