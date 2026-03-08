@@ -30,14 +30,14 @@ export const OFFER_MESSAGES_THREAD: ChatLine[] = [
   {
     id: 'i',
     author: 'friend',
-    text: 'fifteen grand is a ridiculous amount of money for being underqualified.'
+    text: 'fifteen grand is a ridiculous amount of money for your qualifications. no offense.'
   },
   {
     id: 'j',
     author: 'friend',
     text: 'take the job anyway. we can fake the part where you are a real studio.'
   },
-  { id: 'k', author: 'player', text: 'this feels like a bad idea. fine. i am in.' },
+  { id: 'k', author: 'player', text: "this feels like a bad idea. fine. i'm in." },
   { id: 'l', author: 'player', text: 'i have no idea where to even start.' },
   {
     id: 'm',

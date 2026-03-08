@@ -31,6 +31,18 @@ function configureExpandedCycleTwoRoles() {
 }
 
 describe('gameStore role visibility', () => {
+  it('tracks intro dialog dismissal and restores it on reset', () => {
+    const state = useGameStore.getState();
+
+    expect(state.hasSeenIntroDialog).toBe(false);
+
+    state.dismissIntroDialog();
+    expect(useGameStore.getState().hasSeenIntroDialog).toBe(true);
+
+    useGameStore.getState().resetTutorial();
+    expect(useGameStore.getState().hasSeenIntroDialog).toBe(false);
+  });
+
   it('starts with one unlocked role for first cycle', () => {
     const state = useGameStore.getState();
     const activeRoles = getActiveRoles(state.roles, state.unlockedRoleCount);
@@ -73,6 +85,17 @@ describe('gameStore role visibility', () => {
     expect(roleOne?.assignedAgentId).toBeUndefined();
     expect(roleTwo?.assignedAgentId).toBe('agent-01');
   });
+
+  it('updates assigned agent affinity to match the role they fill', () => {
+    const state = useGameStore.getState();
+    state.unlockExpandedRoles();
+    state.configureRole('hat-02', 'Designer');
+    state.assignRole('hat-02', 'agent-02');
+
+    const assignedAgent = useGameStore.getState().agents.find((agent) => agent.id === 'agent-02');
+
+    expect(assignedAgent?.roleAffinity).toBe('Product Designer');
+  });
 });
 
 describe('gameStore narrative run shaping', () => {
@@ -80,10 +103,13 @@ describe('gameStore narrative run shaping', () => {
     assignAllVisibleRoles();
 
     const firstRun = useGameStore.getState().runProduction();
+    const firstArtifacts = useGameStore.getState().latestArtifacts;
 
     expect(firstRun).toBeDefined();
     expect(firstRun?.passed).toBe(false);
-    expect(firstRun?.events[firstRun.events.length - 1]).toContain('client rejection');
+    expect(firstRun?.events[firstRun.events.length - 1]).toContain('Critical role coverage gap');
+    expect(firstArtifacts?.notes.join(' ')).not.toContain('Client');
+    expect(firstArtifacts?.notes.join(' ')).not.toContain('rejection');
   });
 
   it('forces second cycle to pass after expansion', () => {

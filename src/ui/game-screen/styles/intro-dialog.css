@@ -1,0 +1,95 @@
+.intro-dialog-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background:
+    linear-gradient(180deg, rgb(12 18 30 / 22%), rgb(12 18 30 / 34%)),
+    radial-gradient(circle at top, rgb(255 255 255 / 10%), transparent 38%);
+  backdrop-filter: blur(18px) saturate(135%);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
+}
+
+.intro-app-placeholder {
+  height: 100%;
+  border-radius: 0.9rem;
+  background:
+    radial-gradient(circle at top, rgb(130 150 190 / 12%), transparent 34%),
+    linear-gradient(180deg, rgb(255 255 255 / 26%), rgb(244 248 255 / 18%));
+}
+
+.intro-app-placeholder::before,
+.intro-app-placeholder::after {
+  content: '';
+  display: block;
+  border-radius: 999px;
+  background: rgb(154 171 204 / 18%);
+}
+
+.intro-app-placeholder::before {
+  width: 44%;
+  height: 1rem;
+  margin: 1rem 0 0 1rem;
+}
+
+.intro-app-placeholder::after {
+  width: 62%;
+  height: 0.74rem;
+  margin: 0.6rem 0 0 1rem;
+}
+
+.intro-dialog {
+  width: min(100%, 25rem);
+  max-height: min(34rem, calc(100dvh - 5.5rem));
+  overflow: auto;
+  border-radius: 1.2rem;
+  border: 1px solid rgb(255 255 255 / 68%);
+  padding: 1rem 1rem 1.08rem;
+  display: grid;
+  gap: 0.8rem;
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 70%), rgb(246 250 255 / 56%)),
+    linear-gradient(145deg, rgb(255 255 255 / 34%), rgb(255 255 255 / 10%));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 78%),
+    0 1.4rem 3rem rgb(70 82 106 / 18%);
+}
+
+.intro-dialog-kicker,
+.intro-dialog h2,
+.intro-dialog p {
+  margin: 0;
+}
+
+.intro-dialog-kicker {
+  color: #61779c;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.intro-dialog h2 {
+  color: #16253a;
+  font-family: var(--font-display);
+  font-size: 1.26rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.intro-dialog p {
+  color: #44556f;
+  font-size: 0.82rem;
+  line-height: 1.58;
+}
+
+.intro-dialog strong {
+  color: #20314c;
+}
+
+.intro-dialog-action {
+  width: 100%;
+  justify-content: center;
+}

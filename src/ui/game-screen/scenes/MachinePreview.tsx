@@ -41,7 +41,7 @@ export function MachinePreview({
         </div>
         {latestRun ? (
           <span className={`deployment-health ${latestRun.passed ? 'is-pass' : 'is-fail'}`}>
-            {latestRun.passed ? 'Client-ready' : 'Needs revision'}
+            {latestRun.passed ? 'Ready to Submit' : 'Needs Internal Fixes'}
           </span>
         ) : null}
       </div>

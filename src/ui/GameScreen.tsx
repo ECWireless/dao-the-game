@@ -4,6 +4,7 @@ import { getScene, type StoryApp } from '../levels/story';
 import { countAssignedRoles, estimateRunwayAfterRun, getActiveRoles, useGameStore } from '../state/gameStore';
 import { APP_META } from './game-screen/constants';
 import { AppDock } from './game-screen/components/AppDock';
+import { IntroDialog } from './game-screen/components/IntroDialog';
 import { getCrossAppHandoff } from './game-screen/handoffs';
 import { NotificationBanner, type MessageNotification } from './game-screen/scenes/CommunicationScenes';
 import { MailInboxScene } from './game-screen/scenes/MailScenes';
@@ -19,6 +20,7 @@ export default function GameScreen() {
   const unlockedRoleCount = useGameStore((state) => state.unlockedRoleCount);
   const treasury = useGameStore((state) => state.treasury);
   const studioName = useGameStore((state) => state.studioName);
+  const hasSeenIntroDialog = useGameStore((state) => state.hasSeenIntroDialog);
   const roles = useGameStore((state) => state.roles);
   const agents = useGameStore((state) => state.agents);
   const assignmentLog = useGameStore((state) => state.assignmentLog);
@@ -29,6 +31,7 @@ export default function GameScreen() {
   const advanceStory = useGameStore((state) => state.advanceStory);
   const retreatStory = useGameStore((state) => state.retreatStory);
   const setStudioName = useGameStore((state) => state.setStudioName);
+  const dismissIntroDialog = useGameStore((state) => state.dismissIntroDialog);
   const configureRole = useGameStore((state) => state.configureRole);
   const unlockExpandedRoles = useGameStore((state) => state.unlockExpandedRoles);
   const assignRole = useGameStore((state) => state.assignRole);
@@ -55,7 +58,8 @@ export default function GameScreen() {
   const activeRoles = getActiveRoles(roles, unlockedRoleCount);
   const assignedActiveRoles = countAssignedRoles(activeRoles);
   const runwayAfterRun = estimateRunwayAfterRun(treasury, activeRoles, agents);
-  const canSwitchApps = !isMachineLocked;
+  const showIntroDialog = storySceneIndex === 0 && !hasSeenIntroDialog;
+  const canSwitchApps = !isMachineLocked && !showIntroDialog;
 
   const requestAppSwitch = useCallback(
     (targetApp: StoryApp) => {
@@ -125,6 +129,10 @@ export default function GameScreen() {
   }, [advanceStory, requestAppSwitch]);
 
   useEffect(() => {
+    if (showIntroDialog) {
+      return;
+    }
+
     const previousUnlockedApps = previousUnlockedAppsRef.current;
     const newlyUnlockedApp = unlockedApps.find((app) => !previousUnlockedApps.includes(app));
     previousUnlockedAppsRef.current = unlockedApps;
@@ -135,16 +143,16 @@ export default function GameScreen() {
     }
 
     setInstallingApp(newlyUnlockedApp);
-  }, [unlockedApps]);
+  }, [showIntroDialog, unlockedApps]);
 
   useEffect(() => {
-    if (!installingApp) {
+    if (showIntroDialog || !installingApp) {
       return;
     }
 
     const timer = window.setTimeout(() => setInstallingApp((current) => (current === installingApp ? null : current)), 1900);
     return () => window.clearTimeout(timer);
-  }, [installingApp]);
+  }, [installingApp, showIntroDialog]);
 
   useEffect(() => {
     if (unlockedApps.includes(currentApp)) {
@@ -211,23 +219,25 @@ export default function GameScreen() {
   }, [pendingHandoff, requestAppSwitch]);
 
   const hasEmailNotification = scene.id === 'messages-notification';
-  const activePhoneNotification: MessageNotification | null = pendingHandoff
-    ? {
-        appName: pendingHandoff.appName,
-        title: pendingHandoff.title,
-        preview: pendingHandoff.preview,
-        icon: pendingHandoff.icon,
-        onOpen: handleHandoffNotificationOpen
-      }
-    : hasEmailNotification && isEmailNotificationVisible
+  const activePhoneNotification: MessageNotification | null = showIntroDialog
+    ? null
+    : pendingHandoff
       ? {
-        appName: 'Mail',
-        title: 'URGENT: Full rebrand needed in 48 hours',
-        preview: 'Lina, Event Director',
-        icon: 'mail',
-        onOpen: handleMailNotificationOpen
-      }
-      : null;
+          appName: pendingHandoff.appName,
+          title: pendingHandoff.title,
+          preview: pendingHandoff.preview,
+          icon: pendingHandoff.icon,
+          onOpen: handleHandoffNotificationOpen
+        }
+      : hasEmailNotification && isEmailNotificationVisible
+        ? {
+            appName: 'Mail',
+            title: 'URGENT: Full rebrand needed in 48 hours',
+            preview: 'Lina, Event Director',
+            icon: 'mail',
+            onOpen: handleMailNotificationOpen
+          }
+        : null;
   const mailInboxStoryItem = hasEmailNotification
     ? {
         sender: 'Lina, Event Director',
@@ -250,6 +260,10 @@ export default function GameScreen() {
   }, [hasEmailNotification]);
 
   useEffect(() => {
+    if (showIntroDialog) {
+      return;
+    }
+
     if (pendingHandoffSceneId) {
       return;
     }
@@ -275,7 +289,7 @@ export default function GameScreen() {
 
     const timer = window.setTimeout(() => queueCrossAppAdvance(), autoAdvanceDelayMs);
     return () => window.clearTimeout(timer);
-  }, [currentApp, pendingHandoffSceneId, queueCrossAppAdvance, scene.id]);
+  }, [currentApp, pendingHandoffSceneId, queueCrossAppAdvance, scene.id, showIntroDialog]);
 
   useEffect(() => {
     if (pendingHandoffSceneId && (pendingHandoffSceneId !== scene.id || currentApp === scene.app)) {
@@ -309,9 +323,13 @@ export default function GameScreen() {
         setIsMachineLocked
       })
     : null;
-  const appContent = sceneContent ? sceneContent : currentApp === 'mail'
-    ? <MailInboxScene storyItem={mailInboxStoryItem} />
-    : <DormantAppPanel app={currentApp} targetApp={scene.app} onReturn={() => requestAppSwitch(scene.app)} activeRoles={activeRoles} assignedRoles={assignedActiveRoles} runCount={runCount} latestRun={latestRun} />;
+  const appContent = showIntroDialog
+    ? <div className="intro-app-placeholder" aria-hidden="true" />
+    : sceneContent
+      ? sceneContent
+      : currentApp === 'mail'
+        ? <MailInboxScene storyItem={mailInboxStoryItem} />
+        : <DormantAppPanel app={currentApp} targetApp={scene.app} onReturn={() => requestAppSwitch(scene.app)} activeRoles={activeRoles} assignedRoles={assignedActiveRoles} runCount={runCount} latestRun={latestRun} />;
   return (
     <main className="game-root">
       <section className="phone-shell">
@@ -370,6 +388,8 @@ export default function GameScreen() {
               disabled={!canSwitchApps || switchPhase !== 'idle'}
             />
           </footer>
+
+          {showIntroDialog ? <IntroDialog onStart={dismissIntroDialog} /> : null}
         </div>
       </section>
     </main>

@@ -3,7 +3,14 @@ import type { Agent, HatRole } from '../../../types';
 import fullLogo from '../../../assets/raidguild-full.svg';
 import { GuildMemberAvatar } from '../components/GuildMemberAvatar';
 import { GuildMemberCard } from '../components/GuildMemberCard';
-import { getRaidGuildCandidates, getRaidGuildCandidatesForRole, getRaidGuildRoster, RAIDGUILD_CHANNELS, RAIDGUILD_HISTORY, type GuildMemberProfile } from '../guildData';
+import {
+  getRaidGuildCandidates,
+  getRaidGuildCandidatesForRole,
+  getRaidGuildRoster,
+  RAIDGUILD_CHANNELS,
+  RAIDGUILD_HISTORY,
+  type GuildMemberProfile
+} from '../guildData';
 import { formatCredits } from '../utils';
 type GuildSecondCycleSceneProps = {
   studioName?: string;
@@ -23,7 +30,8 @@ type RoleSequence = {
 function buildRoleBrief(roleName: string) {
   if (roleName.includes('Design')) {
     return {
-      brief: 'Need a fast design pass that makes the conference feel intentional instead of barely surviving.',
+      brief:
+        'Need a fast design pass that makes the conference feel intentional instead of barely surviving.',
       bullets: ['Visual hierarchy', 'Clear event branding', 'Still works under deadline'],
       replies: [
         'I can fix the visual pass. Better hierarchy, cleaner hero, less panic showing through.',
@@ -36,7 +44,7 @@ function buildRoleBrief(roleName: string) {
       brief: 'Need a ruthless QA sweep before this goes back in front of the client.',
       bullets: ['Phone checks', 'Broken state sweep', 'Embarrassment prevention'],
       replies: [
-        'I can sweep the whole build and find the weird breakage before Lina does.',
+        'I can sweep the whole build and find the weird breakage before it reaches the client.',
         'I do launch triage. I can smoke-test this fast and leave clean notes.'
       ]
     };
@@ -132,18 +140,30 @@ export function GuildSecondCycleScene({
     };
   }, [visibleEventCount]);
   const visibleRoleBoundary = Math.floor(visibleEventCount / 3);
-  const canPostNextRole = !isReadOnly && postingRoleIndex === null && visibleEventCount < totalSequenceEvents && visibleEventCount % 3 === 0;
+  const canPostNextRole =
+    !isReadOnly &&
+    postingRoleIndex === null &&
+    visibleEventCount < totalSequenceEvents &&
+    visibleEventCount % 3 === 0;
   const nextRoleIndex = canPostNextRole ? visibleRoleBoundary : -1;
   const nextRole = nextRoleIndex >= 0 ? roleSequences[nextRoleIndex] : undefined;
   const allResponsesVisible = totalSequenceEvents > 0 && visibleEventCount >= totalSequenceEvents;
   const showSendToBoard = allResponsesVisible && !continueDisabled && Boolean(onContinue);
   const studioLabel = studioName || 'Unnamed Studio';
   const studioGlyph = studioLabel.trim().charAt(0).toUpperCase() || 'S';
-  const datePreview = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date());
+  const datePreview = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(
+    new Date()
+  );
   const visibleChannels = RAIDGUILD_CHANNELS.filter((channel) => channel !== '#hiring-board');
   const quartermaster = roster.find((member) => member.id === 'quartermaster-nyx');
-  const openMember = roster.find((member) => member.id === openMemberId) ?? roleSequences.flatMap((sequence) => sequence.candidates).find((member) => member.id === openMemberId);
-  const openAgent = openMember?.agentId ? agents.find((agent) => agent.id === openMember.agentId) : undefined;
+  const openMember =
+    roster.find((member) => member.id === openMemberId) ??
+    roleSequences
+      .flatMap((sequence) => sequence.candidates)
+      .find((member) => member.id === openMemberId);
+  const openAgent = openMember?.agentId
+    ? agents.find((agent) => agent.id === openMember.agentId)
+    : undefined;
   const handleStartPosting = () => {
     if (!canPostNextRole || nextRoleIndex < 0) {
       return;
@@ -165,7 +185,12 @@ export function GuildSecondCycleScene({
         <button className="guild-toolbar-button" type="button" disabled aria-label="Search channel">
           <svg viewBox="0 0 24 24" fill="none">
             <circle cx="11" cy="11" r="5.4" stroke="currentColor" strokeWidth="1.8" />
-            <path d="m15.2 15.2 3.5 3.5" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+            <path
+              d="m15.2 15.2 3.5 3.5"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeWidth="1.8"
+            />
           </svg>
         </button>
       </header>
@@ -182,7 +207,11 @@ export function GuildSecondCycleScene({
           }
           return (
             <article key={entry.id} className="guild-feed-entry">
-              <button className="guild-avatar-button" type="button" onClick={() => setOpenMemberId(member.id)}>
+              <button
+                className="guild-avatar-button"
+                type="button"
+                onClick={() => setOpenMemberId(member.id)}
+              >
                 <GuildMemberAvatar member={member} />
               </button>
               <div className="guild-feed-copy">
@@ -220,7 +249,9 @@ export function GuildSecondCycleScene({
           </div>
         </article>
         {firstCycleCandidates.map((candidate, index) => {
-          const agent = candidate.agentId ? agents.find((item) => item.id === candidate.agentId) : undefined;
+          const agent = candidate.agentId
+            ? agents.find((item) => item.id === candidate.agentId)
+            : undefined;
           if (!agent) {
             return null;
           }
@@ -230,7 +261,11 @@ export function GuildSecondCycleScene({
               : 'I can take this too. Frontend polish, deploy handoff, done.';
           return (
             <article key={`first-cycle-${candidate.id}`} className="guild-feed-entry is-candidate">
-              <button className="guild-avatar-button" type="button" onClick={() => setOpenMemberId(candidate.id)}>
+              <button
+                className="guild-avatar-button"
+                type="button"
+                onClick={() => setOpenMemberId(candidate.id)}
+              >
                 <GuildMemberAvatar member={candidate} />
               </button>
               <div className="guild-feed-copy">
@@ -253,7 +288,11 @@ export function GuildSecondCycleScene({
         ) : null}
         {quartermaster && roleSequences.length > 0 ? (
           <article className="guild-feed-entry">
-            <button className="guild-avatar-button" type="button" onClick={() => setOpenMemberId(quartermaster.id)}>
+            <button
+              className="guild-avatar-button"
+              type="button"
+              onClick={() => setOpenMemberId(quartermaster.id)}
+            >
               <GuildMemberAvatar member={quartermaster} />
             </button>
             <div className="guild-feed-copy">
@@ -278,7 +317,9 @@ export function GuildSecondCycleScene({
           }
           return (
             <div key={sequence.role.id} className="guild-sequence-block">
-              <article className={`guild-feed-entry is-self-post ${isPostEntering ? 'is-entering' : ''}`}>
+              <article
+                className={`guild-feed-entry is-self-post ${isPostEntering ? 'is-entering' : ''}`}
+              >
                 <span className="guild-poster-avatar" aria-hidden="true">
                   {studioGlyph}
                 </span>
@@ -300,17 +341,30 @@ export function GuildSecondCycleScene({
                 </div>
               </article>
               {sequence.candidates.map((candidate, candidateIndex) => {
-                const agent = candidate.agentId ? agents.find((item) => item.id === candidate.agentId) : undefined;
+                const agent = candidate.agentId
+                  ? agents.find((item) => item.id === candidate.agentId)
+                  : undefined;
                 if (!agent) {
                   return null;
                 }
-                if ((candidateIndex === 0 && !showFirstReply) || (candidateIndex === 1 && !showSecondReply)) {
+                if (
+                  (candidateIndex === 0 && !showFirstReply) ||
+                  (candidateIndex === 1 && !showSecondReply)
+                ) {
                   return null;
                 }
-                const isEntering = candidateIndex === 0 ? isFirstReplyEntering : isSecondReplyEntering;
+                const isEntering =
+                  candidateIndex === 0 ? isFirstReplyEntering : isSecondReplyEntering;
                 return (
-                  <article key={`${sequence.role.id}-${candidate.id}`} className={`guild-feed-entry is-candidate ${isEntering ? 'is-entering' : ''}`}>
-                    <button className="guild-avatar-button" type="button" onClick={() => setOpenMemberId(candidate.id)}>
+                  <article
+                    key={`${sequence.role.id}-${candidate.id}`}
+                    className={`guild-feed-entry is-candidate ${isEntering ? 'is-entering' : ''}`}
+                  >
+                    <button
+                      className="guild-avatar-button"
+                      type="button"
+                      onClick={() => setOpenMemberId(candidate.id)}
+                    >
                       <GuildMemberAvatar member={candidate} />
                     </button>
                     <div className="guild-feed-copy">
@@ -319,9 +373,12 @@ export function GuildSecondCycleScene({
                         <span>@{candidate.handle}</span>
                       </p>
                       <p className="guild-feed-submeta">
-                        {candidate.title} • rel {agent.reliability} • cost {formatCredits(agent.cost)}
+                        {candidate.title} • rel {agent.reliability} • cost{' '}
+                        {formatCredits(agent.cost)}
                       </p>
-                      <p className="guild-feed-text">{sequence.replies[candidateIndex] ?? sequence.replies[0]}</p>
+                      <p className="guild-feed-text">
+                        {sequence.replies[candidateIndex] ?? sequence.replies[0]}
+                      </p>
                     </div>
                   </article>
                 );
@@ -339,7 +396,9 @@ export function GuildSecondCycleScene({
         <button className="guild-compose-button" type="button" disabled aria-label="Add attachment">
           +
         </button>
-        <div className={`guild-compose-field ${canPostNextRole || postingRoleIndex !== null || showSendToBoard ? 'is-filled' : ''}`}>
+        <div
+          className={`guild-compose-field ${canPostNextRole || postingRoleIndex !== null || showSendToBoard ? 'is-filled' : ''}`}
+        >
           <span>
             {showSendToBoard
               ? 'Designer and QA applicants are ready to import back into the board.'
@@ -359,12 +418,23 @@ export function GuildSecondCycleScene({
             Send to Board
           </button>
         ) : (
-          <button className="guild-compose-button is-muted" type="button" disabled aria-label="Voice message">
+          <button
+            className="guild-compose-button is-muted"
+            type="button"
+            disabled
+            aria-label="Voice message"
+          >
             •
           </button>
         )}
       </footer>
-      {openMember ? <GuildMemberCard member={openMember} agent={openAgent} onClose={() => setOpenMemberId(null)} /> : null}
+      {openMember ? (
+        <GuildMemberCard
+          member={openMember}
+          agent={openAgent}
+          onClose={() => setOpenMemberId(null)}
+        />
+      ) : null}
     </section>
   );
 }

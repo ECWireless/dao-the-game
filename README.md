@@ -1,8 +1,8 @@
 # DAO the Game
 
-`DAO the Game` is a mobile-first, off-chain simulation built as a Vite + React + TypeScript prototype.
+`DAO the Game` is a tycoon, management simulation game that begins with a contract request email being accidentally sent to the player. The player is tasked with building a site and faking a full studio to complete the contract.
 
-The current build is a guided vertical slice: the player moves through a fake phone UI, receives a mis-sent client email, bluffs as a studio, and starts building an autonomous org.
+In the full game, the player would be allowed 3 types of focuses: building workers, building organizational units, or taking on other DAOs in the multi-player arena. While this current version is only a demo for now, one can imagine having the freedom to build out their organizations with more and more complexity in order to produce more and more elaborate creations for customers. They could also license workers to other organizations, sell off some of their organizational units, or buy out entire other DAOs.
 
 ## Stack
 
