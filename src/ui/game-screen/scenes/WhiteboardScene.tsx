@@ -101,7 +101,13 @@ export function WhiteboardScene({
   const candidateOptions = guildCandidates.flatMap((candidate) => {
     const agent = candidate.agentId ? agents.find((item) => item.id === candidate.agentId) : undefined;
     return agent && candidate.agentId
-      ? [{ ...candidate, agentId: candidate.agentId, roleAffinity: agent.roleAffinity, reliability: agent.reliability, speed: agent.speed }]
+      ? [{
+          ...candidate,
+          agentId: candidate.agentId,
+          roleAffinity: candidate.affinityLabel ?? agent.roleAffinity,
+          reliability: agent.reliability,
+          speed: agent.speed
+        }]
       : [];
   });
   const boardLinks = buildWhiteboardLinks(visibleRoles, isExpanded);

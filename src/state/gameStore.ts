@@ -1,7 +1,13 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { FINAL_SCENE_INDEX } from '../levels/story';
-import { TUTORIAL_BRIEF, TUTORIAL_ROLES, TUTORIAL_SEED, TUTORIAL_TREASURY } from '../levels/tutorial';
+import {
+  TUTORIAL_BRIEF,
+  TUTORIAL_ROLES,
+  TUTORIAL_SEED,
+  TUTORIAL_TREASURY
+} from '../levels/tutorial';
+import { getRoleAffinityLabel } from '../roleAffinity';
 import { generateArtifacts, generateStartingAgents, simulateRun } from '../sim';
 import type { Agent, ArtifactBundle, HatRole, RunResult, RunState, ScoreBreakdown } from '../types';
 
@@ -20,6 +26,7 @@ type GameStore = {
   seed: number;
   treasury: number;
   studioName: string;
+  hasSeenIntroDialog: boolean;
   roles: HatRole[];
   agents: Agent[];
   latestRun?: RunResult;
@@ -30,6 +37,7 @@ type GameStore = {
   advanceStory: () => void;
   retreatStory: () => void;
   setStudioName: (name: string) => void;
+  dismissIntroDialog: () => void;
   configureRole: (roleId: string, name: string) => void;
   unlockExpandedRoles: () => void;
   assignRole: (roleId: string, agentId: string) => void;
@@ -45,6 +53,7 @@ type PersistedGameState = Pick<
   | 'seed'
   | 'treasury'
   | 'studioName'
+  | 'hasSeenIntroDialog'
   | 'roles'
   | 'agents'
   | 'latestRun'
@@ -71,6 +80,7 @@ function getInitialState() {
     seed: TUTORIAL_SEED,
     treasury: TUTORIAL_TREASURY,
     studioName: DEFAULT_STUDIO_NAME,
+    hasSeenIntroDialog: false,
     roles: cloneTutorialRoles(),
     agents: generateStartingAgents(TUTORIAL_SEED),
     latestRun: undefined,
@@ -84,7 +94,12 @@ function clampSceneIndex(index: number): number {
   return Math.max(0, Math.min(index, FINAL_SCENE_INDEX));
 }
 
-function buildRunState(seed: number, treasury: number, roles: HatRole[], agents: Agent[]): RunState {
+function buildRunState(
+  seed: number,
+  treasury: number,
+  roles: HatRole[],
+  agents: Agent[]
+): RunState {
   return {
     seed,
     treasury,
@@ -124,7 +139,11 @@ export function estimateRunCost(roles: HatRole[], agents: Agent[]): number {
   return baseCost + assignedCost;
 }
 
-export function estimateRunwayAfterRun(treasury: number, roles: HatRole[], agents: Agent[]): number {
+export function estimateRunwayAfterRun(
+  treasury: number,
+  roles: HatRole[],
+  agents: Agent[]
+): number {
   return treasury - estimateRunCost(roles, agents);
 }
 
@@ -155,7 +174,7 @@ function forceFirstCycleFailure(result: RunResult): RunResult {
   return {
     ...withScore,
     passed: false,
-    events: [...withScore.events, 'Critical role coverage gap triggered client rejection']
+    events: [...withScore.events, 'Critical role coverage gap']
   };
 }
 
@@ -190,6 +209,9 @@ export const useGameStore = create<GameStore>()(
       setStudioName: (name) => {
         set({ studioName: name.trim() });
       },
+      dismissIntroDialog: () => {
+        set({ hasSeenIntroDialog: true });
+      },
       configureRole: (roleId, name) => {
         const state = get();
         const role = state.roles.find((item) => item.id === roleId);
@@ -214,7 +236,10 @@ export const useGameStore = create<GameStore>()(
                 }
               : item
           ),
-          assignmentLog: [createAssignmentLogEntry(`${normalizedName} added to the org chart.`), ...state.assignmentLog].slice(0, 8)
+          assignmentLog: [
+            createAssignmentLogEntry(`${normalizedName} added to the org chart.`),
+            ...state.assignmentLog
+          ].slice(0, 8)
         });
       },
       unlockExpandedRoles: () => {
@@ -231,7 +256,17 @@ export const useGameStore = create<GameStore>()(
           return;
         }
 
+        const nextAffinity = getRoleAffinityLabel(roleId);
+
         set({
+          agents: state.agents.map((item) =>
+            item.id === agent.id
+              ? {
+                  ...item,
+                  roleAffinity: nextAffinity
+                }
+              : item
+          ),
           roles: state.roles.map((item) =>
             item.id === roleId
               ? {
@@ -246,7 +281,9 @@ export const useGameStore = create<GameStore>()(
                 : item
           ),
           assignmentLog: [
-            createAssignmentLogEntry(`${role.name} assigned to ${agent.roleAffinity} (${agent.id})`),
+            createAssignmentLogEntry(
+              `${role.name} assigned to ${nextAffinity} (${agent.id})`
+            ),
             ...state.assignmentLog
           ].slice(0, 8)
         });
@@ -268,7 +305,10 @@ export const useGameStore = create<GameStore>()(
                 }
               : item
           ),
-          assignmentLog: [createAssignmentLogEntry(`${role.name} unassigned`), ...state.assignmentLog].slice(0, 8)
+          assignmentLog: [
+            createAssignmentLogEntry(`${role.name} unassigned`),
+            ...state.assignmentLog
+          ].slice(0, 8)
         });
       },
       runProduction: () => {
@@ -304,7 +344,9 @@ export const useGameStore = create<GameStore>()(
           treasury: state.treasury - result.cost,
           assignmentLog: [
             createAssignmentLogEntry(
-              result.passed ? 'Deployment accepted by client.' : 'Deployment rejected. Role graph needs expansion.'
+              result.passed
+                ? 'Build staged for client review.'
+                : 'Build flagged for internal revision before client review.'
             ),
             ...state.assignmentLog
           ].slice(0, 8)
@@ -318,7 +360,7 @@ export const useGameStore = create<GameStore>()(
     }),
     {
       name: GAME_STATE_STORAGE_KEY,
-      version: 3,
+      version: 4,
       storage: createJSONStorage(() => localStorage),
       partialize: (state): PersistedGameState => ({
         storySceneIndex: state.storySceneIndex,
@@ -326,6 +368,7 @@ export const useGameStore = create<GameStore>()(
         seed: state.seed,
         treasury: state.treasury,
         studioName: state.studioName,
+        hasSeenIntroDialog: state.hasSeenIntroDialog,
         roles: state.roles,
         agents: state.agents,
         latestRun: state.latestRun,
@@ -344,7 +387,12 @@ export const useGameStore = create<GameStore>()(
         return {
           ...initial,
           ...candidate,
-          studioName: typeof candidate.studioName === 'string' ? candidate.studioName : initial.studioName,
+          studioName:
+            typeof candidate.studioName === 'string' ? candidate.studioName : initial.studioName,
+          hasSeenIntroDialog:
+            typeof candidate.hasSeenIntroDialog === 'boolean'
+              ? candidate.hasSeenIntroDialog
+              : initial.hasSeenIntroDialog,
           roles: Array.isArray(candidate.roles)
             ? initial.roles.map((role, index) => {
                 const persistedRole = candidate.roles?.[index];
@@ -369,7 +417,10 @@ export const useGameStore = create<GameStore>()(
               : initial.storySceneIndex,
           unlockedRoleCount:
             typeof candidate.unlockedRoleCount === 'number'
-              ? Math.max(FIRST_CYCLE_ROLE_COUNT, Math.min(candidate.unlockedRoleCount, initial.roles.length))
+              ? Math.max(
+                  FIRST_CYCLE_ROLE_COUNT,
+                  Math.min(candidate.unlockedRoleCount, initial.roles.length)
+                )
               : initial.unlockedRoleCount
         };
       }

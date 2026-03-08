@@ -116,7 +116,7 @@ export function MachineScene({
           ? 'Output node fabricating creation'
           : `${roleNodes[safePacketIndex - 2]?.roleName ?? 'Role'} processing`
     : hasRun
-      ? 'Creation ejected to output node'
+      ? 'Creation routed to output node'
       : 'Assembly line armed';
   const statusDetail = isRunning
     ? safePacketIndex <= 1
@@ -347,13 +347,13 @@ export function MachineScene({
                 {isOutputReady
                   ? isPreviewVisible
                     ? 'Preview Loaded'
-                    : 'Preview Ejected'
+                    : 'Preview Ready'
                   : isRunning
                     ? 'Fabricating...'
                     : 'Awaiting build'}
               </span>
               <span className="machine-node-meta">
-                {isOutputReady ? 'Open the deployed site preview' : 'Finished builds eject here'}
+                {isOutputReady ? 'Open the deployed site preview' : 'Finished builds land here'}
               </span>
               {isOutputReady ? (
                 <span className="machine-node-callout">{isPreviewVisible ? 'Preview open' : 'Open deploy'}</span>

@@ -27,7 +27,7 @@ export function GuildMemberCard({
           <div className="guild-stats">
             <div className="guild-stat-row">
               <span>Affinity</span>
-              <strong>{agent.roleAffinity}</strong>
+              <strong>{member.affinityLabel ?? agent.roleAffinity}</strong>
             </div>
             <div className="guild-stat-row">
               <span>Creativity</span>

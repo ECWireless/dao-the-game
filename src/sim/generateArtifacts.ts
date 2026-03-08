@@ -7,14 +7,14 @@ export function generateArtifacts(input: RunArtifactsInput): ArtifactBundle {
 
   const notes = result.passed
     ? [
-        'Autonomous execution complete.',
-        'Client accepted delivery for the current sprint.',
-        'Ready for expansion into the next campaign.'
+        'Assembly pass complete and staged for review.',
+        'Information hierarchy and delivery flow feel stable enough to send.',
+        'This build is ready for client review.'
       ]
     : [
-        'Client found weak execution in at least one critical role.',
-        'Refit the hat tree and retry before treasury depletion.',
-        'Investigate reliability-sensitive steps in Engine mode.'
+        'The build still feels under-supported in at least one critical pass.',
+        'Tighten the graph and rerun before sending this version out.',
+        'Review the rough spots and strengthen the weakest role coverage.'
       ];
 
   return {

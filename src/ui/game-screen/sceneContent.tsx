@@ -165,7 +165,7 @@ export function renderSceneContent({
     case 'messages-convince':
       return renderMessageStep({
         thread: OFFER_MESSAGES_THREAD.slice(0, 5),
-        draft: 'this feels like a bad idea. fine. i am in.',
+        draft: "this feels like a bad idea. fine. i'm in.",
         isInteractive,
         onSend: advanceStory,
         lineDelayOffsets: { j: 1400 }
