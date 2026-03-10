@@ -22,12 +22,14 @@ In the full game, the player would be allowed 3 types of focuses: building worke
 ```bash
 pnpm install
 cp .env.example .env.local
+pnpm db:migrate
 pnpm dev:all
 ```
 
 Then open the local Vite URL in your browser.
 
 `pnpm dev:all` runs:
+
 - the Vite frontend on `http://localhost:5173`
 - the local Vercel Functions server on `http://localhost:3000`
 
@@ -38,6 +40,7 @@ The Vite dev server proxies `/api/*` requests to `localhost:3000`, which matches
 - `pnpm dev` - start the Vite frontend on `localhost:5173`
 - `pnpm dev:api` - start local Vercel Functions on `localhost:3000`
 - `pnpm dev:all` - run the frontend and API servers together
+- `pnpm db:migrate` - create or update the Neon schema before running the app
 - `pnpm build` - typecheck and build for production
 - `pnpm preview` - preview the production build
 - `pnpm reset:all` - wipe local app data in Neon after confirmation
@@ -65,3 +68,4 @@ dev-history/ dated build journal
 - The app now includes a small Vercel-backed API layer for player bootstrap, progress tracking, saved run state, and reset flows.
 - Privy handles authentication, identity tokens, and wallet provisioning for the current demo.
 - Progress is stored in Neon and mirrored locally in browser storage for fast client restoration.
+- Run `pnpm db:migrate` any time you point the app at a fresh database. Request handlers no longer create tables or indexes on demand.

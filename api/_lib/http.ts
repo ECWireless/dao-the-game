@@ -11,14 +11,14 @@ function getCorsHeaders(request: Request): Headers {
   const headers = new Headers();
   const origin = request.headers.get('origin');
 
-  if (origin) {
+  if (origin && origin === new URL(request.url).origin) {
     headers.set('access-control-allow-origin', origin);
     headers.set('vary', 'origin');
-  }
 
-  headers.set('access-control-allow-methods', 'POST, OPTIONS');
-  headers.set('access-control-allow-headers', 'authorization, content-type');
-  headers.set('access-control-max-age', '86400');
+    headers.set('access-control-allow-methods', 'POST, OPTIONS');
+    headers.set('access-control-allow-headers', 'authorization, content-type');
+    headers.set('access-control-max-age', '86400');
+  }
 
   return headers;
 }
