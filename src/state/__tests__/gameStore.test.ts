@@ -1,15 +1,17 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
+  buildGameStateSnapshot,
   countAssignedRoles,
   estimateRunCost,
   estimateRunwayAfterRun,
   getActiveRoles,
   useGameStore
 } from '../gameStore';
+import { FINAL_SCENE_INDEX } from '../../levels/story';
 
 beforeEach(() => {
   localStorage.clear();
-  useGameStore.getState().resetTutorial();
+  useGameStore.getState().clearPlayerState();
 });
 
 function assignAllVisibleRoles() {
@@ -31,6 +33,44 @@ function configureExpandedCycleTwoRoles() {
 }
 
 describe('gameStore role visibility', () => {
+  it('keeps current state when hydrating the same player without a snapshot', () => {
+    const state = useGameStore.getState();
+    state.hydrateForPlayer('player-one', null);
+    state.setStorySceneIndex(4);
+    state.unlockExpandedRoles();
+    state.setStudioName('Night Shift');
+    state.dismissIntroDialog();
+
+    useGameStore.getState().hydrateForPlayer('player-one', null);
+    const next = useGameStore.getState();
+
+    expect(next.ownerPlayerId).toBe('player-one');
+    expect(next.storySceneIndex).toBe(4);
+    expect(next.unlockedRoleCount).toBe(next.roles.length);
+    expect(next.studioName).toBe('Night Shift');
+    expect(next.hasSeenIntroDialog).toBe(true);
+  });
+
+  it('resets to the initial tutorial state when switching players without a snapshot', () => {
+    const state = useGameStore.getState();
+    state.hydrateForPlayer('player-one', null);
+    state.setStorySceneIndex(4);
+    state.unlockExpandedRoles();
+    state.setStudioName('Night Shift');
+    state.dismissIntroDialog();
+    state.assignRole('hat-01', 'agent-01');
+
+    useGameStore.getState().hydrateForPlayer('player-two', null);
+    const next = useGameStore.getState();
+
+    expect(next.ownerPlayerId).toBe('player-two');
+    expect(next.storySceneIndex).toBe(0);
+    expect(next.unlockedRoleCount).toBe(1);
+    expect(next.studioName).toBe('');
+    expect(next.hasSeenIntroDialog).toBe(false);
+    expect(next.roles.every((role) => role.assignedAgentId === undefined)).toBe(true);
+  });
+
   it('tracks intro dialog dismissal and restores it on reset', () => {
     const state = useGameStore.getState();
 
@@ -41,6 +81,22 @@ describe('gameStore role visibility', () => {
 
     useGameStore.getState().resetTutorial();
     expect(useGameStore.getState().hasSeenIntroDialog).toBe(false);
+  });
+
+  it('preserves ownerPlayerId when resetting the tutorial', () => {
+    const state = useGameStore.getState();
+    state.hydrateForPlayer('player-one', null);
+    state.setStorySceneIndex(4);
+    state.unlockExpandedRoles();
+    state.setStudioName('Night Shift');
+
+    useGameStore.getState().resetTutorial();
+    const next = useGameStore.getState();
+
+    expect(next.ownerPlayerId).toBe('player-one');
+    expect(next.storySceneIndex).toBe(0);
+    expect(next.unlockedRoleCount).toBe(1);
+    expect(next.studioName).toBe('');
   });
 
   it('starts with one unlocked role for first cycle', () => {
@@ -176,6 +232,48 @@ describe('gameStore narrative run shaping', () => {
     const stored = JSON.parse(raw ?? '{}');
     expect(stored.state.storySceneIndex).toBe(4);
     expect(stored.state.unlockedRoleCount).toBe(4);
+  });
+
+  it('migrates older persisted shapes by clamping and normalizing player-scoped state', async () => {
+    const migrate = useGameStore.persist.getOptions().migrate;
+
+    expect(migrate).toBeDefined();
+
+    const migrated = await migrate!(
+      {
+        storySceneIndex: FINAL_SCENE_INDEX + 10,
+        unlockedRoleCount: 0,
+        seed: 123,
+        treasury: 456,
+        studioName: 'Legacy Studio',
+        hasSeenIntroDialog: true,
+        roles: [
+          {
+            id: 'hat-01',
+            name: 'Legacy Lead',
+            assignedAgentId: 'agent-01'
+          }
+        ],
+        agents: useGameStore.getState().agents,
+        latestRun: undefined,
+        latestArtifacts: undefined,
+        runCount: 2,
+        assignmentLog: 'bad-shape'
+      },
+      4
+    );
+    const migratedState = migrated as ReturnType<typeof useGameStore.getState> & {
+      ownerPlayerId: string | null;
+    };
+
+    expect(migratedState.ownerPlayerId).toBeNull();
+    expect(migratedState.storySceneIndex).toBe(FINAL_SCENE_INDEX);
+    expect(migratedState.unlockedRoleCount).toBe(1);
+    expect(migratedState.studioName).toBe('Legacy Studio');
+    expect(migratedState.hasSeenIntroDialog).toBe(true);
+    expect(migratedState.assignmentLog).toEqual([]);
+    expect(migratedState.roles[0]?.isConfigured).toBe(true);
+    expect(buildGameStateSnapshot(migratedState).storySceneIndex).toBe(FINAL_SCENE_INDEX);
   });
 
   it('tracks assignment count from active roles', () => {

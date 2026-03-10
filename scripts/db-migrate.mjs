@@ -1,0 +1,118 @@
+import { existsSync, readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { neon } from '@neondatabase/serverless';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const projectRoot = path.resolve(__dirname, '..');
+
+function loadEnvFile(filename) {
+  const filePath = path.join(projectRoot, filename);
+
+  if (!existsSync(filePath)) {
+    return;
+  }
+
+  const raw = readFileSync(filePath, 'utf8');
+
+  for (const line of raw.split(/\r?\n/u)) {
+    const trimmed = line.trim();
+
+    if (!trimmed || trimmed.startsWith('#')) {
+      continue;
+    }
+
+    const separatorIndex = trimmed.indexOf('=');
+
+    if (separatorIndex <= 0) {
+      continue;
+    }
+
+    const key = trimmed.slice(0, separatorIndex).trim();
+
+    if (!key || process.env[key] !== undefined) {
+      continue;
+    }
+
+    let value = trimmed.slice(separatorIndex + 1).trim();
+
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+
+    process.env[key] = value.replace(/\\n/g, '\n');
+  }
+}
+
+function getDatabaseUrl() {
+  loadEnvFile('.env.local');
+  loadEnvFile('.env');
+
+  return process.env.DATABASE_URL;
+}
+
+async function runMigrations() {
+  const databaseUrl = getDatabaseUrl();
+
+  if (!databaseUrl) {
+    throw new Error('Missing DATABASE_URL. Set it in the environment, .env.local, or .env.');
+  }
+
+  const sql = neon(databaseUrl);
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS players (
+      id uuid PRIMARY KEY,
+      privy_user_id text NOT NULL UNIQUE,
+      wallet_address text,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS progress_events (
+      id uuid PRIMARY KEY,
+      player_id uuid NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      beat text NOT NULL,
+      scene_index integer NOT NULL,
+      occurred_at timestamptz NOT NULL DEFAULT now()
+    )
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS progress_events_player_occurred_idx
+    ON progress_events (player_id, occurred_at DESC)
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS progress_summary (
+      player_id uuid PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,
+      current_beat text NOT NULL,
+      current_scene_index integer NOT NULL,
+      furthest_beat text NOT NULL,
+      furthest_scene_index integer NOT NULL,
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS game_state (
+      player_id uuid PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,
+      snapshot_json jsonb NOT NULL,
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )
+  `;
+
+  console.log('Database schema is up to date.');
+}
+
+void runMigrations().catch((error) => {
+  console.error('Migration failed.');
+  console.error(error instanceof Error ? error.message : error);
+  process.exitCode = 1;
+});

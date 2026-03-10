@@ -32,7 +32,6 @@ type GameStateRow = {
 type SqlClient = ReturnType<typeof neon>;
 
 let sqlClient: SqlClient | null = null;
-let schemaReadyPromise: Promise<void> | null = null;
 
 function getSql(): SqlClient {
   if (!sqlClient) {
@@ -72,68 +71,10 @@ function mapGameState(row: GameStateRow): StoredGameStateRecord {
   };
 }
 
-async function ensureSchema(): Promise<void> {
-  if (!schemaReadyPromise) {
-    schemaReadyPromise = (async () => {
-      const sql = getSql();
-
-      await sql`
-        CREATE TABLE IF NOT EXISTS players (
-          id uuid PRIMARY KEY,
-          privy_user_id text NOT NULL UNIQUE,
-          wallet_address text,
-          created_at timestamptz NOT NULL DEFAULT now(),
-          updated_at timestamptz NOT NULL DEFAULT now()
-        )
-      `;
-
-      await sql`
-        CREATE TABLE IF NOT EXISTS progress_events (
-          id uuid PRIMARY KEY,
-          player_id uuid NOT NULL REFERENCES players(id) ON DELETE CASCADE,
-          beat text NOT NULL,
-          scene_index integer NOT NULL,
-          occurred_at timestamptz NOT NULL DEFAULT now()
-        )
-      `;
-
-      await sql`
-        CREATE INDEX IF NOT EXISTS progress_events_player_occurred_idx
-        ON progress_events (player_id, occurred_at DESC)
-      `;
-
-      await sql`
-        CREATE TABLE IF NOT EXISTS progress_summary (
-          player_id uuid PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,
-          current_beat text NOT NULL,
-          current_scene_index integer NOT NULL,
-          furthest_beat text NOT NULL,
-          furthest_scene_index integer NOT NULL,
-          updated_at timestamptz NOT NULL DEFAULT now()
-        )
-      `;
-
-      await sql`
-        CREATE TABLE IF NOT EXISTS game_state (
-          player_id uuid PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,
-          snapshot_json jsonb NOT NULL,
-          updated_at timestamptz NOT NULL DEFAULT now()
-        )
-      `;
-    })().catch((error) => {
-      schemaReadyPromise = null;
-      throw error;
-    });
-  }
-
-  await schemaReadyPromise;
-}
-
 export async function upsertPlayer(input: {
   privyUserId: string;
   walletAddress: string | null;
 }): Promise<PlayerRecord> {
-  await ensureSchema();
   const sql = getSql();
 
   const [player] = (await sql`
@@ -154,7 +95,6 @@ export async function upsertPlayer(input: {
 }
 
 export async function getProgressSummary(playerId: string): Promise<ProgressSummaryRecord | null> {
-  await ensureSchema();
   const sql = getSql();
 
   const [summary] = (await sql`
@@ -173,7 +113,6 @@ export async function getProgressSummary(playerId: string): Promise<ProgressSumm
 }
 
 export async function getGameState(playerId: string): Promise<StoredGameStateRecord | null> {
-  await ensureSchema();
   const sql = getSql();
 
   const [state] = (await sql`
@@ -191,7 +130,6 @@ export async function recordProgress(input: {
   beat: string;
   sceneIndex: number;
 }): Promise<ProgressSummaryRecord> {
-  await ensureSchema();
   const sql = getSql();
 
   const existingSummary = await getProgressSummary(input.playerId);
@@ -252,7 +190,6 @@ export async function saveGameState(input: {
   playerId: string;
   snapshot: GameStateSnapshot;
 }): Promise<StoredGameStateRecord> {
-  await ensureSchema();
   const sql = getSql();
 
   const [state] = (await sql`
@@ -272,7 +209,6 @@ export async function resetPlayerState(input: {
   initialBeat: string;
   initialSceneIndex: number;
 }): Promise<ProgressSummaryRecord> {
-  await ensureSchema();
   const sql = getSql();
 
   await sql`

@@ -7,6 +7,7 @@
     "dev": "vite",
     "dev:api": "vercel dev",
     "dev:all": "node ./scripts/dev-all.mjs",
+    "db:migrate": "node ./scripts/db-migrate.mjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "reset:all": "node ./scripts/reset-all.mjs",
