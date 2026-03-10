@@ -29,6 +29,7 @@ pnpm dev:all
 Then open the local Vite URL in your browser.
 
 `pnpm dev:all` runs:
+
 - the Vite frontend on `http://localhost:5173`
 - the local Vercel Functions server on `http://localhost:3000`
 
