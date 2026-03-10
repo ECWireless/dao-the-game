@@ -9,7 +9,7 @@ import {
   useQuery,
   useQueryClient
 } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { shallow } from 'zustand/shallow';
 import type {
   GameStateRequest,
@@ -47,6 +47,14 @@ async function requireIdentityToken(): Promise<string> {
   return identityToken;
 }
 
+function getSnapshotSaveDelay(attempt: number): number {
+  if (attempt <= 0) {
+    return 500;
+  }
+
+  return Math.min(1000 * 2 ** (attempt - 1), 10_000);
+}
+
 export default function App() {
   const queryClient = useQueryClient();
   const { ready, authenticated, login, logout, user } = usePrivy();
@@ -66,16 +74,28 @@ export default function App() {
   const clearPlayer = usePlayerStore((state) => state.clearPlayer);
 
   const scene = getScene(storySceneIndex);
-  const serializedSnapshot = JSON.stringify(gameStateSnapshot);
+  const serializedSnapshot = useMemo(
+    () => JSON.stringify(gameStateSnapshot),
+    [gameStateSnapshot]
+  );
 
   const [hasHydratedPlayerState, setHasHydratedPlayerState] = useState(false);
   const [identityToken, setIdentityToken] = useState<string | null>(null);
   const [identityTokenError, setIdentityTokenError] = useState<string | null>(null);
   const [identityTokenRequestCount, setIdentityTokenRequestCount] = useState(0);
+  const [gameStateSaveRetry, setGameStateSaveRetry] = useState<{
+    snapshot: string | null;
+    attempt: number;
+  }>({
+    snapshot: null,
+    attempt: 0
+  });
   const hydrationKeyRef = useRef<string | null>(null);
   const lastTrackedBeatRef = useRef<string | null>(null);
   const lastSavedSnapshotRef = useRef<string | null>(null);
   const pendingSnapshotRef = useRef<string | null>(null);
+  const snapshotSaveRetryAttempt =
+    gameStateSaveRetry.snapshot === serializedSnapshot ? gameStateSaveRetry.attempt : 0;
 
   useEffect(() => {
     if (!ready) {
@@ -179,6 +199,7 @@ export default function App() {
     lastTrackedBeatRef.current = null;
     lastSavedSnapshotRef.current = null;
     pendingSnapshotRef.current = null;
+    setGameStateSaveRetry({ snapshot: null, attempt: 0 });
     queryClient.removeQueries({ queryKey: ['player-bootstrap'] });
   }, [authenticated, clearPlayer, queryClient, ready]);
 
@@ -201,6 +222,7 @@ export default function App() {
 
     lastSavedSnapshotRef.current = nextGameState ? JSON.stringify(nextGameState.snapshot) : null;
     pendingSnapshotRef.current = null;
+    setGameStateSaveRetry({ snapshot: null, attempt: 0 });
     setHasHydratedPlayerState(true);
   }, [bootstrapQuery.data, hydrateForPlayer, setPlayer]);
 
@@ -253,13 +275,19 @@ export default function App() {
           onSuccess: () => {
             lastSavedSnapshotRef.current = serializedSnapshot;
             pendingSnapshotRef.current = null;
+            setGameStateSaveRetry({ snapshot: null, attempt: 0 });
           },
           onError: () => {
             pendingSnapshotRef.current = null;
+            setGameStateSaveRetry((current) => ({
+              snapshot: serializedSnapshot,
+              attempt:
+                current.snapshot === serializedSnapshot ? current.attempt + 1 : 1
+            }));
           }
         }
       );
-    }, 500);
+    }, getSnapshotSaveDelay(snapshotSaveRetryAttempt));
 
     return () => window.clearTimeout(timer);
   }, [
@@ -269,7 +297,8 @@ export default function App() {
     hasHydratedPlayerState,
     identityToken,
     player,
-    serializedSnapshot
+    serializedSnapshot,
+    snapshotSaveRetryAttempt
   ]);
 
   useEffect(() => {
@@ -365,6 +394,7 @@ export default function App() {
                 lastTrackedBeatRef.current = null;
                 lastSavedSnapshotRef.current = null;
                 pendingSnapshotRef.current = null;
+                setGameStateSaveRetry({ snapshot: null, attempt: 0 });
               })();
             }}
             onSignOut={() => {

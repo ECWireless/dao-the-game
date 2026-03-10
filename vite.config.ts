@@ -7,15 +7,21 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (!id.includes('node_modules')) {
+          const normalizedId = id.replaceAll('\\', '/');
+
+          if (!normalizedId.includes('node_modules')) {
             return undefined;
           }
 
-          if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/scheduler/')) {
+          if (
+            normalizedId.includes('/react/') ||
+            normalizedId.includes('/react-dom/') ||
+            normalizedId.includes('/scheduler/')
+          ) {
             return 'react-vendor';
           }
 
-          if (id.includes('/@tanstack/react-query/')) {
+          if (normalizedId.includes('/@tanstack/react-query/')) {
             return 'query-vendor';
           }
 
