@@ -1,8 +1,8 @@
 import type { ResetResponse } from '../src/contracts/player';
-import { STORY_SCENES } from '../src/levels/story';
-import { resetPlayerState, upsertPlayer } from './_lib/db';
-import { handleRouteError, json, options, withCors } from './_lib/http';
-import { requirePrivyUser } from './_lib/privy';
+import { STORY_SCENES } from '../src/levels/story.js';
+import { resetPlayerState, upsertPlayer } from './_lib/db.js';
+import { handleRouteError, json, options, withCors } from './_lib/http.js';
+import { requirePrivyUser } from './_lib/privy.js';
 
 export const runtime = 'nodejs';
 

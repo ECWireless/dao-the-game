@@ -2,9 +2,9 @@ import type {
   PlayerBootstrapRequest,
   PlayerBootstrapResponse
 } from '../../src/contracts/player';
-import { getGameState, getProgressSummary, upsertPlayer } from '../_lib/db';
-import { handleRouteError, json, options, parseOptionalJsonBody, withCors } from '../_lib/http';
-import { requirePrivyUser } from '../_lib/privy';
+import { getGameState, getProgressSummary, upsertPlayer } from '../_lib/db.js';
+import { handleRouteError, json, options, parseOptionalJsonBody, withCors } from '../_lib/http.js';
+import { requirePrivyUser } from '../_lib/privy.js';
 
 export const runtime = 'nodejs';
 

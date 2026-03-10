@@ -1,7 +1,7 @@
 import type { GameStateRequest, GameStateResponse } from '../src/contracts/player';
-import { saveGameState, upsertPlayer } from './_lib/db';
-import { handleRouteError, HttpError, json, options, parseOptionalJsonBody, withCors } from './_lib/http';
-import { requirePrivyUser } from './_lib/privy';
+import { saveGameState, upsertPlayer } from './_lib/db.js';
+import { handleRouteError, HttpError, json, options, parseOptionalJsonBody, withCors } from './_lib/http.js';
+import { requirePrivyUser } from './_lib/privy.js';
 
 export const runtime = 'nodejs';
 

@@ -1,6 +1,6 @@
 import { PrivyClient } from '@privy-io/node';
-import { getPrivyAppId, getPrivyAppSecret } from './env';
-import { HttpError } from './http';
+import { getPrivyAppId, getPrivyAppSecret } from './env.js';
+import { HttpError } from './http.js';
 
 let privyClient: PrivyClient | null = null;
 

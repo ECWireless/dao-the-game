@@ -1,8 +1,8 @@
 import type { ProgressRequest, ProgressResponse } from '../src/contracts/player';
-import { getSceneIndex } from '../src/levels/story';
-import { recordProgress, upsertPlayer } from './_lib/db';
-import { handleRouteError, HttpError, json, options, parseOptionalJsonBody, withCors } from './_lib/http';
-import { requirePrivyUser } from './_lib/privy';
+import { getSceneIndex } from '../src/levels/story.js';
+import { recordProgress, upsertPlayer } from './_lib/db.js';
+import { handleRouteError, HttpError, json, options, parseOptionalJsonBody, withCors } from './_lib/http.js';
+import { requirePrivyUser } from './_lib/privy.js';
 
 export const runtime = 'nodejs';
 

@@ -6,7 +6,7 @@ import type {
   ProgressSummaryRecord,
   StoredGameStateRecord
 } from '../../src/contracts/player';
-import { getDatabaseUrl } from './env';
+import { getDatabaseUrl } from './env.js';
 
 type PlayerRow = {
   id: string;
