@@ -32,7 +32,7 @@ type SceneContentArgs = {
   unlockExpandedRoles: () => void;
   assignRole: (roleId: string, agentId: string) => void;
   runProduction: () => void;
-  resetTutorial: () => void;
+  resetDemo: () => void;
   setIsMachineLocked: (isLocked: boolean) => void;
 };
 
@@ -102,7 +102,7 @@ export function renderSceneContent({
   unlockExpandedRoles,
   assignRole,
   runProduction,
-  resetTutorial,
+  resetDemo,
   setIsMachineLocked
 }: SceneContentArgs): ReactNode {
   const configuredExpandedRoles = activeRoles.filter((role) => role.isConfigured);
@@ -350,7 +350,7 @@ export function renderSceneContent({
             'Thank you for pulling this off under pressure. I am wiring the $15,000 over ASAP.'
           ]}
           actionLabel={isInteractive ? 'Play Again' : undefined}
-          onAction={isInteractive ? resetTutorial : undefined}
+          onAction={isInteractive ? resetDemo : undefined}
         />
       );
   }

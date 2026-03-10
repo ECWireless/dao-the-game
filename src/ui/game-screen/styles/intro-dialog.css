@@ -89,6 +89,11 @@
   color: #20314c;
 }
 
+.intro-dialog-actions {
+  display: grid;
+  gap: 0.5rem;
+}
+
 .intro-dialog-action {
   width: 100%;
   justify-content: center;

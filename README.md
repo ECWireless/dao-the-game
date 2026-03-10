@@ -9,6 +9,10 @@ In the full game, the player would be allowed 3 types of focuses: building worke
 - Vite
 - React 18
 - TypeScript
+- Vercel Functions
+- Neon Postgres
+- Privy
+- TanStack Query
 - Zustand
 - Vitest
 - ESLint
@@ -17,16 +21,26 @@ In the full game, the player would be allowed 3 types of focuses: building worke
 
 ```bash
 pnpm install
-pnpm dev
+cp .env.example .env.local
+pnpm dev:all
 ```
 
 Then open the local Vite URL in your browser.
 
+`pnpm dev:all` runs:
+- the Vite frontend on `http://localhost:5173`
+- the local Vercel Functions server on `http://localhost:3000`
+
+The Vite dev server proxies `/api/*` requests to `localhost:3000`, which matches the same-origin `/api` routing used in production on Vercel.
+
 ## Scripts
 
-- `pnpm dev` - start the development server
+- `pnpm dev` - start the Vite frontend on `localhost:5173`
+- `pnpm dev:api` - start local Vercel Functions on `localhost:3000`
+- `pnpm dev:all` - run the frontend and API servers together
 - `pnpm build` - typecheck and build for production
 - `pnpm preview` - preview the production build
+- `pnpm reset:all` - wipe local app data in Neon after confirmation
 - `pnpm lint` - run ESLint
 - `pnpm typecheck` - run TypeScript checks
 - `pnpm test` - run the test suite
@@ -48,5 +62,6 @@ dev-history/ dated build journal
 ## Notes
 
 - This is a proof-of-concept, not a production app.
-- Everything is simulated. There is no backend, no real wallet flow, and no on-chain integration.
-- Progress is stored locally in browser storage for the current demo flow.
+- The app now includes a small Vercel-backed API layer for player bootstrap, progress tracking, saved run state, and reset flows.
+- Privy handles authentication, identity tokens, and wallet provisioning for the current demo.
+- Progress is stored in Neon and mirrored locally in browser storage for fast client restoration.

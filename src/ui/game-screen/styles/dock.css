@@ -221,6 +221,10 @@ button {
   cursor: pointer;
 }
 
+button:disabled {
+  cursor: default;
+}
+
 button:focus-visible {
   outline: 2px solid rgb(92 163 242 / 74%);
   outline-offset: 2px;

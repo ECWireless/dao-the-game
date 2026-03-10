@@ -1,8 +1,18 @@
 type IntroDialogProps = {
-  onStart: () => void;
+  onPrimaryAction: () => void;
+  primaryActionLabel?: string;
+  primaryActionDisabled?: boolean;
+  secondaryActionLabel?: string;
+  onSecondaryAction?: () => void;
 };
 
-export function IntroDialog({ onStart }: IntroDialogProps) {
+export function IntroDialog({
+  onPrimaryAction,
+  primaryActionLabel = 'Start Demo',
+  primaryActionDisabled = false,
+  secondaryActionLabel,
+  onSecondaryAction
+}: IntroDialogProps) {
   return (
     <div className="intro-dialog-scrim" role="dialog" aria-modal="true" aria-labelledby="intro-dialog-title">
       <section className="intro-dialog">
@@ -22,9 +32,21 @@ export function IntroDialog({ onStart }: IntroDialogProps) {
           produce more elaborate work for customers. They could also license workers to other organizations, sell off
           organizational units, or buy out entire other DAOs.
         </p>
-        <button className="primary-action intro-dialog-action" type="button" onClick={onStart}>
-          Start Demo
-        </button>
+        <div className="intro-dialog-actions">
+          {secondaryActionLabel && onSecondaryAction ? (
+            <button className="secondary-action intro-dialog-action" type="button" onClick={onSecondaryAction}>
+              {secondaryActionLabel}
+            </button>
+          ) : null}
+          <button
+            className="primary-action intro-dialog-action"
+            type="button"
+            onClick={onPrimaryAction}
+            disabled={primaryActionDisabled}
+          >
+            {primaryActionLabel}
+          </button>
+        </div>
       </section>
     </div>
   );
