@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getScene, type StoryApp } from '../levels/story';
 import { countAssignedRoles, estimateRunwayAfterRun, getActiveRoles, useGameStore } from '../state/gameStore';
@@ -15,7 +15,27 @@ import type { AppSwitchPhase } from './game-screen/types';
 import { getAppLaunchOrigin, getLatestReachedSceneForApp, getUnlockedApps } from './game-screen/utils';
 import './game-screen.css';
 
-export default function GameScreen() {
+export type IntroDialogConfig = {
+  primaryActionLabel?: string;
+  onPrimaryAction?: () => void;
+  primaryActionDisabled?: boolean;
+  secondaryActionLabel?: string;
+  onSecondaryAction?: () => void;
+};
+
+type GameScreenProps = {
+  forceIntroDialog?: boolean;
+  suppressIntroDialog?: boolean;
+  introDialogConfig?: IntroDialogConfig | null;
+  headerAccessory?: ReactNode;
+};
+
+export default function GameScreen({
+  forceIntroDialog = false,
+  suppressIntroDialog = false,
+  introDialogConfig = null,
+  headerAccessory = null
+}: GameScreenProps) {
   const storySceneIndex = useGameStore((state) => state.storySceneIndex);
   const unlockedRoleCount = useGameStore((state) => state.unlockedRoleCount);
   const treasury = useGameStore((state) => state.treasury);
@@ -43,7 +63,6 @@ export default function GameScreen() {
   const nextHandoff = getCrossAppHandoff(nextScene.id);
   const unlockedApps = useMemo(() => getUnlockedApps(storySceneIndex), [storySceneIndex]);
   const previousUnlockedAppsRef = useRef<StoryApp[]>(storySceneIndex === 0 && unlockedApps.includes('mail') ? unlockedApps.filter((app) => app !== 'mail') : unlockedApps);
-  const resetTapRef = useRef<{ count: number; timerId: number | null }>({ count: 0, timerId: null });
 
   const [currentApp, setCurrentApp] = useState<StoryApp>(scene.app);
   const [pendingApp, setPendingApp] = useState<StoryApp | null>(null);
@@ -58,7 +77,8 @@ export default function GameScreen() {
   const activeRoles = getActiveRoles(roles, unlockedRoleCount);
   const assignedActiveRoles = countAssignedRoles(activeRoles);
   const runwayAfterRun = estimateRunwayAfterRun(treasury, activeRoles, agents);
-  const showIntroDialog = storySceneIndex === 0 && !hasSeenIntroDialog;
+  const showIntroDialog =
+    forceIntroDialog || (!suppressIntroDialog && storySceneIndex === 0 && !hasSeenIntroDialog);
   const canSwitchApps = !isMachineLocked && !showIntroDialog;
 
   const requestAppSwitch = useCallback(
@@ -75,14 +95,8 @@ export default function GameScreen() {
     [canSwitchApps, currentApp, switchPhase, unlockedApps]
   );
 
-  const clearResetTapState = useCallback(() => {
-    if (resetTapRef.current.timerId !== null) window.clearTimeout(resetTapRef.current.timerId);
-    resetTapRef.current = { count: 0, timerId: null };
-  }, []);
-
-  const handleHiddenReset = useCallback(() => {
+  const handleReplayDemo = useCallback(() => {
     const resetApps = getUnlockedApps(0);
-    clearResetTapState();
     resetTutorial();
     setCurrentApp('messages');
     setPendingApp(null);
@@ -94,33 +108,13 @@ export default function GameScreen() {
     setPendingHandoffSceneId(null);
     setLaunchOriginX(getAppLaunchOrigin('messages', resetApps));
     previousUnlockedAppsRef.current = resetApps;
-  }, [clearResetTapState, resetTutorial]);
+  }, [resetTutorial]);
 
   const handleDockOpen = useCallback(
     (targetApp: StoryApp) => {
-      if (targetApp === 'messages') {
-        const nextCount = resetTapRef.current.count + 1;
-        if (resetTapRef.current.timerId !== null) window.clearTimeout(resetTapRef.current.timerId);
-
-        if (nextCount >= 3) {
-          clearResetTapState();
-          if (window.confirm('Confirm demo reset?')) handleHiddenReset();
-          return;
-        }
-
-        resetTapRef.current = {
-          count: nextCount,
-          timerId: window.setTimeout(() => {
-            resetTapRef.current = { count: 0, timerId: null };
-          }, 1200)
-        };
-      } else {
-        clearResetTapState();
-      }
-
       requestAppSwitch(targetApp);
     },
-    [clearResetTapState, handleHiddenReset, requestAppSwitch]
+    [requestAppSwitch]
   );
 
   const advanceStoryAndOpenApp = useCallback((targetApp: StoryApp) => {
@@ -191,9 +185,6 @@ export default function GameScreen() {
     }, 220);
     return () => window.clearTimeout(timer);
   }, [switchPhase]);
-
-  useEffect(() => () => clearResetTapState(), [clearResetTapState]);
-
   useEffect(() => {
     if (storySceneIndex === 0) {
       setIsEmailNotificationVisible(false);
@@ -248,6 +239,16 @@ export default function GameScreen() {
       }
     : undefined;
   const dockTargetApp = pendingHandoff?.targetApp ?? (hasEmailNotification && isEmailNotificationVisible ? 'mail' : scene.app);
+  const resolvedIntroDialogConfig: Required<
+    Pick<IntroDialogConfig, 'onPrimaryAction' | 'primaryActionLabel' | 'primaryActionDisabled'>
+  > &
+    Omit<IntroDialogConfig, 'onPrimaryAction' | 'primaryActionLabel' | 'primaryActionDisabled'> = {
+    onPrimaryAction: introDialogConfig?.onPrimaryAction ?? dismissIntroDialog,
+    primaryActionLabel: introDialogConfig?.primaryActionLabel ?? 'Start Demo',
+    primaryActionDisabled: introDialogConfig?.primaryActionDisabled ?? false,
+    secondaryActionLabel: introDialogConfig?.secondaryActionLabel,
+    onSecondaryAction: introDialogConfig?.onSecondaryAction
+  };
 
   useEffect(() => {
     if (!hasEmailNotification) {
@@ -319,7 +320,7 @@ export default function GameScreen() {
         unlockExpandedRoles,
         assignRole,
         runProduction,
-        resetTutorial,
+        resetDemo: handleReplayDemo,
         setIsMachineLocked
       })
     : null;
@@ -363,6 +364,7 @@ export default function GameScreen() {
               <div className="app-heading">
                 <p className="app-title">{APP_META[currentApp].label}</p>
               </div>
+              {headerAccessory ? <div className="app-header-accessory">{headerAccessory}</div> : null}
             </div>
           </section>
 
@@ -389,7 +391,7 @@ export default function GameScreen() {
             />
           </footer>
 
-          {showIntroDialog ? <IntroDialog onStart={dismissIntroDialog} /> : null}
+          {showIntroDialog ? <IntroDialog {...resolvedIntroDialogConfig} /> : null}
         </div>
       </section>
     </main>

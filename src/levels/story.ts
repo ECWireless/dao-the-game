@@ -155,3 +155,7 @@ export function getScene(index: number): StoryScene {
   const bounded = Math.max(0, Math.min(index, FINAL_SCENE_INDEX));
   return STORY_SCENES[bounded] ?? STORY_SCENES[0];
 }
+
+export function getSceneIndex(sceneId: string): number {
+  return STORY_SCENES.findIndex((scene) => scene.id === sceneId);
+}

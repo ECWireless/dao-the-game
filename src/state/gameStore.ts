@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import type { AssignmentLogEntry, GameStateSnapshot } from '../contracts/gameState';
 import { FINAL_SCENE_INDEX } from '../levels/story';
 import {
   TUTORIAL_BRIEF,
@@ -15,12 +16,8 @@ const GAME_STATE_STORAGE_KEY = 'dao-the-game:state:v2';
 const FIRST_CYCLE_ROLE_COUNT = 1;
 const DEFAULT_STUDIO_NAME = '';
 
-export type AssignmentLogEntry = {
-  id: string;
-  message: string;
-};
-
 type GameStore = {
+  ownerPlayerId: string | null;
   storySceneIndex: number;
   unlockedRoleCount: number;
   seed: number;
@@ -33,6 +30,8 @@ type GameStore = {
   latestArtifacts?: ArtifactBundle;
   runCount: number;
   assignmentLog: AssignmentLogEntry[];
+  hydrateForPlayer: (playerId: string, snapshot?: Partial<GameStateSnapshot> | null) => void;
+  clearPlayerState: () => void;
   setStorySceneIndex: (next: number) => void;
   advanceStory: () => void;
   retreatStory: () => void;
@@ -46,21 +45,9 @@ type GameStore = {
   resetTutorial: () => void;
 };
 
-type PersistedGameState = Pick<
-  GameStore,
-  | 'storySceneIndex'
-  | 'unlockedRoleCount'
-  | 'seed'
-  | 'treasury'
-  | 'studioName'
-  | 'hasSeenIntroDialog'
-  | 'roles'
-  | 'agents'
-  | 'latestRun'
-  | 'latestArtifacts'
-  | 'runCount'
-  | 'assignmentLog'
->;
+type PersistedGameState = GameStateSnapshot & {
+  ownerPlayerId: string | null;
+};
 
 function cloneTutorialRoles(): HatRole[] {
   return TUTORIAL_ROLES.map((role) => ({ ...role, isConfigured: role.isConfigured ?? false }));
@@ -73,8 +60,9 @@ function createAssignmentLogEntry(message: string): AssignmentLogEntry {
   };
 }
 
-function getInitialState() {
+function getInitialState(ownerPlayerId: string | null = null): PersistedGameState {
   return {
+    ownerPlayerId,
     storySceneIndex: 0,
     unlockedRoleCount: FIRST_CYCLE_ROLE_COUNT,
     seed: TUTORIAL_SEED,
@@ -87,6 +75,100 @@ function getInitialState() {
     latestArtifacts: undefined,
     runCount: 0,
     assignmentLog: []
+  };
+}
+
+function normalizeGameStateSnapshot(
+  candidate: Partial<GameStateSnapshot> | undefined,
+  ownerPlayerId: string | null
+): PersistedGameState {
+  const initial = getInitialState(ownerPlayerId);
+
+  if (!candidate || typeof candidate !== 'object') {
+    return initial;
+  }
+
+  return {
+    ...initial,
+    ...candidate,
+    ownerPlayerId,
+    storySceneIndex:
+      typeof candidate.storySceneIndex === 'number'
+        ? clampSceneIndex(candidate.storySceneIndex)
+        : initial.storySceneIndex,
+    unlockedRoleCount:
+      typeof candidate.unlockedRoleCount === 'number'
+        ? Math.max(
+            FIRST_CYCLE_ROLE_COUNT,
+            Math.min(candidate.unlockedRoleCount, initial.roles.length)
+          )
+        : initial.unlockedRoleCount,
+    seed: typeof candidate.seed === 'number' ? candidate.seed : initial.seed,
+    treasury: typeof candidate.treasury === 'number' ? candidate.treasury : initial.treasury,
+    studioName:
+      typeof candidate.studioName === 'string' ? candidate.studioName : initial.studioName,
+    hasSeenIntroDialog:
+      typeof candidate.hasSeenIntroDialog === 'boolean'
+        ? candidate.hasSeenIntroDialog
+        : initial.hasSeenIntroDialog,
+    roles: Array.isArray(candidate.roles)
+      ? initial.roles.map((role, index) => {
+          const persistedRole = candidate.roles?.[index];
+
+          if (!persistedRole) {
+            return role;
+          }
+
+          return {
+            ...role,
+            ...persistedRole,
+            isConfigured:
+              typeof persistedRole.isConfigured === 'boolean'
+                ? persistedRole.isConfigured
+                : Boolean(persistedRole.assignedAgentId) || persistedRole.name !== role.name
+          };
+        })
+      : initial.roles,
+    agents: Array.isArray(candidate.agents) ? candidate.agents : initial.agents,
+    latestRun: candidate.latestRun,
+    latestArtifacts: candidate.latestArtifacts,
+    runCount: typeof candidate.runCount === 'number' ? candidate.runCount : initial.runCount,
+    assignmentLog: Array.isArray(candidate.assignmentLog)
+      ? candidate.assignmentLog
+      : initial.assignmentLog
+  };
+}
+
+export function buildGameStateSnapshot(
+  state: Pick<
+    GameStore,
+    | 'storySceneIndex'
+    | 'unlockedRoleCount'
+    | 'seed'
+    | 'treasury'
+    | 'studioName'
+    | 'hasSeenIntroDialog'
+    | 'roles'
+    | 'agents'
+    | 'latestRun'
+    | 'latestArtifacts'
+    | 'runCount'
+    | 'assignmentLog'
+  >
+): GameStateSnapshot {
+  return {
+    storySceneIndex: state.storySceneIndex,
+    unlockedRoleCount: state.unlockedRoleCount,
+    seed: state.seed,
+    treasury: state.treasury,
+    studioName: state.studioName,
+    hasSeenIntroDialog: state.hasSeenIntroDialog,
+    roles: state.roles,
+    agents: state.agents,
+    latestRun: state.latestRun,
+    latestArtifacts: state.latestArtifacts,
+    runCount: state.runCount,
+    assignmentLog: state.assignmentLog
   };
 }
 
@@ -197,6 +279,24 @@ export const useGameStore = create<GameStore>()(
   persist(
     (set, get) => ({
       ...getInitialState(),
+      hydrateForPlayer: (playerId, snapshot) => {
+        const state = get();
+
+        if (!snapshot) {
+          if (state.ownerPlayerId === playerId) {
+            set({ ownerPlayerId: playerId });
+            return;
+          }
+
+          set(getInitialState(playerId));
+          return;
+        }
+
+        set(normalizeGameStateSnapshot(snapshot, playerId));
+      },
+      clearPlayerState: () => {
+        set(getInitialState());
+      },
       setStorySceneIndex: (next) => {
         set({ storySceneIndex: clampSceneIndex(next) });
       },
@@ -355,26 +455,16 @@ export const useGameStore = create<GameStore>()(
         return result;
       },
       resetTutorial: () => {
-        set(getInitialState());
+        set(getInitialState(get().ownerPlayerId));
       }
     }),
     {
       name: GAME_STATE_STORAGE_KEY,
-      version: 4,
+      version: 5,
       storage: createJSONStorage(() => localStorage),
       partialize: (state): PersistedGameState => ({
-        storySceneIndex: state.storySceneIndex,
-        unlockedRoleCount: state.unlockedRoleCount,
-        seed: state.seed,
-        treasury: state.treasury,
-        studioName: state.studioName,
-        hasSeenIntroDialog: state.hasSeenIntroDialog,
-        roles: state.roles,
-        agents: state.agents,
-        latestRun: state.latestRun,
-        latestArtifacts: state.latestArtifacts,
-        runCount: state.runCount,
-        assignmentLog: state.assignmentLog
+        ownerPlayerId: state.ownerPlayerId,
+        ...buildGameStateSnapshot(state)
       }),
       migrate: (persistedState) => {
         if (!persistedState || typeof persistedState !== 'object') {
@@ -382,47 +472,7 @@ export const useGameStore = create<GameStore>()(
         }
 
         const candidate = persistedState as Partial<PersistedGameState>;
-        const initial = getInitialState();
-
-        return {
-          ...initial,
-          ...candidate,
-          studioName:
-            typeof candidate.studioName === 'string' ? candidate.studioName : initial.studioName,
-          hasSeenIntroDialog:
-            typeof candidate.hasSeenIntroDialog === 'boolean'
-              ? candidate.hasSeenIntroDialog
-              : initial.hasSeenIntroDialog,
-          roles: Array.isArray(candidate.roles)
-            ? initial.roles.map((role, index) => {
-                const persistedRole = candidate.roles?.[index];
-
-                if (!persistedRole) {
-                  return role;
-                }
-
-                return {
-                  ...role,
-                  ...persistedRole,
-                  isConfigured:
-                    typeof persistedRole.isConfigured === 'boolean'
-                      ? persistedRole.isConfigured
-                      : Boolean(persistedRole.assignedAgentId) || persistedRole.name !== role.name
-                };
-              })
-            : initial.roles,
-          storySceneIndex:
-            typeof candidate.storySceneIndex === 'number'
-              ? clampSceneIndex(candidate.storySceneIndex)
-              : initial.storySceneIndex,
-          unlockedRoleCount:
-            typeof candidate.unlockedRoleCount === 'number'
-              ? Math.max(
-                  FIRST_CYCLE_ROLE_COUNT,
-                  Math.min(candidate.unlockedRoleCount, initial.roles.length)
-                )
-              : initial.unlockedRoleCount
-        };
+        return normalizeGameStateSnapshot(candidate, candidate.ownerPlayerId ?? null);
       }
     }
   )
