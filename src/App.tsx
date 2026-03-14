@@ -90,7 +90,15 @@ type ResolveExecutionClientOptions = {
   requireSmartWallet?: boolean;
 };
 
-export default function App() {
+type AppProps = {
+  autoStartLogin?: boolean;
+  onAutoStartLoginHandled?: () => void;
+};
+
+export default function App({
+  autoStartLogin = false,
+  onAutoStartLoginHandled
+}: AppProps) {
   const queryClient = useQueryClient();
   const { ready, authenticated, login, logout, user } = usePrivy();
   const { wallets } = useWallets();
@@ -129,6 +137,7 @@ export default function App() {
   const lastTrackedBeatRef = useRef<string | null>(null);
   const lastSavedSnapshotRef = useRef<string | null>(null);
   const pendingSnapshotRef = useRef<string | null>(null);
+  const hasTriggeredAutoLoginRef = useRef(false);
   const snapshotSaveRetryAttempt =
     gameStateSaveRetry.snapshot === serializedSnapshot ? gameStateSaveRetry.attempt : 0;
   const bootstrapQueryKey = useMemo(
@@ -175,6 +184,21 @@ export default function App() {
       isCancelled = true;
     };
   }, [authenticated, identityTokenRequestCount, ready]);
+
+  useEffect(() => {
+    if (!autoStartLogin) {
+      hasTriggeredAutoLoginRef.current = false;
+      return;
+    }
+
+    if (!ready || authenticated || hasTriggeredAutoLoginRef.current) {
+      return;
+    }
+
+    hasTriggeredAutoLoginRef.current = true;
+    onAutoStartLoginHandled?.();
+    void login();
+  }, [authenticated, autoStartLogin, login, onAutoStartLoginHandled, ready]);
 
   const bootstrapQuery = useQuery({
     queryKey: bootstrapQueryKey,
