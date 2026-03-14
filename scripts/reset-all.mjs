@@ -64,7 +64,7 @@ async function confirmReset() {
 
   try {
     const answer = await rl.question(
-      'This will permanently delete all players, progress events, progress summaries, and saved game state from the configured Neon database. Continue? [y/N] '
+      'This will permanently delete all players, progress events, progress summaries, saved game state, and Hats org metadata from the configured Neon database. Continue? [y/N] '
     );
 
     return /^y(?:es)?$/iu.test(answer.trim());
@@ -99,7 +99,7 @@ async function main() {
   const sql = neon(databaseUrl);
 
   await sql`
-    TRUNCATE TABLE game_state, progress_events, progress_summary, players CASCADE
+    TRUNCATE TABLE org_role_hats, org_trees, game_state, progress_events, progress_summary, players CASCADE
   `;
 
   console.log('Neon data wiped.');

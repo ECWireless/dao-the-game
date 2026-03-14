@@ -19,13 +19,16 @@
     "format:write": "prettier --write ."
   },
   "dependencies": {
+    "@hatsprotocol/sdk-v1-core": "^0.12.4",
     "@neondatabase/serverless": "^1.0.2",
     "@privy-io/node": "^0.10.1",
     "@privy-io/react-auth": "^3.16.0",
     "@tanstack/react-query": "^5.90.21",
     "@vercel/analytics": "^1.6.1",
+    "permissionless": "^0.2.47",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "viem": "^2.47.2",
     "zod": "^4.3.6",
     "zustand": "^4.5.5"
   },

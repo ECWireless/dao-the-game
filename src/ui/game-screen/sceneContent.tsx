@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { OrgTreeRecord } from '../../contracts/org';
 import type { Agent, ArtifactBundle, HatRole, RunResult } from '../../types';
 import type { AssignmentLogEntry, ChatLine } from './types';
 import { MessagesScene } from './scenes/CommunicationScenes';
@@ -17,6 +18,7 @@ type SceneContentArgs = {
   sceneId: string;
   isInteractive: boolean;
   studioName: string;
+  orgTree: OrgTreeRecord | null;
   activeRoles: HatRole[];
   agents: Agent[];
   assignmentLog: AssignmentLogEntry[];
@@ -27,12 +29,12 @@ type SceneContentArgs = {
   runwayAfterRun: number;
   advanceStory: () => void;
   queueCrossAppAdvance: () => void;
-  setStudioName: (name: string) => void;
-  configureRole: (roleId: string, name: string) => void;
+  setStudioName: (name: string) => Promise<void> | void;
+  configureRole: (roleId: string, name: string) => Promise<void> | void;
   unlockExpandedRoles: () => void;
   assignRole: (roleId: string, agentId: string) => void;
   runProduction: () => void;
-  resetDemo: () => void;
+  resetDemo: () => Promise<void> | void;
   setIsMachineLocked: (isLocked: boolean) => void;
 };
 
@@ -87,6 +89,7 @@ export function renderSceneContent({
   sceneId,
   isInteractive,
   studioName,
+  orgTree,
   activeRoles,
   agents,
   assignmentLog,
@@ -189,6 +192,7 @@ export function renderSceneContent({
           roles={activeRoles}
           agents={agents}
           studioName={studioName}
+          orgTree={orgTree}
           isExpanded={false}
           onSetStudioName={isInteractive ? setStudioName : undefined}
           onConfigureRole={isInteractive ? configureRole : undefined}
@@ -229,6 +233,7 @@ export function renderSceneContent({
           roles={activeRoles}
           agents={agents}
           studioName={studioName}
+          orgTree={orgTree}
           isExpanded={false}
           onAssignCandidateToRole={isInteractive ? assignRole : undefined}
           onComplete={isInteractive ? queueCrossAppAdvance : undefined}
@@ -289,6 +294,7 @@ export function renderSceneContent({
           roles={activeRoles}
           agents={agents}
           studioName={studioName}
+          orgTree={orgTree}
           isExpanded
           onConfigureRole={isInteractive ? configureRole : undefined}
           onComplete={isInteractive ? queueCrossAppAdvance : undefined}
@@ -315,6 +321,7 @@ export function renderSceneContent({
           roles={configuredExpandedRoles}
           agents={agents}
           studioName={studioName}
+          orgTree={orgTree}
           isExpanded
           onAssignCandidateToRole={isInteractive ? assignRole : undefined}
           onComplete={isInteractive ? queueCrossAppAdvance : undefined}
@@ -350,7 +357,7 @@ export function renderSceneContent({
             'Thank you for pulling this off under pressure. I am wiring the $15,000 over ASAP.'
           ]}
           actionLabel={isInteractive ? 'Play Again' : undefined}
-          onAction={isInteractive ? resetDemo : undefined}
+          onAction={isInteractive ? () => void resetDemo() : undefined}
         />
       );
   }

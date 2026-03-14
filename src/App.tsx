@@ -4,12 +4,17 @@ import {
   usePrivy,
   useWallets
 } from '@privy-io/react-auth';
-import {
-  useMutation,
-  useQuery,
-  useQueryClient
-} from '@tanstack/react-query';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { Address } from 'viem';
+import type {
+  OrgRoleHatRecord,
+  OrgRoleHatUpsertRequest,
+  OrgRoleHatUpsertResponse,
+  OrgTreeUpsertRequest,
+  OrgTreeUpsertResponse
+} from './contracts/org';
 import { shallow } from 'zustand/shallow';
 import type {
   GameStateRequest,
@@ -20,7 +25,16 @@ import type {
   ProgressResponse,
   ResetResponse
 } from './contracts/player';
+import { clientEnv } from './config';
 import { getScene } from './levels/story';
+import {
+  HATS_CHAIN_ID,
+  changeHatDetails,
+  createEmbeddedWalletExecutionClient,
+  createRoleHat,
+  mintTopHat,
+  type HatsExecutionClient
+} from './lib/hats';
 import { postApi } from './lib/api';
 import { buildGameStateSnapshot, useGameStore } from './state/gameStore';
 import { usePlayerStore } from './state/playerStore';
@@ -55,10 +69,32 @@ function getSnapshotSaveDelay(attempt: number): number {
   return Math.min(1000 * 2 ** (attempt - 1), 10_000);
 }
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  return fallback;
+}
+
+function formatTxHash(hash: string): string {
+  return `${hash.slice(0, 10)}...${hash.slice(-6)}`;
+}
+
+function sortRoleHats(roleHats: OrgRoleHatRecord[]): OrgRoleHatRecord[] {
+  return [...roleHats].sort((left, right) => left.roleId.localeCompare(right.roleId));
+}
+
+type ResolveExecutionClientOptions = {
+  expectedWearerAddress?: string | null;
+  requireSmartWallet?: boolean;
+};
+
 export default function App() {
   const queryClient = useQueryClient();
   const { ready, authenticated, login, logout, user } = usePrivy();
   const { wallets } = useWallets();
+  const { getClientForChain } = useSmartWallets();
   const embeddedWallet = getEmbeddedConnectedWallet(wallets);
   const walletAddress = embeddedWallet?.address ?? null;
 
@@ -67,6 +103,8 @@ export default function App() {
   const dismissIntroDialog = useGameStore((state) => state.dismissIntroDialog);
   const hydrateForPlayer = useGameStore((state) => state.hydrateForPlayer);
   const resetTutorial = useGameStore((state) => state.resetTutorial);
+  const setStudioName = useGameStore((state) => state.setStudioName);
+  const configureRole = useGameStore((state) => state.configureRole);
   const gameStateSnapshot = useGameStore((state) => buildGameStateSnapshot(state), shallow);
 
   const player = usePlayerStore((state) => state.player);
@@ -74,10 +112,7 @@ export default function App() {
   const clearPlayer = usePlayerStore((state) => state.clearPlayer);
 
   const scene = getScene(storySceneIndex);
-  const serializedSnapshot = useMemo(
-    () => JSON.stringify(gameStateSnapshot),
-    [gameStateSnapshot]
-  );
+  const serializedSnapshot = useMemo(() => JSON.stringify(gameStateSnapshot), [gameStateSnapshot]);
 
   const [hasHydratedPlayerState, setHasHydratedPlayerState] = useState(false);
   const [identityToken, setIdentityToken] = useState<string | null>(null);
@@ -96,6 +131,10 @@ export default function App() {
   const pendingSnapshotRef = useRef<string | null>(null);
   const snapshotSaveRetryAttempt =
     gameStateSaveRetry.snapshot === serializedSnapshot ? gameStateSaveRetry.attempt : 0;
+  const bootstrapQueryKey = useMemo(
+    () => ['player-bootstrap', user?.id ?? null, walletAddress] as const,
+    [user?.id, walletAddress]
+  );
 
   useEffect(() => {
     if (!ready) {
@@ -138,7 +177,7 @@ export default function App() {
   }, [authenticated, identityTokenRequestCount, ready]);
 
   const bootstrapQuery = useQuery({
-    queryKey: ['player-bootstrap', user?.id ?? null, walletAddress],
+    queryKey: bootstrapQueryKey,
     enabled: ready && authenticated && Boolean(user?.id) && Boolean(identityToken),
     queryFn: async () =>
       postApi<PlayerBootstrapRequest, PlayerBootstrapResponse>(
@@ -154,11 +193,7 @@ export default function App() {
         throw new Error('Missing Privy identity token.');
       }
 
-      return postApi<ProgressRequest, ProgressResponse>(
-        '/api/progress',
-        identityToken,
-        body
-      );
+      return postApi<ProgressRequest, ProgressResponse>('/api/progress', identityToken, body);
     }
   });
 
@@ -168,11 +203,7 @@ export default function App() {
         throw new Error('Missing Privy identity token.');
       }
 
-      return postApi<GameStateRequest, GameStateResponse>(
-        '/api/game-state',
-        identityToken,
-        body
-      );
+      return postApi<GameStateRequest, GameStateResponse>('/api/game-state', identityToken, body);
     }
   });
 
@@ -185,6 +216,293 @@ export default function App() {
       return postApi<undefined, ResetResponse>('/api/reset', identityToken);
     }
   });
+
+  const orgTreeMutation = useMutation({
+    mutationFn: async (body: OrgTreeUpsertRequest) => {
+      if (!identityToken) {
+        throw new Error('Missing Privy identity token.');
+      }
+
+      return postApi<OrgTreeUpsertRequest, OrgTreeUpsertResponse>(
+        '/api/org/tree',
+        identityToken,
+        body
+      );
+    }
+  });
+
+  const orgRoleHatMutation = useMutation({
+    mutationFn: async (body: OrgRoleHatUpsertRequest) => {
+      if (!identityToken) {
+        throw new Error('Missing Privy identity token.');
+      }
+
+      return postApi<OrgRoleHatUpsertRequest, OrgRoleHatUpsertResponse>(
+        '/api/org/role',
+        identityToken,
+        body
+      );
+    }
+  });
+
+  const updateBootstrapCache = useCallback(
+    (updater: (current: PlayerBootstrapResponse) => PlayerBootstrapResponse) => {
+      queryClient.setQueryData<PlayerBootstrapResponse>(bootstrapQueryKey, (current) =>
+        current ? updater(current) : current
+      );
+    },
+    [bootstrapQueryKey, queryClient]
+  );
+
+  const syncResetRefs = useCallback(() => {
+    lastTrackedBeatRef.current = null;
+    lastSavedSnapshotRef.current = null;
+    pendingSnapshotRef.current = null;
+    setGameStateSaveRetry({ snapshot: null, attempt: 0 });
+  }, []);
+
+  const resolveExecutionClient = useCallback(
+    async ({
+      expectedWearerAddress = null,
+      requireSmartWallet = false
+    }: ResolveExecutionClientOptions = {}): Promise<HatsExecutionClient> => {
+      if (!embeddedWallet) {
+        throw new Error(
+          'The embedded gameplay wallet is unavailable right now. Sign out and back in, then try again.'
+        );
+      }
+
+      const normalizedExpectedAddress = expectedWearerAddress?.toLowerCase() ?? null;
+      let smartWalletExecutionClient: HatsExecutionClient | null = null;
+
+      if (requireSmartWallet || normalizedExpectedAddress) {
+        try {
+          const smartWalletClient = await getClientForChain({ id: HATS_CHAIN_ID });
+          const smartWalletAddress = smartWalletClient?.account?.address as Address | undefined;
+
+          if (smartWalletClient && smartWalletAddress) {
+            smartWalletExecutionClient = {
+              kind: 'smart',
+              address: smartWalletAddress,
+              client: smartWalletClient
+            };
+          }
+        } catch (error) {
+          if (requireSmartWallet) {
+            throw new Error(
+              getErrorMessage(
+                error,
+                'Smart-wallet execution is enabled, but the Privy smart wallet is unavailable right now.'
+              )
+            );
+          }
+        }
+      }
+
+      if (
+        smartWalletExecutionClient &&
+        (!normalizedExpectedAddress ||
+          smartWalletExecutionClient.address.toLowerCase() === normalizedExpectedAddress)
+      ) {
+        return smartWalletExecutionClient;
+      }
+
+      if (requireSmartWallet) {
+        throw new Error(
+          'Smart-wallet execution is enabled, but this org is not linked to an available Sepolia smart wallet.'
+        );
+      }
+
+      const embeddedExecutionClient = await createEmbeddedWalletExecutionClient(embeddedWallet);
+
+      if (
+        normalizedExpectedAddress &&
+        embeddedExecutionClient.address.toLowerCase() !== normalizedExpectedAddress
+      ) {
+        throw new Error(
+          'This studio Hats tree is linked to a different execution wallet. Sign out and back in before editing the org.'
+        );
+      }
+
+      return embeddedExecutionClient;
+    },
+    [embeddedWallet, getClientForChain]
+  );
+
+  const orgTree = bootstrapQuery.data?.orgTree ?? null;
+  const orgRoleHats = useMemo(
+    () => bootstrapQuery.data?.orgRoleHats ?? [],
+    [bootstrapQuery.data?.orgRoleHats]
+  );
+  const orgRoleHatByRoleId = useMemo(
+    () => new Map(orgRoleHats.map((roleHat) => [roleHat.roleId, roleHat])),
+    [orgRoleHats]
+  );
+
+  const handleSetStudioName = useCallback(
+    async (name: string) => {
+      const normalizedName = name.trim();
+
+      if (!normalizedName) {
+        return;
+      }
+
+      if (orgTree) {
+        if (orgTree.studioName?.trim() !== normalizedName) {
+          const executionClient = await resolveExecutionClient({
+            expectedWearerAddress: orgTree.wearerAddress
+          });
+          const { txHash } = await changeHatDetails({
+            executionClient,
+            hatId: BigInt(orgTree.topHatId),
+            details: normalizedName
+          }).catch((error) => {
+            throw new Error(getErrorMessage(error, 'Could not update the studio top hat.'));
+          });
+
+          try {
+            const response = await orgTreeMutation.mutateAsync({
+              chainId: orgTree.chainId,
+              topHatId: orgTree.topHatId,
+              studioName: normalizedName,
+              wearerAddress: orgTree.wearerAddress,
+              eligibilityAddress: orgTree.eligibilityAddress,
+              toggleAddress: orgTree.toggleAddress,
+              txHash
+            });
+
+            updateBootstrapCache((current) => ({
+              ...current,
+              orgTree: response.orgTree
+            }));
+          } catch {
+            throw new Error(
+              `The studio name updated onchain (${formatTxHash(txHash)}), but local sync failed. Refresh before retrying.`
+            );
+          }
+        }
+
+        setStudioName(normalizedName);
+        return;
+      }
+
+      const executionClient = await resolveExecutionClient({
+        requireSmartWallet: clientEnv.preferSmartWalletExecution
+      });
+      const wearerAddress = executionClient.address;
+
+      const { hatId, txHash } = await mintTopHat({
+        executionClient,
+        wearerAddress,
+        details: normalizedName
+      }).catch((error) => {
+        throw new Error(getErrorMessage(error, 'Could not create the studio top hat.'));
+      });
+
+      try {
+        const response = await orgTreeMutation.mutateAsync({
+          chainId: HATS_CHAIN_ID,
+          topHatId: hatId.toString(),
+          studioName: normalizedName,
+          wearerAddress,
+          eligibilityAddress: wearerAddress,
+          toggleAddress: wearerAddress,
+          txHash
+        });
+
+        updateBootstrapCache((current) => ({
+          ...current,
+          orgTree: response.orgTree
+        }));
+      } catch {
+        throw new Error(
+          `The studio top hat was created onchain (${formatTxHash(txHash)}), but local sync failed. Refresh before retrying.`
+        );
+      }
+
+      setStudioName(normalizedName);
+    },
+    [orgTree, orgTreeMutation, resolveExecutionClient, setStudioName, updateBootstrapCache]
+  );
+
+  const handleConfigureRole = useCallback(
+    async (roleId: string, name: string) => {
+      const existingRoleHat = orgRoleHatByRoleId.get(roleId);
+      const normalizedName = name.trim();
+
+      if (!normalizedName) {
+        return;
+      }
+
+      if (existingRoleHat) {
+        configureRole(roleId, existingRoleHat.roleName);
+        return;
+      }
+
+      if (!orgTree) {
+        throw new Error('Create the studio root onchain before adding roles.');
+      }
+
+      const executionClient = await resolveExecutionClient({
+        expectedWearerAddress: orgTree.wearerAddress
+      });
+      const { hatId, txHash } = await createRoleHat({
+        executionClient,
+        adminHatId: BigInt(orgTree.topHatId),
+        details: normalizedName,
+        eligibilityAddress: orgTree.wearerAddress as Address,
+        toggleAddress: orgTree.wearerAddress as Address
+      }).catch((error) => {
+        throw new Error(getErrorMessage(error, `Could not create the ${normalizedName} hat.`));
+      });
+
+      try {
+        const response = await orgRoleHatMutation.mutateAsync({
+          roleId,
+          roleName: normalizedName,
+          chainId: orgTree.chainId,
+          hatId: hatId.toString(),
+          adminHatId: orgTree.topHatId,
+          eligibilityAddress: orgTree.wearerAddress,
+          toggleAddress: orgTree.wearerAddress,
+          txHash
+        });
+
+        updateBootstrapCache((current) => ({
+          ...current,
+          orgRoleHats: sortRoleHats([
+            ...current.orgRoleHats.filter((roleHat) => roleHat.roleId !== roleId),
+            response.orgRoleHat
+          ])
+        }));
+      } catch {
+        throw new Error(
+          `The ${normalizedName} hat was created onchain (${formatTxHash(txHash)}), but local sync failed. Refresh before retrying.`
+        );
+      }
+
+      configureRole(roleId, normalizedName);
+    },
+    [
+      configureRole,
+      orgRoleHatByRoleId,
+      orgRoleHatMutation,
+      orgTree,
+      resolveExecutionClient,
+      updateBootstrapCache
+    ]
+  );
+
+  const handleResetDemo = useCallback(async () => {
+    const response = await resetMutation.mutateAsync();
+
+    updateBootstrapCache((current) => ({
+      ...current,
+      progress: response.progress,
+      gameState: null
+    }));
+    syncResetRefs();
+  }, [resetMutation, syncResetRefs, updateBootstrapCache]);
 
   useEffect(() => {
     if (!ready || authenticated) {
@@ -246,14 +564,7 @@ export default function App() {
         }
       }
     );
-  }, [
-    authenticated,
-    hasHydratedPlayerState,
-    identityToken,
-    player,
-    progressMutation,
-    scene.id
-  ]);
+  }, [authenticated, hasHydratedPlayerState, identityToken, player, progressMutation, scene.id]);
 
   useEffect(() => {
     if (!player || !authenticated || !identityToken || !hasHydratedPlayerState) {
@@ -281,8 +592,7 @@ export default function App() {
             pendingSnapshotRef.current = null;
             setGameStateSaveRetry((current) => ({
               snapshot: serializedSnapshot,
-              attempt:
-                current.snapshot === serializedSnapshot ? current.attempt + 1 : 1
+              attempt: current.snapshot === serializedSnapshot ? current.attempt + 1 : 1
             }));
           }
         }
@@ -307,13 +617,7 @@ export default function App() {
     }
 
     dismissIntroDialog();
-  }, [
-    authenticated,
-    dismissIntroDialog,
-    hasHydratedPlayerState,
-    hasSeenIntroDialog,
-    player
-  ]);
+  }, [authenticated, dismissIntroDialog, hasHydratedPlayerState, hasSeenIntroDialog, player]);
   let forceIntroDialog = false;
   let introDialogConfig: IntroDialogConfig | null = null;
 
@@ -375,10 +679,15 @@ export default function App() {
       forceIntroDialog={forceIntroDialog}
       suppressIntroDialog={suppressIntroDialog}
       introDialogConfig={introDialogConfig}
+      orgTree={orgTree}
+      onSetStudioName={handleSetStudioName}
+      onConfigureRole={handleConfigureRole}
+      onResetDemo={handleResetDemo}
       headerAccessory={
         showSessionBar && player ? (
           <PlayerSessionBar
             label={getSessionLabel(player.walletAddress)}
+            embeddedWalletAddress={embeddedWallet?.address ?? null}
             onReset={() => {
               void (async () => {
                 const confirmed = window.confirm(
@@ -389,12 +698,14 @@ export default function App() {
                   return;
                 }
 
-                await resetMutation.mutateAsync();
-                resetTutorial();
-                lastTrackedBeatRef.current = null;
-                lastSavedSnapshotRef.current = null;
-                pendingSnapshotRef.current = null;
-                setGameStateSaveRetry({ snapshot: null, attempt: 0 });
+                try {
+                  await handleResetDemo();
+                  resetTutorial();
+                } catch (error) {
+                  window.alert(
+                    getErrorMessage(error, 'Could not reset the current run right now.')
+                  );
+                }
               })();
             }}
             onSignOut={() => {
