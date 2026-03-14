@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent } from 'react';
 import { hatIdToTreeId } from '@hatsprotocol/sdk-v1-core';
+import { sepolia } from 'viem/chains';
+import type { OrgTreeRecord } from '../../../contracts/org';
 import type { Agent, HatRole } from '../../../types';
 import { findRaidGuildMember, getRaidGuildCandidatesForRole } from '../guildData';
 import {
@@ -21,7 +23,7 @@ type WhiteboardSceneProps = {
   agents?: Agent[];
   studioName: string;
   isExpanded: boolean;
-  orgTopHatId?: string | null;
+  orgTree?: OrgTreeRecord | null;
   isReadOnly?: boolean;
   onSetStudioName?: (name: string) => Promise<void> | void;
   onConfigureRole?: (roleId: string, name: string) => Promise<void> | void;
@@ -41,12 +43,24 @@ const DRAG_START_THRESHOLD = 6;
 
 function clamp(value: number, min: number, max: number) { return Math.max(min, Math.min(value, max)); }
 
+function formatOrgChainLabel(chainId?: number | null): string | null {
+  if (!chainId) {
+    return null;
+  }
+
+  if (chainId === sepolia.id) {
+    return sepolia.name;
+  }
+
+  return `Chain ${chainId}`;
+}
+
 export function WhiteboardScene({
   roles,
   agents = [],
   studioName,
   isExpanded,
-  orgTopHatId = null,
+  orgTree = null,
   isReadOnly = false,
   onSetStudioName,
   onConfigureRole,
@@ -81,7 +95,6 @@ export function WhiteboardScene({
       setIsSubmitting(false);
     }
   }, [sheetMode]);
-
   useEffect(() => {
     const minimumVisibleRoles = Math.max(configuredRoleCount, firstRoleReady ? 1 : 0);
     if (minimumVisibleRoles > stagedRoleCount) {
@@ -126,17 +139,20 @@ export function WhiteboardScene({
   const boardOffsetClampX = isExpanded ? 320 : 220;
   const shouldAutoAdvanceExpanded = isInteractive && isExpanded && autoAdvanceOnReady && configuredRoleCount >= 3 && Boolean(onComplete);
   const orgTreeId = useMemo(() => {
-    if (!orgTopHatId) {
+    if (!orgTree?.topHatId) {
       return null;
     }
 
     try {
-      return hatIdToTreeId(BigInt(orgTopHatId)).toString();
+      return hatIdToTreeId(BigInt(orgTree.topHatId)).toString();
     } catch {
       return null;
     }
-  }, [orgTopHatId]);
-
+  }, [orgTree?.topHatId]);
+  const orgChainLabel = useMemo(
+    () => formatOrgChainLabel(orgTree?.chainId ?? sepolia.id),
+    [orgTree?.chainId]
+  );
   useEffect(() => { if (shouldAutoAdvanceExpanded) onComplete?.(); }, [onComplete, shouldAutoAdvanceExpanded]);
   useEffect(() => {
     if (!isInteractive) {
@@ -234,13 +250,11 @@ export function WhiteboardScene({
 
   const commitRole = async () => {
     if (!activeRole || activeRole.isConfigured || !onConfigureRole || isSubmitting) return;
+    const roleDisplayName = activeRoleBlueprint?.label ?? activeRole.name ?? DEFAULT_ROLE_NAME;
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      await onConfigureRole(
-        activeRole.id,
-        activeRoleBlueprint?.label ?? activeRole.name ?? DEFAULT_ROLE_NAME
-      );
+      await onConfigureRole(activeRole.id, roleDisplayName);
       setSheetMode(null);
       setActiveRoleId(null);
       if (!isExpanded) onComplete?.();
@@ -338,7 +352,7 @@ export function WhiteboardScene({
               <span className="tree-node-meta">
                 {studioName
                   ? orgTreeId
-                    ? `Tree ${orgTreeId}`
+                    ? `${orgChainLabel ?? 'Sepolia'} | Tree ${orgTreeId}`
                     : 'Studio active'
                   : 'Tap to name studio'}
               </span>

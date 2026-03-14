@@ -118,7 +118,7 @@ export function WhiteboardSheet({
             </>
           ) : mode === 'role' ? (
             <button className="primary-action whiteboard-create-role" type="button" disabled={isSubmitting} onClick={onCommitRole}>
-              {isSubmitting ? 'Creating Role...' : 'Create Role'}
+              {isSubmitting ? 'Creating...' : 'Create Role'}
             </button>
           ) : (
             <button className="secondary-action whiteboard-create-role" type="button" disabled={isSubmitting} onClick={onClose}>Close</button>

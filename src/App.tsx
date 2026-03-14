@@ -85,6 +85,11 @@ function sortRoleHats(roleHats: OrgRoleHatRecord[]): OrgRoleHatRecord[] {
   return [...roleHats].sort((left, right) => left.roleId.localeCompare(right.roleId));
 }
 
+type ResolveExecutionClientOptions = {
+  expectedWearerAddress?: string | null;
+  requireSmartWallet?: boolean;
+};
+
 export default function App() {
   const queryClient = useQueryClient();
   const { ready, authenticated, login, logout, user } = usePrivy();
@@ -257,7 +262,10 @@ export default function App() {
   }, []);
 
   const resolveExecutionClient = useCallback(
-    async (expectedWearerAddress?: string | null): Promise<HatsExecutionClient> => {
+    async ({
+      expectedWearerAddress = null,
+      requireSmartWallet = false
+    }: ResolveExecutionClientOptions = {}): Promise<HatsExecutionClient> => {
       if (!embeddedWallet) {
         throw new Error(
           'The embedded gameplay wallet is unavailable right now. Sign out and back in, then try again.'
@@ -265,27 +273,44 @@ export default function App() {
       }
 
       const normalizedExpectedAddress = expectedWearerAddress?.toLowerCase() ?? null;
+      let smartWalletExecutionClient: HatsExecutionClient | null = null;
 
-      if (clientEnv.preferSmartWalletExecution || normalizedExpectedAddress) {
+      if (requireSmartWallet || normalizedExpectedAddress) {
         try {
           const smartWalletClient = await getClientForChain({ id: HATS_CHAIN_ID });
           const smartWalletAddress = smartWalletClient?.account?.address as Address | undefined;
 
-          if (
-            smartWalletClient &&
-            smartWalletAddress &&
-            (!normalizedExpectedAddress ||
-              smartWalletAddress.toLowerCase() === normalizedExpectedAddress)
-          ) {
-            return {
+          if (smartWalletClient && smartWalletAddress) {
+            smartWalletExecutionClient = {
               kind: 'smart',
               address: smartWalletAddress,
               client: smartWalletClient
             };
           }
-        } catch {
-          // If the smart wallet path is unavailable, fall back to the embedded signer.
+        } catch (error) {
+          if (requireSmartWallet) {
+            throw new Error(
+              getErrorMessage(
+                error,
+                'Smart-wallet execution is enabled, but the Privy smart wallet is unavailable right now.'
+              )
+            );
+          }
         }
+      }
+
+      if (
+        smartWalletExecutionClient &&
+        (!normalizedExpectedAddress ||
+          smartWalletExecutionClient.address.toLowerCase() === normalizedExpectedAddress)
+      ) {
+        return smartWalletExecutionClient;
+      }
+
+      if (requireSmartWallet) {
+        throw new Error(
+          'Smart-wallet execution is enabled, but this org is not linked to an available Sepolia smart wallet.'
+        );
       }
 
       const embeddedExecutionClient = await createEmbeddedWalletExecutionClient(embeddedWallet);
@@ -324,7 +349,9 @@ export default function App() {
 
       if (orgTree) {
         if (orgTree.studioName?.trim() !== normalizedName) {
-          const executionClient = await resolveExecutionClient(orgTree.wearerAddress);
+          const executionClient = await resolveExecutionClient({
+            expectedWearerAddress: orgTree.wearerAddress
+          });
           const { txHash } = await changeHatDetails({
             executionClient,
             hatId: BigInt(orgTree.topHatId),
@@ -359,7 +386,9 @@ export default function App() {
         return;
       }
 
-      const executionClient = await resolveExecutionClient();
+      const executionClient = await resolveExecutionClient({
+        requireSmartWallet: clientEnv.preferSmartWalletExecution
+      });
       const wearerAddress = executionClient.address;
 
       const { hatId, txHash } = await mintTopHat({
@@ -414,7 +443,9 @@ export default function App() {
         throw new Error('Create the studio root onchain before adding roles.');
       }
 
-      const executionClient = await resolveExecutionClient(orgTree.wearerAddress);
+      const executionClient = await resolveExecutionClient({
+        expectedWearerAddress: orgTree.wearerAddress
+      });
       const { hatId, txHash } = await createRoleHat({
         executionClient,
         adminHatId: BigInt(orgTree.topHatId),

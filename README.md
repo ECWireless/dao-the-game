@@ -79,6 +79,6 @@ dev-history/ dated build journal
 - This is a proof-of-concept, not a production app.
 - The app now includes a small Vercel-backed API layer for player bootstrap, progress tracking, saved run state, and reset flows.
 - Privy handles authentication, identity tokens, and wallet provisioning for the current demo.
-- `VITE_PREFER_SMART_WALLET_EXECUTION=true` opts the org flow into smart-wallet execution. Leave it off until your Privy smart-account paymaster path is configured and ready.
+- `VITE_PREFER_SMART_WALLET_EXECUTION=true` opts new org creation into smart-wallet execution. Leave it off until your Privy smart-account paymaster path is configured and ready.
 - Progress is stored in Neon and mirrored locally in browser storage for fast client restoration.
 - Run `pnpm db:migrate` any time you point the app at a fresh database. Request handlers no longer create tables or indexes on demand.

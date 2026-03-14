@@ -192,7 +192,7 @@ export function renderSceneContent({
           roles={activeRoles}
           agents={agents}
           studioName={studioName}
-          orgTopHatId={orgTree?.topHatId}
+          orgTree={orgTree}
           isExpanded={false}
           onSetStudioName={isInteractive ? setStudioName : undefined}
           onConfigureRole={isInteractive ? configureRole : undefined}
@@ -233,7 +233,7 @@ export function renderSceneContent({
           roles={activeRoles}
           agents={agents}
           studioName={studioName}
-          orgTopHatId={orgTree?.topHatId}
+          orgTree={orgTree}
           isExpanded={false}
           onAssignCandidateToRole={isInteractive ? assignRole : undefined}
           onComplete={isInteractive ? queueCrossAppAdvance : undefined}
@@ -294,7 +294,7 @@ export function renderSceneContent({
           roles={activeRoles}
           agents={agents}
           studioName={studioName}
-          orgTopHatId={orgTree?.topHatId}
+          orgTree={orgTree}
           isExpanded
           onConfigureRole={isInteractive ? configureRole : undefined}
           onComplete={isInteractive ? queueCrossAppAdvance : undefined}
@@ -321,7 +321,7 @@ export function renderSceneContent({
           roles={configuredExpandedRoles}
           agents={agents}
           studioName={studioName}
-          orgTopHatId={orgTree?.topHatId}
+          orgTree={orgTree}
           isExpanded
           onAssignCandidateToRole={isInteractive ? assignRole : undefined}
           onComplete={isInteractive ? queueCrossAppAdvance : undefined}
