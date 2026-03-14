@@ -14,7 +14,11 @@ export function WhiteboardEdgeCue({
   );
 }
 
-export function WhiteboardHud({ studioName }: { studioName: string }) {
+type WhiteboardHudProps = {
+  studioName: string;
+};
+
+export function WhiteboardHud({ studioName }: WhiteboardHudProps) {
   return (
     <div className="whiteboard-hud" aria-hidden="true">
       <span>Planning board</span>

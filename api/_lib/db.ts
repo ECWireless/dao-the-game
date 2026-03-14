@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { neon } from '@neondatabase/serverless';
 import type { GameStateSnapshot } from '../../src/contracts/gameState';
+import type { OrgRoleHatRecord, OrgTreeRecord } from '../../src/contracts/org';
 import type {
   PlayerRecord,
   ProgressSummaryRecord,
@@ -26,6 +27,33 @@ type ProgressSummaryRow = {
 
 type GameStateRow = {
   snapshot_json: GameStateSnapshot | string;
+  updated_at: string;
+};
+
+type OrgTreeRow = {
+  player_id: string;
+  chain_id: number;
+  top_hat_id: string;
+  studio_name: string | null;
+  wearer_address: string;
+  eligibility_address: string;
+  toggle_address: string;
+  tx_hash: string;
+  created_at: string;
+  updated_at: string;
+};
+
+type OrgRoleHatRow = {
+  player_id: string;
+  role_id: string;
+  role_name: string;
+  chain_id: number;
+  hat_id: string;
+  admin_hat_id: string;
+  eligibility_address: string;
+  toggle_address: string;
+  tx_hash: string;
+  created_at: string;
   updated_at: string;
 };
 
@@ -67,6 +95,37 @@ function mapGameState(row: GameStateRow): StoredGameStateRecord {
       typeof row.snapshot_json === 'string'
         ? (JSON.parse(row.snapshot_json) as GameStateSnapshot)
         : row.snapshot_json,
+    updatedAt: row.updated_at
+  };
+}
+
+function mapOrgTree(row: OrgTreeRow): OrgTreeRecord {
+  return {
+    playerId: row.player_id,
+    chainId: row.chain_id,
+    topHatId: row.top_hat_id,
+    studioName: row.studio_name,
+    wearerAddress: row.wearer_address,
+    eligibilityAddress: row.eligibility_address,
+    toggleAddress: row.toggle_address,
+    txHash: row.tx_hash,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
+function mapOrgRoleHat(row: OrgRoleHatRow): OrgRoleHatRecord {
+  return {
+    playerId: row.player_id,
+    roleId: row.role_id,
+    roleName: row.role_name,
+    chainId: row.chain_id,
+    hatId: row.hat_id,
+    adminHatId: row.admin_hat_id,
+    eligibilityAddress: row.eligibility_address,
+    toggleAddress: row.toggle_address,
+    txHash: row.tx_hash,
+    createdAt: row.created_at,
     updatedAt: row.updated_at
   };
 }
@@ -123,6 +182,173 @@ export async function getGameState(playerId: string): Promise<StoredGameStateRec
   `) as GameStateRow[];
 
   return state ? mapGameState(state) : null;
+}
+
+export async function getOrgTree(playerId: string): Promise<OrgTreeRecord | null> {
+  const sql = getSql();
+
+  const [tree] = (await sql`
+    SELECT
+      player_id::text,
+      chain_id,
+      top_hat_id,
+      studio_name,
+      wearer_address,
+      eligibility_address,
+      toggle_address,
+      tx_hash,
+      created_at::text,
+      updated_at::text
+    FROM org_trees
+    WHERE player_id = ${playerId}::uuid
+    LIMIT 1
+  `) as OrgTreeRow[];
+
+  return tree ? mapOrgTree(tree) : null;
+}
+
+export async function getOrgRoleHats(playerId: string): Promise<OrgRoleHatRecord[]> {
+  const sql = getSql();
+
+  const rows = (await sql`
+    SELECT
+      player_id::text,
+      role_id,
+      role_name,
+      chain_id,
+      hat_id,
+      admin_hat_id,
+      eligibility_address,
+      toggle_address,
+      tx_hash,
+      created_at::text,
+      updated_at::text
+    FROM org_role_hats
+    WHERE player_id = ${playerId}::uuid
+    ORDER BY role_id ASC
+  `) as OrgRoleHatRow[];
+
+  return rows.map(mapOrgRoleHat);
+}
+
+export async function upsertOrgTree(input: {
+  playerId: string;
+  chainId: number;
+  topHatId: string;
+  studioName: string | null;
+  wearerAddress: string;
+  eligibilityAddress: string;
+  toggleAddress: string;
+  txHash: string;
+}): Promise<OrgTreeRecord> {
+  const sql = getSql();
+
+  const [tree] = (await sql`
+    INSERT INTO org_trees (
+      player_id,
+      chain_id,
+      top_hat_id,
+      studio_name,
+      wearer_address,
+      eligibility_address,
+      toggle_address,
+      tx_hash
+    )
+    VALUES (
+      ${input.playerId}::uuid,
+      ${input.chainId},
+      ${input.topHatId},
+      ${input.studioName},
+      ${input.wearerAddress},
+      ${input.eligibilityAddress},
+      ${input.toggleAddress},
+      ${input.txHash}
+    )
+    ON CONFLICT (player_id) DO UPDATE SET
+      chain_id = EXCLUDED.chain_id,
+      top_hat_id = EXCLUDED.top_hat_id,
+      studio_name = COALESCE(EXCLUDED.studio_name, org_trees.studio_name),
+      wearer_address = EXCLUDED.wearer_address,
+      eligibility_address = EXCLUDED.eligibility_address,
+      toggle_address = EXCLUDED.toggle_address,
+      tx_hash = EXCLUDED.tx_hash,
+      updated_at = now()
+    RETURNING
+      player_id::text,
+      chain_id,
+      top_hat_id,
+      studio_name,
+      wearer_address,
+      eligibility_address,
+      toggle_address,
+      tx_hash,
+      created_at::text,
+      updated_at::text
+  `) as OrgTreeRow[];
+
+  return mapOrgTree(tree);
+}
+
+export async function upsertOrgRoleHat(input: {
+  playerId: string;
+  roleId: string;
+  roleName: string;
+  chainId: number;
+  hatId: string;
+  adminHatId: string;
+  eligibilityAddress: string;
+  toggleAddress: string;
+  txHash: string;
+}): Promise<OrgRoleHatRecord> {
+  const sql = getSql();
+
+  const [roleHat] = (await sql`
+    INSERT INTO org_role_hats (
+      player_id,
+      role_id,
+      role_name,
+      chain_id,
+      hat_id,
+      admin_hat_id,
+      eligibility_address,
+      toggle_address,
+      tx_hash
+    )
+    VALUES (
+      ${input.playerId}::uuid,
+      ${input.roleId},
+      ${input.roleName},
+      ${input.chainId},
+      ${input.hatId},
+      ${input.adminHatId},
+      ${input.eligibilityAddress},
+      ${input.toggleAddress},
+      ${input.txHash}
+    )
+    ON CONFLICT (player_id, role_id) DO UPDATE SET
+      role_name = EXCLUDED.role_name,
+      chain_id = EXCLUDED.chain_id,
+      hat_id = EXCLUDED.hat_id,
+      admin_hat_id = EXCLUDED.admin_hat_id,
+      eligibility_address = EXCLUDED.eligibility_address,
+      toggle_address = EXCLUDED.toggle_address,
+      tx_hash = EXCLUDED.tx_hash,
+      updated_at = now()
+    RETURNING
+      player_id::text,
+      role_id,
+      role_name,
+      chain_id,
+      hat_id,
+      admin_hat_id,
+      eligibility_address,
+      toggle_address,
+      tx_hash,
+      created_at::text,
+      updated_at::text
+  `) as OrgRoleHatRow[];
+
+  return mapOrgRoleHat(roleHat);
 }
 
 export async function recordProgress(input: {

@@ -4,6 +4,7 @@ import './player-session-bar.css';
 
 type PlayerSessionBarProps = {
   label: string;
+  embeddedWalletAddress?: string | null;
   onReset: () => void;
   onSignOut: () => void;
   isResetting: boolean;
@@ -11,11 +12,13 @@ type PlayerSessionBarProps = {
 
 export function PlayerSessionBar({
   label,
+  embeddedWalletAddress,
   onReset,
   onSignOut,
   isResetting
 }: PlayerSessionBarProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -44,6 +47,32 @@ export function PlayerSessionBar({
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    if (copyState === 'idle') {
+      return;
+    }
+
+    const timer = window.setTimeout(() => setCopyState('idle'), 1600);
+    return () => window.clearTimeout(timer);
+  }, [copyState]);
+
+  const shortEmbeddedWalletAddress = embeddedWalletAddress
+    ? `${embeddedWalletAddress.slice(0, 6)}...${embeddedWalletAddress.slice(-4)}`
+    : null;
+
+  const handleCopyEmbeddedWallet = async () => {
+    if (!embeddedWalletAddress) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(embeddedWalletAddress);
+      setCopyState('copied');
+    } catch {
+      setCopyState('error');
+    }
+  };
+
   return (
     <div ref={containerRef} className="player-session-bar">
       <button
@@ -60,6 +89,27 @@ export function PlayerSessionBar({
       {isOpen ? (
         <div className="player-session-menu">
           <p className="player-session-label">{label}</p>
+          {embeddedWalletAddress ? (
+            <div className="player-session-copy-card">
+              <div className="player-session-copy-copy">
+                <span className="player-session-copy-kicker">Embedded wallet</span>
+                <span className="player-session-copy-value" title={embeddedWalletAddress}>
+                  {shortEmbeddedWalletAddress}
+                </span>
+              </div>
+              <button
+                className="player-session-copy-button"
+                type="button"
+                onClick={handleCopyEmbeddedWallet}
+              >
+                {copyState === 'copied'
+                  ? 'Copied'
+                  : copyState === 'error'
+                    ? 'Try again'
+                    : 'Copy'}
+              </button>
+            </div>
+          ) : null}
           <div className="player-session-actions">
             <button
               type="button"

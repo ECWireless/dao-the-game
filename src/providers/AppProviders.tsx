@@ -1,6 +1,8 @@
 import { PrivyProvider } from '@privy-io/react-auth';
+import { SmartWalletsProvider } from '@privy-io/react-auth/smart-wallets';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
+import { sepolia } from 'viem/chains';
 
 type AppProvidersProps = {
   children: ReactNode;
@@ -29,6 +31,8 @@ export function AppProviders({ children, privyAppId }: AppProvidersProps) {
         appId={privyAppId}
         config={{
           loginMethods: ['email', 'wallet'],
+          supportedChains: [sepolia],
+          defaultChain: sepolia,
           appearance: {
             walletChainType: 'ethereum-only'
           },
@@ -39,7 +43,7 @@ export function AppProviders({ children, privyAppId }: AppProvidersProps) {
           }
         }}
       >
-        {children}
+        <SmartWalletsProvider>{children}</SmartWalletsProvider>
       </PrivyProvider>
     </QueryClientProvider>
   );

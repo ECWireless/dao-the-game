@@ -108,6 +108,48 @@ async function runMigrations() {
     )
   `;
 
+  await sql`
+    CREATE TABLE IF NOT EXISTS org_trees (
+      player_id uuid PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,
+      chain_id integer NOT NULL,
+      top_hat_id text NOT NULL,
+      studio_name text,
+      wearer_address text NOT NULL,
+      eligibility_address text NOT NULL,
+      toggle_address text NOT NULL,
+      tx_hash text NOT NULL,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )
+  `;
+
+  await sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS org_trees_top_hat_idx
+    ON org_trees (top_hat_id)
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS org_role_hats (
+      player_id uuid NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      role_id text NOT NULL,
+      role_name text NOT NULL,
+      chain_id integer NOT NULL,
+      hat_id text NOT NULL,
+      admin_hat_id text NOT NULL,
+      eligibility_address text NOT NULL,
+      toggle_address text NOT NULL,
+      tx_hash text NOT NULL,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      PRIMARY KEY (player_id, role_id)
+    )
+  `;
+
+  await sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS org_role_hats_hat_idx
+    ON org_role_hats (hat_id)
+  `;
+
   console.log('Database schema is up to date.');
 }
 

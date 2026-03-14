@@ -2,7 +2,7 @@ import type {
   PlayerBootstrapRequest,
   PlayerBootstrapResponse
 } from '../../src/contracts/player';
-import { getGameState, getProgressSummary, upsertPlayer } from '../_lib/db.js';
+import { getGameState, getOrgRoleHats, getOrgTree, getProgressSummary, upsertPlayer } from '../_lib/db.js';
 import { handleRouteError, json, options, parseOptionalJsonBody, withCors } from '../_lib/http.js';
 import { requirePrivyUser } from '../_lib/privy.js';
 
@@ -24,15 +24,19 @@ export async function POST(request: Request): Promise<Response> {
       walletAddress
     });
 
-    const [progress, gameState] = await Promise.all([
+    const [progress, gameState, orgTree, orgRoleHats] = await Promise.all([
       getProgressSummary(player.id),
-      getGameState(player.id)
+      getGameState(player.id),
+      getOrgTree(player.id),
+      getOrgRoleHats(player.id)
     ]);
 
     const response: PlayerBootstrapResponse = {
       player,
       progress,
-      gameState
+      gameState,
+      orgTree,
+      orgRoleHats
     };
 
     return withCors(request, json(response));

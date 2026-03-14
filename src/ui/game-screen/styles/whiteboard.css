@@ -300,6 +300,13 @@
   line-height: 1.4;
 }
 
+.whiteboard-sheet-error {
+  margin: 0;
+  color: #b34c62;
+  font-size: 0.71rem;
+  line-height: 1.4;
+}
+
 .whiteboard-field {
   display: grid;
   gap: 0.34rem;

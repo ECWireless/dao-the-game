@@ -1,4 +1,5 @@
 import type { GameStateSnapshot } from './gameState';
+import type { OrgRoleHatRecord, OrgTreeRecord } from './org';
 
 export type PlayerRecord = {
   id: string;
@@ -29,6 +30,8 @@ export type PlayerBootstrapResponse = {
   player: PlayerRecord;
   progress: ProgressSummaryRecord | null;
   gameState: StoredGameStateRecord | null;
+  orgTree: OrgTreeRecord | null;
+  orgRoleHats: OrgRoleHatRecord[];
 };
 
 export type ProgressRequest = {

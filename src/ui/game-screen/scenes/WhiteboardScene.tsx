@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent } from 'react';
+import { hatIdToTreeId } from '@hatsprotocol/sdk-v1-core';
 import type { Agent, HatRole } from '../../../types';
 import { findRaidGuildMember, getRaidGuildCandidatesForRole } from '../guildData';
 import {
@@ -20,9 +21,10 @@ type WhiteboardSceneProps = {
   agents?: Agent[];
   studioName: string;
   isExpanded: boolean;
+  orgTopHatId?: string | null;
   isReadOnly?: boolean;
-  onSetStudioName?: (name: string) => void;
-  onConfigureRole?: (roleId: string, name: string) => void;
+  onSetStudioName?: (name: string) => Promise<void> | void;
+  onConfigureRole?: (roleId: string, name: string) => Promise<void> | void;
   onAssignCandidateToRole?: (roleId: string, agentId: string) => void;
   onComplete?: () => void;
   autoAdvanceOnReady?: boolean;
@@ -44,6 +46,7 @@ export function WhiteboardScene({
   agents = [],
   studioName,
   isExpanded,
+  orgTopHatId = null,
   isReadOnly = false,
   onSetStudioName,
   onConfigureRole,
@@ -59,6 +62,8 @@ export function WhiteboardScene({
   const [activeRoleId, setActiveRoleId] = useState<string | null>(null);
   const [stagedRoleCount, setStagedRoleCount] = useState(Math.max(configuredRoleCount, firstRoleReady ? 1 : 0));
   const [studioDraft, setStudioDraft] = useState(studioName);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [cueState, setCueState] = useState<CueState>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -70,6 +75,12 @@ export function WhiteboardScene({
   const suppressClickUntilRef = useRef(0);
 
   useEffect(() => setStudioDraft(studioName), [studioName]);
+  useEffect(() => {
+    if (!sheetMode) {
+      setSubmitError(null);
+      setIsSubmitting(false);
+    }
+  }, [sheetMode]);
 
   useEffect(() => {
     const minimumVisibleRoles = Math.max(configuredRoleCount, firstRoleReady ? 1 : 0);
@@ -114,6 +125,17 @@ export function WhiteboardScene({
   const addBranchPosition = getWhiteboardBranchTriggerPosition(isExpanded ? nextRole?.id : firstRole?.id, isExpanded);
   const boardOffsetClampX = isExpanded ? 320 : 220;
   const shouldAutoAdvanceExpanded = isInteractive && isExpanded && autoAdvanceOnReady && configuredRoleCount >= 3 && Boolean(onComplete);
+  const orgTreeId = useMemo(() => {
+    if (!orgTopHatId) {
+      return null;
+    }
+
+    try {
+      return hatIdToTreeId(BigInt(orgTopHatId)).toString();
+    } catch {
+      return null;
+    }
+  }, [orgTopHatId]);
 
   useEffect(() => { if (shouldAutoAdvanceExpanded) onComplete?.(); }, [onComplete, shouldAutoAdvanceExpanded]);
   useEffect(() => {
@@ -196,18 +218,37 @@ export function WhiteboardScene({
     stagedRoleCount
   ]);
 
-  const commitStudioName = () => {
-    if (!canOpenStudio || !studioReady) return;
-    onSetStudioName?.(studioDraft.trim());
-    setSheetMode(null);
+  const commitStudioName = async () => {
+    if (!canOpenStudio || !studioReady || !onSetStudioName || isSubmitting) return;
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      await onSetStudioName(studioDraft.trim());
+      setSheetMode(null);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Could not save the studio yet.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const commitRole = () => {
-    if (!activeRole || activeRole.isConfigured || !onConfigureRole) return;
-    onConfigureRole(activeRole.id, activeRoleBlueprint?.label ?? activeRole.name ?? DEFAULT_ROLE_NAME);
-    setSheetMode(null);
-    setActiveRoleId(null);
-    if (!isExpanded) onComplete?.();
+  const commitRole = async () => {
+    if (!activeRole || activeRole.isConfigured || !onConfigureRole || isSubmitting) return;
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      await onConfigureRole(
+        activeRole.id,
+        activeRoleBlueprint?.label ?? activeRole.name ?? DEFAULT_ROLE_NAME
+      );
+      setSheetMode(null);
+      setActiveRoleId(null);
+      if (!isExpanded) onComplete?.();
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Could not create the role yet.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const commitCandidate = (agentId: string) => {
@@ -294,7 +335,13 @@ export function WhiteboardScene({
             >
               <span className="tree-node-kicker">Studio Root</span>
               <span className="tree-node-title">{studioName || 'Name your studio'}</span>
-              <span className="tree-node-meta">{studioName ? 'Studio active' : 'Tap to name studio'}</span>
+              <span className="tree-node-meta">
+                {studioName
+                  ? orgTreeId
+                    ? `Tree ${orgTreeId}`
+                    : 'Studio active'
+                  : 'Tap to name studio'}
+              </span>
             </button>
             {canAddBranch ? (
               <button
@@ -333,9 +380,11 @@ export function WhiteboardScene({
                   onClick={() => {
                     if (canOpenRole) {
                       setActiveRoleId(role.id);
+                      setSubmitError(null);
                       setSheetMode('role');
                     } else if (canOpenImportRole) {
                       setActiveRoleId(role.id);
+                      setSubmitError(null);
                       setSheetMode('integrate');
                     }
                   }}
@@ -368,6 +417,8 @@ export function WhiteboardScene({
           studioName={studioName}
           studioReady={studioReady}
           studioNameLimit={STUDIO_NAME_LIMIT}
+          isSubmitting={isSubmitting}
+          submitError={submitError}
           activeRoleName={activeRole?.name}
           roleLabel={activeRoleBlueprint?.label ?? DEFAULT_ROLE_NAME}
           roleScope={activeRoleBlueprint?.scope ?? 'Build the site'}
@@ -376,7 +427,12 @@ export function WhiteboardScene({
           onCommitStudioName={commitStudioName}
           onCommitRole={commitRole}
           onCommitCandidate={commitCandidate}
-          onClose={() => setSheetMode(null)}
+          onClose={() => {
+            if (isSubmitting) {
+              return;
+            }
+            setSheetMode(null);
+          }}
         />
       ) : null}
     </section>

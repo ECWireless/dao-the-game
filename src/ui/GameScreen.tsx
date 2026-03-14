@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { OrgTreeRecord } from '../contracts/org';
 import { getScene, type StoryApp } from '../levels/story';
 import { countAssignedRoles, estimateRunwayAfterRun, getActiveRoles, useGameStore } from '../state/gameStore';
 import { APP_META } from './game-screen/constants';
@@ -28,13 +29,21 @@ type GameScreenProps = {
   suppressIntroDialog?: boolean;
   introDialogConfig?: IntroDialogConfig | null;
   headerAccessory?: ReactNode;
+  orgTree?: OrgTreeRecord | null;
+  onSetStudioName?: (name: string) => Promise<void> | void;
+  onConfigureRole?: (roleId: string, name: string) => Promise<void> | void;
+  onResetDemo?: () => Promise<void> | void;
 };
 
 export default function GameScreen({
   forceIntroDialog = false,
   suppressIntroDialog = false,
   introDialogConfig = null,
-  headerAccessory = null
+  headerAccessory = null,
+  orgTree = null,
+  onSetStudioName,
+  onConfigureRole,
+  onResetDemo
 }: GameScreenProps) {
   const storySceneIndex = useGameStore((state) => state.storySceneIndex);
   const unlockedRoleCount = useGameStore((state) => state.unlockedRoleCount);
@@ -96,19 +105,30 @@ export default function GameScreen({
   );
 
   const handleReplayDemo = useCallback(() => {
-    const resetApps = getUnlockedApps(0);
-    resetTutorial();
-    setCurrentApp('messages');
-    setPendingApp(null);
-    setSwitchPhase('idle');
-    setPulseApp(null);
-    setInstallingApp(resetApps.includes('mail') ? 'mail' : null);
-    setIsMachineLocked(false);
-    setIsEmailNotificationVisible(false);
-    setPendingHandoffSceneId(null);
-    setLaunchOriginX(getAppLaunchOrigin('messages', resetApps));
-    previousUnlockedAppsRef.current = resetApps;
-  }, [resetTutorial]);
+    void (async () => {
+      try {
+        await onResetDemo?.();
+      } catch (error) {
+        window.alert(
+          error instanceof Error ? error.message : 'Could not reset the current run.'
+        );
+        return;
+      }
+
+      const resetApps = getUnlockedApps(0);
+      resetTutorial();
+      setCurrentApp('messages');
+      setPendingApp(null);
+      setSwitchPhase('idle');
+      setPulseApp(null);
+      setInstallingApp(resetApps.includes('mail') ? 'mail' : null);
+      setIsMachineLocked(false);
+      setIsEmailNotificationVisible(false);
+      setPendingHandoffSceneId(null);
+      setLaunchOriginX(getAppLaunchOrigin('messages', resetApps));
+      previousUnlockedAppsRef.current = resetApps;
+    })();
+  }, [onResetDemo, resetTutorial]);
 
   const handleDockOpen = useCallback(
     (targetApp: StoryApp) => {
@@ -305,6 +325,7 @@ export default function GameScreen({
         sceneId: displayedScene.id,
         isInteractive: isSceneInteractive,
         studioName,
+        orgTree,
         activeRoles,
         agents,
         assignmentLog,
@@ -315,8 +336,8 @@ export default function GameScreen({
         runwayAfterRun,
         advanceStory,
         queueCrossAppAdvance,
-        setStudioName,
-        configureRole,
+        setStudioName: onSetStudioName ?? setStudioName,
+        configureRole: onConfigureRole ?? configureRole,
         unlockExpandedRoles,
         assignRole,
         runProduction,

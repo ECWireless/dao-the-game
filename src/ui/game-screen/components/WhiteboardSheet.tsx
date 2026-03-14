@@ -19,6 +19,8 @@ type WhiteboardSheetProps = {
   studioName: string;
   studioReady: boolean;
   studioNameLimit: number;
+  isSubmitting: boolean;
+  submitError?: string | null;
   activeRoleName?: string;
   roleLabel: string;
   roleScope: string;
@@ -36,6 +38,8 @@ export function WhiteboardSheet({
   studioName,
   studioReady,
   studioNameLimit,
+  isSubmitting,
+  submitError,
   activeRoleName,
   roleLabel,
   roleScope,
@@ -62,7 +66,13 @@ export function WhiteboardSheet({
         {mode === 'studio' ? (
           <label className="whiteboard-field">
             <span>Studio name</span>
-            <input autoFocus maxLength={studioNameLimit} value={studioDraft} onChange={(event) => onStudioDraftChange(event.target.value)} />
+            <input
+              autoFocus
+              disabled={isSubmitting}
+              maxLength={studioNameLimit}
+              value={studioDraft}
+              onChange={(event) => onStudioDraftChange(event.target.value)}
+            />
           </label>
         ) : mode === 'role' ? (
           <div className="whiteboard-summary">
@@ -73,7 +83,13 @@ export function WhiteboardSheet({
         ) : (
           <div className="whiteboard-candidate-list">
             {candidates.map((candidate) => (
-              <button key={candidate.id} className="whiteboard-candidate-row" type="button" onClick={() => onCommitCandidate(candidate.agentId)}>
+              <button
+                key={candidate.id}
+                className="whiteboard-candidate-row"
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => onCommitCandidate(candidate.agentId)}
+              >
                 <span className="whiteboard-candidate-avatar" aria-hidden="true" style={{ '--guild-avatar-accent': candidate.accent, '--guild-avatar-shadow': candidate.shadow } as CSSProperties}>
                   {candidate.name.charAt(0)}
                 </span>
@@ -86,16 +102,26 @@ export function WhiteboardSheet({
           </div>
         )}
 
+        {submitError ? (
+          <p className="whiteboard-sheet-error" role="alert">
+            {submitError}
+          </p>
+        ) : null}
+
         <div className="whiteboard-sheet-actions">
           {mode === 'studio' ? (
             <>
-              <button className="secondary-action" type="button" onClick={onClose}>Cancel</button>
-              <button className="primary-action" type="button" disabled={!studioReady} onClick={onCommitStudioName}>Save Studio</button>
+              <button className="secondary-action" type="button" disabled={isSubmitting} onClick={onClose}>Cancel</button>
+              <button className="primary-action" type="button" disabled={!studioReady || isSubmitting} onClick={onCommitStudioName}>
+                {isSubmitting ? 'Saving...' : 'Save Studio'}
+              </button>
             </>
           ) : mode === 'role' ? (
-            <button className="primary-action whiteboard-create-role" type="button" onClick={onCommitRole}>Create Role</button>
+            <button className="primary-action whiteboard-create-role" type="button" disabled={isSubmitting} onClick={onCommitRole}>
+              {isSubmitting ? 'Creating Role...' : 'Create Role'}
+            </button>
           ) : (
-            <button className="secondary-action whiteboard-create-role" type="button" onClick={onClose}>Close</button>
+            <button className="secondary-action whiteboard-create-role" type="button" disabled={isSubmitting} onClick={onClose}>Close</button>
           )}
         </div>
       </section>
