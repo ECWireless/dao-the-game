@@ -13,10 +13,30 @@ const brief: Brief = {
 };
 
 const fullRoles: HatRole[] = [
-  { id: 'role-01', name: 'Mission Coordinator', assignedAgentId: 'agent-01' },
-  { id: 'role-02', name: 'Frontend Architect', assignedAgentId: 'agent-02' },
-  { id: 'role-03', name: 'Quality Relay', assignedAgentId: 'agent-03' },
-  { id: 'role-04', name: 'Deployment Operator', assignedAgentId: 'agent-04' }
+  {
+    id: 'role-01',
+    name: 'Mission Coordinator',
+    assignedAgentId: 'agent-01',
+    pipelineStageId: 'design'
+  },
+  {
+    id: 'role-02',
+    name: 'Frontend Architect',
+    assignedAgentId: 'agent-02',
+    pipelineStageId: 'implementation'
+  },
+  {
+    id: 'role-03',
+    name: 'Quality Relay',
+    assignedAgentId: 'agent-03',
+    pipelineStageId: 'review'
+  },
+  {
+    id: 'role-04',
+    name: 'Deployment Operator',
+    assignedAgentId: 'agent-04',
+    pipelineStageId: 'deployment'
+  }
 ];
 
 function buildState(overrides: Partial<RunState> = {}): RunState {
@@ -60,5 +80,42 @@ describe('simulateRun', () => {
     expect(result.events.length).toBeGreaterThan(0);
     expect(result.diagnostics.costBreakdown.total).toBe(result.cost);
     expect(result.diagnostics.scoreBreakdown.total).toBe(result.qualityScore);
+  });
+
+  it('returns pipeline stages in canonical execution order', () => {
+    const result = simulateRun(buildState());
+
+    expect(result.pipeline?.order).toEqual([
+      'design',
+      'implementation',
+      'review',
+      'deployment'
+    ]);
+    expect(result.pipeline?.stages.map((stage) => stage.id)).toEqual(result.pipeline?.order);
+    expect(result.pipeline?.coveredStageCount).toBe(4);
+    expect(result.diagnostics.totalStageCount).toBe(4);
+  });
+
+  it('marks missing stages as blocked when the line is under-configured', () => {
+    const result = simulateRun(
+      buildState({
+        roles: [
+          {
+            id: 'role-02',
+            name: 'Frontend Architect',
+            assignedAgentId: 'agent-02',
+            pipelineStageId: 'implementation'
+          }
+        ]
+      })
+    );
+
+    expect(result.pipeline?.coveredStageCount).toBe(1);
+    expect(result.pipeline?.missingStageCount).toBe(3);
+    expect(result.pipeline?.stages.find((stage) => stage.id === 'design')?.status).toBe('blocked');
+    expect(result.pipeline?.stages.find((stage) => stage.id === 'review')?.status).toBe('blocked');
+    expect(result.pipeline?.stages.find((stage) => stage.id === 'deployment')?.status).toBe(
+      'blocked'
+    );
   });
 });

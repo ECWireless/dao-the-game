@@ -59,6 +59,7 @@ export function PlayerSessionBar({
   const shortEmbeddedWalletAddress = embeddedWalletAddress
     ? `${embeddedWalletAddress.slice(0, 6)}...${embeddedWalletAddress.slice(-4)}`
     : null;
+  const showSessionLabel = Boolean(label && label !== shortEmbeddedWalletAddress);
 
   const handleCopyEmbeddedWallet = async () => {
     if (!embeddedWalletAddress) {
@@ -88,7 +89,7 @@ export function PlayerSessionBar({
       </button>
       {isOpen ? (
         <div className="player-session-menu">
-          <p className="player-session-label">{label}</p>
+          {showSessionLabel ? <p className="player-session-label">{label}</p> : null}
           {embeddedWalletAddress ? (
             <div className="player-session-copy-card">
               <div className="player-session-copy-copy">

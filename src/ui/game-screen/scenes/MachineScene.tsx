@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { hasPipelineStage } from '../../../pipeline';
 import type { Agent, ArtifactBundle, HatRole, RunResult } from '../../../types';
-import { buildMachineRoleLanes, hasRoleWithKeyword } from '../machineUtils';
+import { buildMachineRoleLanes } from '../machineUtils';
 import { usePannableViewport } from '../usePannableViewport';
 import { MachinePreview } from './MachinePreview';
 type MachineSceneProps = {
@@ -51,12 +52,14 @@ export function MachineScene({
   const [packetIndex, setPacketIndex] = useState(0);
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
   const roleLanes = useMemo(() => buildMachineRoleLanes(roles, agents), [agents, roles]);
-  const hasDesigner = hasRoleWithKeyword(roles, 'design');
-  const hasReviewer = hasRoleWithKeyword(roles, 'review');
-  const hasDeploymentRole = hasRoleWithKeyword(roles, 'deploy');
+  const hasDesigner = hasPipelineStage(roles, 'design');
+  const hasReviewer = hasPipelineStage(roles, 'review');
+  const hasDeploymentRole = hasPipelineStage(roles, 'deployment');
   const deploymentTone = !hasDesigner || !hasReviewer ? 'rough' : 'polished';
   const heroTitle = latestArtifacts?.siteTitle ?? 'Pending deployable';
   const heroUrl = latestArtifacts?.publicUrl ?? 'Output rail locked until first run';
+  const latestPipeline = latestRun?.pipeline;
+  const weakestStage = latestPipeline?.stages.find((stage) => stage.id === latestPipeline.weakestStageId);
   const capabilityGaps = [
     !hasDesigner ? 'No design pass' : null,
     !hasReviewer ? 'No QA pass' : null,
@@ -114,18 +117,24 @@ export function MachineScene({
         ? 'Root node shaping request'
         : safePacketIndex === lastPacketIndex
           ? 'Output node fabricating creation'
-          : `${roleNodes[safePacketIndex - 2]?.roleName ?? 'Role'} processing`
+          : `${roleNodes[safePacketIndex - 2]?.stageLabel ?? roleNodes[safePacketIndex - 2]?.roleName ?? 'Stage'} processing`
     : hasRun
-      ? 'Creation routed to output node'
+      ? latestPipeline
+        ? latestRun?.passed
+          ? `${latestPipeline.coveredStageCount}/${latestPipeline.order.length} stages stabilized`
+          : `${weakestStage?.label ?? 'Pipeline'} needs reinforcement`
+        : 'Creation routed to output node'
       : 'Assembly line armed';
   const statusDetail = isRunning
     ? safePacketIndex <= 1
       ? 'Requirements are being piped through the studio chassis.'
       : safePacketIndex === lastPacketIndex
         ? 'The final creation is being compressed and pushed into the output node.'
-        : `${roleNodes[safePacketIndex - 2]?.operatorName ?? 'Machine core'} is actively shaping this pass.`
+        : `${roleNodes[safePacketIndex - 2]?.operatorName ?? 'Machine core'} is actively shaping the ${roleNodes[safePacketIndex - 2]?.stageLabel?.toLowerCase() ?? 'current'} pass.`
     : hasRun
-      ? latestRun?.events[latestRun.events.length - 1] ?? 'The line has cooled and the deploy preview is latched open.'
+      ? weakestStage?.note ??
+        latestRun?.events[latestRun.events.length - 1] ??
+        'The line has cooled and the deploy preview is latched open.'
       : `Ready to route through ${roleLanes.length} linked role ${roleLanes.length === 1 ? 'node' : 'nodes'}.`;
   const sharedRoleCenterY = roleNodes[0]?.y ? roleNodes[0].y + roleNodes[0].height / 2 : rootNode.y + rootNode.height / 2;
   const pipeSegments: PipeSegment[] = [
