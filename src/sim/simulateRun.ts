@@ -187,6 +187,40 @@ function buildStageNote(
   }
 }
 
+function getStageSeverityRank(status: PipelineStageStatus): number {
+  switch (status) {
+    case 'blocked':
+      return 0;
+    case 'strained':
+      return 1;
+    case 'steady':
+      return 2;
+    case 'strong':
+    default:
+      return 3;
+  }
+}
+
+function compareStagesByWeakness(left: PipelineStageResult, right: PipelineStageResult): number {
+  const severityDelta = getStageSeverityRank(left.status) - getStageSeverityRank(right.status);
+
+  if (severityDelta !== 0) {
+    return severityDelta;
+  }
+
+  const coverageDelta = Number(Boolean(left.assignedAgentId)) - Number(Boolean(right.assignedAgentId));
+
+  if (coverageDelta !== 0) {
+    return coverageDelta;
+  }
+
+  return left.score - right.score;
+}
+
+function compareStagesByStrength(left: PipelineStageResult, right: PipelineStageResult): number {
+  return compareStagesByWeakness(right, left);
+}
+
 function getRoleByStage(state: RunState): Map<PipelineStageId, RunState['roles'][number]> {
   const roleByStage = new Map<PipelineStageId, RunState['roles'][number]>();
 
@@ -201,6 +235,28 @@ function getRoleByStage(state: RunState): Map<PipelineStageId, RunState['roles']
   }
 
   return roleByStage;
+}
+
+function getDuplicateStageIds(state: RunState): PipelineStageId[] {
+  const seen = new Set<PipelineStageId>();
+  const duplicates = new Set<PipelineStageId>();
+
+  for (const role of state.roles) {
+    const stageId = inferPipelineStageId(role);
+
+    if (!stageId) {
+      continue;
+    }
+
+    if (seen.has(stageId)) {
+      duplicates.add(stageId);
+      continue;
+    }
+
+    seen.add(stageId);
+  }
+
+  return [...duplicates];
 }
 
 function matchesStageAffinity(agent: Agent, stageId: PipelineStageId): boolean {
@@ -276,8 +332,8 @@ function buildRunPipeline(state: RunState, event: ReturnType<typeof rollRunEvent
   const coveredStages = stages.filter((stage) => Boolean(stage.assignedAgentId));
   const coveredStageCount = coveredStages.length;
   const missingStageCount = stages.length - coveredStageCount;
-  const strongestStage = [...stages].sort((left, right) => right.score - left.score)[0];
-  const weakestStage = [...stages].sort((left, right) => left.score - right.score)[0];
+  const strongestStage = [...stages].sort(compareStagesByStrength)[0];
+  const weakestStage = [...stages].sort(compareStagesByWeakness)[0];
 
   return {
     order: [...PIPELINE_STAGE_ORDER],
@@ -290,6 +346,7 @@ function buildRunPipeline(state: RunState, event: ReturnType<typeof rollRunEvent
 }
 
 export function simulateRun(state: RunState): RunResult {
+  const duplicateStageIds = getDuplicateStageIds(state);
   const assignedAgents = getAssignedAgents(state);
   const avgCreativity = average(assignedAgents.map((agent) => agent.creativity));
   const avgReliability = average(assignedAgents.map((agent) => agent.reliability));
@@ -335,24 +392,35 @@ export function simulateRun(state: RunState): RunResult {
 
   const qualityScore = clamp(totalScore, 0, 100);
   const passThreshold = state.brief.passThreshold;
-  const passed = qualityScore >= passThreshold && runwayAfterRun >= 0;
+  const duplicateStagePenalty = duplicateStageIds.length > 0 ? 18 + duplicateStageIds.length * 6 : 0;
+  const finalQualityScore = clamp(qualityScore - duplicateStagePenalty, 0, 100);
+  const passed =
+    duplicateStageIds.length === 0 && finalQualityScore >= passThreshold && runwayAfterRun >= 0;
   const weakestStage = pipeline.stages.find((stage) => stage.id === pipeline.weakestStageId);
+  const duplicateStageLabels = duplicateStageIds.map(
+    (stageId) => getPipelineStageDefinition(stageId).shortLabel.toLowerCase()
+  );
+  const duplicateStageEvent =
+    duplicateStageLabels.length > 0
+      ? `Machine rejected duplicate stage ownership: ${duplicateStageLabels.join(', ')}`
+      : undefined;
 
   const cid = buildPseudoCid(
     hashSeedParts(
       state.seed,
-      qualityScore,
+      finalQualityScore,
       totalCost,
       Math.round(avgReliability),
       event.qualityDelta,
-      stageInfluence
+      stageInfluence,
+      duplicateStageIds.length
     )
   );
 
   return {
-    qualityScore,
+    qualityScore: finalQualityScore,
     cost: totalCost,
-    events: [event.label, weakestStage?.note].filter(Boolean) as string[],
+    events: [event.label, weakestStage?.note, duplicateStageEvent].filter(Boolean) as string[],
     cid,
     passed,
     pipeline,
@@ -365,6 +433,7 @@ export function simulateRun(state: RunState): RunResult {
       totalRoleCount: state.roles.length,
       coveredStageCount: pipeline.coveredStageCount,
       totalStageCount: PIPELINE_STAGE_ORDER.length,
+      duplicateStageIds,
       costBreakdown: {
         base: baseCost,
         agents: agentCost,
@@ -379,8 +448,8 @@ export function simulateRun(state: RunState): RunResult {
         reliabilityPenalty,
         roleCoverageBonus,
         eventModifier: event.qualityDelta,
-        budgetPenalty,
-        total: qualityScore
+        budgetPenalty: budgetPenalty + duplicateStagePenalty,
+        total: finalQualityScore
       }
     }
   };

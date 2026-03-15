@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Brief, HatRole, RunState } from '../../types';
 import { generateStartingAgents } from '../generateStartingAgents';
+import { inferPipelineStageId } from '../../pipeline';
 import { simulateRun } from '../simulateRun';
 
 const brief: Brief = {
@@ -51,6 +52,16 @@ function buildState(overrides: Partial<RunState> = {}): RunState {
 }
 
 describe('simulateRun', () => {
+  it('ignores invalid persisted pipeline stage ids and falls back to role inference', () => {
+    expect(
+      inferPipelineStageId({
+        id: 'hat-04',
+        name: 'Deployment Agent',
+        pipelineStageId: 'totally-invalid' as never
+      })
+    ).toBe('deployment');
+  });
+
   it('is deterministic for the same input', () => {
     const state = buildState();
 
@@ -117,5 +128,82 @@ describe('simulateRun', () => {
     expect(result.pipeline?.stages.find((stage) => stage.id === 'deployment')?.status).toBe(
       'blocked'
     );
+  });
+
+  it('fails when multiple roles claim the same pipeline stage', () => {
+    const result = simulateRun(
+      buildState({
+        roles: [
+          {
+            id: 'role-01',
+            name: 'Mission Coordinator',
+            assignedAgentId: 'agent-01',
+            pipelineStageId: 'design'
+          },
+          {
+            id: 'role-01b',
+            name: 'Brand Strategist',
+            assignedAgentId: 'agent-05',
+            pipelineStageId: 'design'
+          },
+          {
+            id: 'role-02',
+            name: 'Frontend Architect',
+            assignedAgentId: 'agent-02',
+            pipelineStageId: 'implementation'
+          },
+          {
+            id: 'role-03',
+            name: 'Quality Relay',
+            assignedAgentId: 'agent-03',
+            pipelineStageId: 'review'
+          },
+          {
+            id: 'role-04',
+            name: 'Deployment Operator',
+            assignedAgentId: 'agent-04',
+            pipelineStageId: 'deployment'
+          }
+        ]
+      })
+    );
+
+    expect(result.passed).toBe(false);
+    expect(result.diagnostics.duplicateStageIds).toEqual(['design']);
+    expect(result.events[result.events.length - 1]).toContain('duplicate stage ownership');
+  });
+
+  it('treats uncovered blocked stages as weaker than covered blocked stages', () => {
+    const result = simulateRun(
+      buildState({
+        roles: [
+          {
+            id: 'role-02',
+            name: 'Frontend Architect',
+            assignedAgentId: 'agent-low',
+            pipelineStageId: 'implementation'
+          }
+        ],
+        agents: [
+          {
+            id: 'agent-low',
+            roleAffinity: 'Frontend Builder',
+            creativity: 0,
+            reliability: 0,
+            speed: 0,
+            cost: 12
+          }
+        ]
+      })
+    );
+
+    expect(result.pipeline?.stages.find((stage) => stage.id === 'implementation')?.status).toBe(
+      'blocked'
+    );
+    expect(result.pipeline?.weakestStageId).not.toBe('implementation');
+    expect(
+      result.pipeline?.stages.find((stage) => stage.id === result.pipeline?.weakestStageId)
+        ?.assignedAgentId
+    ).toBeUndefined();
   });
 });

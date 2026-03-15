@@ -45,6 +45,10 @@ function normalizeRoleName(roleName: string): string {
   return roleName.trim().toLowerCase();
 }
 
+export function isPipelineStageId(value: unknown): value is PipelineStageId {
+  return typeof value === 'string' && PIPELINE_STAGE_ORDER.includes(value as PipelineStageId);
+}
+
 export function getPipelineStageDefinition(stageId: PipelineStageId): PipelineStageDefinition {
   return PIPELINE_STAGE_DEFINITIONS[stageId];
 }
@@ -52,7 +56,7 @@ export function getPipelineStageDefinition(stageId: PipelineStageId): PipelineSt
 export function inferPipelineStageId(
   role: Pick<HatRole, 'id' | 'name' | 'pipelineStageId'>
 ): PipelineStageId | undefined {
-  if (role.pipelineStageId) {
+  if (isPipelineStageId(role.pipelineStageId)) {
     return role.pipelineStageId;
   }
 

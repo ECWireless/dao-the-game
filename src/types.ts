@@ -63,6 +63,7 @@ export type RunDiagnostics = {
   totalRoleCount: number;
   coveredStageCount?: number;
   totalStageCount?: number;
+  duplicateStageIds?: PipelineStageId[];
   costBreakdown: CostBreakdown;
   scoreBreakdown: ScoreBreakdown;
 };

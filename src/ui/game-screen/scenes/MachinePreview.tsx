@@ -29,7 +29,7 @@ export function MachinePreview({
   onContinue
 }: MachinePreviewProps) {
   const previewUrl = latestArtifacts?.previewUrl ?? getFallbackPreviewUrl(deploymentTone);
-  const latestEvent = latestRun?.events[latestRun.events.length - 1];
+  const latestEvent = latestRun?.events.at(-1);
   const openLabel = deploymentTone === 'rough' ? 'Open draft deploy' : 'Open launch build';
 
   return (

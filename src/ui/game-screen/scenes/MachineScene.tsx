@@ -60,6 +60,7 @@ export function MachineScene({
   const heroUrl = latestArtifacts?.publicUrl ?? 'Output rail locked until first run';
   const latestPipeline = latestRun?.pipeline;
   const weakestStage = latestPipeline?.stages.find((stage) => stage.id === latestPipeline.weakestStageId);
+  const latestEvent = latestRun?.events.at(-1);
   const capabilityGaps = [
     !hasDesigner ? 'No design pass' : null,
     !hasReviewer ? 'No QA pass' : null,
@@ -133,7 +134,7 @@ export function MachineScene({
         : `${roleNodes[safePacketIndex - 2]?.operatorName ?? 'Machine core'} is actively shaping the ${roleNodes[safePacketIndex - 2]?.stageLabel?.toLowerCase() ?? 'current'} pass.`
     : hasRun
       ? weakestStage?.note ??
-        latestRun?.events[latestRun.events.length - 1] ??
+        latestEvent ??
         'The line has cooled and the deploy preview is latched open.'
       : `Ready to route through ${roleLanes.length} linked role ${roleLanes.length === 1 ? 'node' : 'nodes'}.`;
   const sharedRoleCenterY = roleNodes[0]?.y ? roleNodes[0].y + roleNodes[0].height / 2 : rootNode.y + rootNode.height / 2;
