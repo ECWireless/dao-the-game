@@ -7,11 +7,14 @@ export type Agent = {
   cost: number;
 };
 
+export type PipelineStageId = 'design' | 'implementation' | 'review' | 'deployment';
+
 export type HatRole = {
   id: string;
   name: string;
   isConfigured?: boolean;
   assignedAgentId?: string;
+  pipelineStageId?: PipelineStageId;
 };
 
 export type Brief = {
@@ -41,6 +44,7 @@ export type CostBreakdown = {
 
 export type ScoreBreakdown = {
   base: number;
+  stageInfluence?: number;
   creativityInfluence: number;
   speedInfluence: number;
   reliabilityPenalty: number;
@@ -57,8 +61,44 @@ export type RunDiagnostics = {
   runwayAfterRun: number;
   assignedRoleCount: number;
   totalRoleCount: number;
+  coveredStageCount?: number;
+  totalStageCount?: number;
+  duplicateStageIds?: PipelineStageId[];
   costBreakdown: CostBreakdown;
   scoreBreakdown: ScoreBreakdown;
+};
+
+export type PipelineStageDefinition = {
+  id: PipelineStageId;
+  label: string;
+  shortLabel: string;
+  summary: string;
+};
+
+export type PipelineStageStatus = 'strong' | 'steady' | 'strained' | 'blocked';
+
+export type PipelineStageResult = {
+  id: PipelineStageId;
+  label: string;
+  roleId?: string;
+  roleName?: string;
+  assignedAgentId?: string;
+  operatorAffinity?: string;
+  score: number;
+  qualityDelta: number;
+  cost: number;
+  status: PipelineStageStatus;
+  note: string;
+  eventLabel?: string;
+};
+
+export type RunPipeline = {
+  order: PipelineStageId[];
+  stages: PipelineStageResult[];
+  coveredStageCount: number;
+  missingStageCount: number;
+  strongestStageId?: PipelineStageId;
+  weakestStageId?: PipelineStageId;
 };
 
 export type RunResult = {
@@ -68,6 +108,7 @@ export type RunResult = {
   cid: string;
   passed: boolean;
   diagnostics: RunDiagnostics;
+  pipeline?: RunPipeline;
 };
 
 export type RunState = {

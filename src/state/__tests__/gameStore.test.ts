@@ -163,6 +163,13 @@ describe('gameStore narrative run shaping', () => {
 
     expect(firstRun).toBeDefined();
     expect(firstRun?.passed).toBe(false);
+    expect(firstRun?.pipeline?.order).toEqual([
+      'design',
+      'implementation',
+      'review',
+      'deployment'
+    ]);
+    expect(firstRun?.pipeline?.coveredStageCount).toBe(1);
     expect(firstRun?.events[firstRun.events.length - 1]).toContain('Critical role coverage gap');
     expect(firstArtifacts?.notes.join(' ')).not.toContain('Client');
     expect(firstArtifacts?.notes.join(' ')).not.toContain('rejection');
@@ -179,6 +186,7 @@ describe('gameStore narrative run shaping', () => {
 
     expect(secondRun).toBeDefined();
     expect(secondRun?.passed).toBe(true);
+    expect(secondRun?.pipeline?.coveredStageCount).toBe(4);
     expect(secondRun?.qualityScore).toBeGreaterThanOrEqual(72);
   });
 
