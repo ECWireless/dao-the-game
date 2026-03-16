@@ -190,6 +190,7 @@
 }
 
 .deployment-metrics p,
+.deployment-profile-copy,
 .deployment-notes p {
   color: rgb(223 236 255 / 62%);
   font-size: 0.7rem;
@@ -198,6 +199,48 @@
 
 .deployment-metrics strong {
   color: #f6f9ff;
+}
+
+.deployment-profile {
+  display: grid;
+  gap: 0.42rem;
+}
+
+.deployment-profile-copy {
+  margin: 0;
+}
+
+.deployment-profile-copy strong {
+  color: #f6f9ff;
+}
+
+.deployment-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.42rem;
+}
+
+.deployment-profile-card {
+  border-radius: 0.76rem;
+  padding: 0.5rem 0.56rem;
+  display: grid;
+  gap: 0.18rem;
+  background: rgb(255 255 255 / 4%);
+  border: 1px solid rgb(176 208 255 / 10%);
+}
+
+.deployment-profile-card span {
+  color: rgb(159 203 255 / 58%);
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.deployment-profile-card strong {
+  color: #f6f9ff;
+  font-size: 0.92rem;
+  line-height: 1.1;
 }
 
 .deployment-notes {

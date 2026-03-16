@@ -142,7 +142,7 @@ describe('gameStore role visibility', () => {
     expect(roleTwo?.assignedAgentId).toBe('agent-01');
   });
 
-  it('updates assigned agent affinity to match the role they fill', () => {
+  it('preserves worker identity when assigning them to a role', () => {
     const state = useGameStore.getState();
     state.unlockExpandedRoles();
     state.configureRole('hat-02', 'Designer');
@@ -150,7 +150,8 @@ describe('gameStore role visibility', () => {
 
     const assignedAgent = useGameStore.getState().agents.find((agent) => agent.id === 'agent-02');
 
-    expect(assignedAgent?.roleAffinity).toBe('Product Designer');
+    expect(assignedAgent?.name).toBe('Kestrel Vale');
+    expect(assignedAgent?.roleAffinity).toBe('Flow and interaction design');
   });
 });
 

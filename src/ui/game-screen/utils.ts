@@ -23,7 +23,7 @@ export function formatRoleAssignment(role: HatRole, agent?: Agent): string {
     return `${role.name}: awaiting hire`;
   }
 
-  return `${role.name}: ${agent.roleAffinity} (${agent.id})`;
+  return `${role.name}: ${agent.name} (${agent.roleAffinity})`;
 }
 
 export function getRunSummary(result?: RunResult): RunSummary | undefined {

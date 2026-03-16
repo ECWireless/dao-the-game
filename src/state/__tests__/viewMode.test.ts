@@ -23,9 +23,10 @@ const runResult: RunResult = {
     },
     scoreBreakdown: {
       base: 58,
-      creativityInfluence: 10,
-      speedInfluence: 4,
-      reliabilityPenalty: 3,
+      visualIdentityInfluence: 7,
+      launchStabilityInfluence: 8,
+      communityHypeInfluence: 2,
+      trustInfluence: 5,
       roleCoverageBonus: 14,
       eventModifier: 5,
       budgetPenalty: 0,

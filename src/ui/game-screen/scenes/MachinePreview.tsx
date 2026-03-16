@@ -1,5 +1,27 @@
-import type { ArtifactBundle, RunResult } from '../../../types';
+import type { ArtifactBundle, DeploymentMetricId, RunResult } from '../../../types';
 import { formatCredits } from '../utils';
+
+const DEPLOYMENT_METRIC_ORDER: DeploymentMetricId[] = [
+  'visualIdentity',
+  'launchStability',
+  'communityHype',
+  'trust'
+];
+
+const DEPLOYMENT_METRIC_LABELS: Record<DeploymentMetricId, string> = {
+  visualIdentity: 'Visual',
+  launchStability: 'Stability',
+  communityHype: 'Hype',
+  trust: 'Trust'
+};
+
+const DEPLOYMENT_PROFILE_LABELS = {
+  premium: 'Premium launch',
+  flashy: 'Flashy launch',
+  stable: 'Stable launch',
+  messy: 'Messy launch',
+  failed: 'Failed launch'
+} as const;
 
 type MachinePreviewProps = {
   deploymentTone: 'rough' | 'polished';
@@ -31,6 +53,7 @@ export function MachinePreview({
   const previewUrl = latestArtifacts?.previewUrl ?? getFallbackPreviewUrl(deploymentTone);
   const latestEvent = latestRun?.events.at(-1);
   const openLabel = deploymentTone === 'rough' ? 'Open draft deploy' : 'Open launch build';
+  const deploymentProfile = latestRun?.evaluation;
 
   return (
     <article className={`deployment-cassette is-ejected is-${deploymentTone}`}>
@@ -99,6 +122,24 @@ export function MachinePreview({
             Quality <strong>{latestRun.qualityScore}</strong>
           </p>
           <p>{latestEvent}</p>
+        </div>
+      ) : null}
+
+      {deploymentProfile ? (
+        <div className="deployment-profile">
+          <p className="deployment-profile-copy">
+            Profile{' '}
+            <strong>{DEPLOYMENT_PROFILE_LABELS[deploymentProfile.profileTag]}</strong>
+          </p>
+          <p className="deployment-profile-copy">{deploymentProfile.headline}</p>
+          <div className="deployment-profile-grid">
+            {DEPLOYMENT_METRIC_ORDER.map((metricId) => (
+              <article key={metricId} className="deployment-profile-card">
+                <span>{DEPLOYMENT_METRIC_LABELS[metricId]}</span>
+                <strong>{deploymentProfile.metrics[metricId]}</strong>
+              </article>
+            ))}
+          </div>
         </div>
       ) : null}
 
