@@ -8,7 +8,6 @@ import {
   TUTORIAL_SEED,
   TUTORIAL_TREASURY
 } from '../levels/tutorial';
-import { getRoleAffinityLabel } from '../roleAffinity';
 import { generateArtifacts, generateStartingAgents, simulateRun } from '../sim';
 import type { Agent, ArtifactBundle, HatRole, RunResult, RunState, ScoreBreakdown } from '../types';
 
@@ -214,7 +213,7 @@ export function estimateRunCost(roles: HatRole[], agents: Agent[]): number {
     }
 
     const agent = agentById.get(role.assignedAgentId);
-    return sum + (agent?.cost ?? 0);
+    return sum + (agent?.contractCost ?? 0);
   }, 0);
 
   const baseCost = 36 + runnableRoles.length * 2;
@@ -356,17 +355,7 @@ export const useGameStore = create<GameStore>()(
           return;
         }
 
-        const nextAffinity = getRoleAffinityLabel(roleId);
-
         set({
-          agents: state.agents.map((item) =>
-            item.id === agent.id
-              ? {
-                  ...item,
-                  roleAffinity: nextAffinity
-                }
-              : item
-          ),
           roles: state.roles.map((item) =>
             item.id === roleId
               ? {
@@ -382,7 +371,7 @@ export const useGameStore = create<GameStore>()(
           ),
           assignmentLog: [
             createAssignmentLogEntry(
-              `${role.name} assigned to ${nextAffinity} (${agent.id})`
+              `${role.name} assigned to ${agent.name}`
             ),
             ...state.assignmentLog
           ].slice(0, 8)

@@ -1,5 +1,8 @@
 import type { Agent } from '../../types';
-import { getRoleAffinityLabel } from '../../roleAffinity';
+import {
+  getWorkerAverageCapability,
+  getWorkerCapabilitySummary
+} from '../../workers/catalog';
 
 export type GuildMemberProfile = {
   id: string;
@@ -7,9 +10,12 @@ export type GuildMemberProfile = {
   name: string;
   handle: string;
   title: string;
-  affinityLabel?: string;
   accent: string;
   shadow: string;
+  roleAffinity?: string;
+  archetype?: string;
+  temperamentProfile?: string;
+  capabilitySummary?: string;
 };
 
 export type GuildFeedEntry = {
@@ -17,51 +23,6 @@ export type GuildFeedEntry = {
   memberId: string;
   text: string;
 };
-
-const CANDIDATE_PRESETS: Omit<GuildMemberProfile, 'id' | 'agentId'>[] = [
-  {
-    name: 'Rune Mercer',
-    handle: 'rune-mercer',
-    title: 'frontend delver',
-    accent: '#BD482D',
-    shadow: '#6A2818'
-  },
-  {
-    name: 'Kestrel Vale',
-    handle: 'kestrel-vale',
-    title: 'interface ranger',
-    accent: '#8B6C20',
-    shadow: '#534A13'
-  },
-  {
-    name: 'Hexa Thorn',
-    handle: 'hexa-thorn',
-    title: 'brand scavenger',
-    accent: '#8B3A2E',
-    shadow: '#4D1A14'
-  },
-  {
-    name: 'Sable Quill',
-    handle: 'sable-quill',
-    title: 'review sentinel',
-    accent: '#6F5C18',
-    shadow: '#3A300B'
-  },
-  {
-    name: 'Mint Halberd',
-    handle: 'mint-halberd',
-    title: 'deploy courier',
-    accent: '#5D6E2F',
-    shadow: '#2E3A18'
-  },
-  {
-    name: 'Dorian Ash',
-    handle: 'dorian-ash',
-    title: 'stack architect',
-    accent: '#6C4C89',
-    shadow: '#332244'
-  }
-];
 
 const DECOR_PROFILES: GuildMemberProfile[] = [
   {
@@ -115,49 +76,70 @@ export const RAIDGUILD_HISTORY: GuildFeedEntry[] = [
   }
 ];
 
-function getRoleCandidateOffset(roleId: string) {
+function createGuildProfile(agent: Agent, id: string): GuildMemberProfile {
+  return {
+    id,
+    agentId: agent.id,
+    name: agent.name,
+    handle: agent.handle,
+    title: agent.title,
+    accent: agent.accent,
+    shadow: agent.shadow,
+    roleAffinity: agent.roleAffinity,
+    archetype: agent.archetype,
+    temperamentProfile: agent.temperament.profile,
+    capabilitySummary: getWorkerCapabilitySummary(agent)
+  };
+}
+
+function getRoleStageRank(agent: Agent, roleId: string): number {
   switch (roleId) {
     case 'hat-02':
-      return 2;
+      return agent.capabilityVector.design;
     case 'hat-03':
-      return 4;
+      return agent.capabilityVector.review;
     case 'hat-04':
-      return 1;
+      return agent.capabilityVector.deployment;
     case 'hat-01':
     default:
-      return 0;
+      return agent.capabilityVector.implementation;
   }
+}
+
+function compareRoleCandidates(left: Agent, right: Agent, roleId?: string): number {
+  if (roleId) {
+    const roleDelta = getRoleStageRank(right, roleId) - getRoleStageRank(left, roleId);
+
+    if (roleDelta !== 0) {
+      return roleDelta;
+    }
+  }
+
+  const averageDelta = getWorkerAverageCapability(right) - getWorkerAverageCapability(left);
+
+  if (averageDelta !== 0) {
+    return averageDelta;
+  }
+
+  return left.id.localeCompare(right.id);
 }
 
 function buildCandidateProfiles(
   agents: Agent[],
-  startIndex: number,
   count: number,
   roleId?: string
 ): GuildMemberProfile[] {
-  if (agents.length === 0) {
-    return [];
-  }
-
-  return Array.from({ length: Math.min(count, agents.length) }, (_, index) => {
-    const agentIndex = (startIndex + index) % agents.length;
-    const agent = agents[agentIndex];
-    const preset = CANDIDATE_PRESETS[(startIndex + index) % CANDIDATE_PRESETS.length];
-
-    return {
-      ...preset,
-      id: `candidate-${startIndex}-${agent.id}`,
-      agentId: agent.id,
-      affinityLabel: roleId ? getRoleAffinityLabel(roleId, index) : undefined
-    };
-  });
+  return [...agents]
+    .sort((left, right) => compareRoleCandidates(left, right, roleId))
+    .slice(0, Math.min(count, agents.length))
+    .map((agent) => createGuildProfile(agent, roleId ? `candidate-${roleId}-${agent.id}` : `candidate-${agent.id}`));
 }
 
 export function getRaidGuildCandidates(
   agents: Agent[],
   count = agents.length
 ): GuildMemberProfile[] {
-  return buildCandidateProfiles(agents, 0, count, 'hat-01');
+  return buildCandidateProfiles(agents, count);
 }
 
 export function getRaidGuildCandidatesForRole(
@@ -165,7 +147,7 @@ export function getRaidGuildCandidatesForRole(
   roleId: string,
   count = 2
 ): GuildMemberProfile[] {
-  return buildCandidateProfiles(agents, getRoleCandidateOffset(roleId), count, roleId);
+  return buildCandidateProfiles(agents, count, roleId);
 }
 
 export function getPrimaryRaidGuildCandidateForRole(
@@ -187,5 +169,6 @@ export function findRaidGuildMember(
     return undefined;
   }
 
-  return getRaidGuildCandidates(agents).find((member) => member.agentId === agentId);
+  const agent = agents.find((candidate) => candidate.id === agentId);
+  return agent ? createGuildProfile(agent, `candidate-${agent.id}`) : undefined;
 }

@@ -6,6 +6,7 @@ import { simulateRun } from '../simulateRun';
 
 const brief: Brief = {
   id: 'brief-conf-01',
+  artifactType: 'conference-site',
   clientName: 'Meta Summit',
   mission: 'Rebuild a failing conference brand website.',
   requirements: ['No human labor', 'Autonomous execution'],
@@ -49,6 +50,37 @@ function buildState(overrides: Partial<RunState> = {}): RunState {
     agents: generateStartingAgents(777),
     ...overrides
   };
+}
+
+function buildRoles(
+  assignedAgentIds: readonly [string, string, string, string]
+): HatRole[] {
+  return [
+    {
+      id: 'role-01',
+      name: 'Mission Coordinator',
+      assignedAgentId: assignedAgentIds[0],
+      pipelineStageId: 'design'
+    },
+    {
+      id: 'role-02',
+      name: 'Frontend Architect',
+      assignedAgentId: assignedAgentIds[1],
+      pipelineStageId: 'implementation'
+    },
+    {
+      id: 'role-03',
+      name: 'Quality Relay',
+      assignedAgentId: assignedAgentIds[2],
+      pipelineStageId: 'review'
+    },
+    {
+      id: 'role-04',
+      name: 'Deployment Operator',
+      assignedAgentId: assignedAgentIds[3],
+      pipelineStageId: 'deployment'
+    }
+  ];
 }
 
 describe('simulateRun', () => {
@@ -187,11 +219,33 @@ describe('simulateRun', () => {
         agents: [
           {
             id: 'agent-low',
+            name: 'Agent Low',
+            handle: 'agent-low',
+            title: 'fragile implementer',
+            archetype: 'Stress Case',
             roleAffinity: 'Frontend Builder',
-            creativity: 0,
-            reliability: 0,
-            speed: 0,
-            cost: 12
+            capabilityVector: {
+              design: 0,
+              implementation: 0,
+              review: 0,
+              deployment: 0
+            },
+            styleProfile: {
+              signature: 'Unformed and inconsistent.',
+              execution: 'Struggles to complete basic work.',
+              collaboration: 'Creates drag across the line.'
+            },
+            temperament: {
+              profile: 'Frayed under pressure',
+              pace: 0,
+              resilience: 0,
+              teamwork: 0
+            },
+            traits: ['Unreliable'],
+            bio: 'A deliberately weak fixture for blocked-stage regression tests.',
+            accent: '#222222',
+            shadow: '#111111',
+            contractCost: 12
           }
         ]
       })
@@ -205,5 +259,31 @@ describe('simulateRun', () => {
       result.pipeline?.stages.find((stage) => stage.id === result.pipeline?.weakestStageId)
         ?.assignedAgentId
     ).toBeUndefined();
+  });
+
+  it('produces meaningfully different deployment profiles for different lineups', () => {
+    const stableRun = simulateRun(
+      buildState({
+        roles: buildRoles(['agent-02', 'agent-06', 'agent-04', 'agent-05'])
+      })
+    );
+    const flashyRun = simulateRun(
+      buildState({
+        roles: buildRoles(['agent-07', 'agent-01', 'agent-03', 'agent-10'])
+      })
+    );
+
+    expect(stableRun.qualityScore).not.toBe(flashyRun.qualityScore);
+    expect(stableRun.evaluation?.profileTag).toBe('premium');
+    expect(flashyRun.evaluation?.profileTag).toBe('messy');
+    expect(stableRun.evaluation?.strongestMetricId).toBe('launchStability');
+    expect(flashyRun.evaluation?.strongestMetricId).toBe('communityHype');
+    expect(flashyRun.evaluation?.weakestMetricId).toBe('launchStability');
+    expect(stableRun.evaluation?.metrics.launchStability).toBeGreaterThan(
+      flashyRun.evaluation?.metrics.launchStability ?? 0
+    );
+    expect(stableRun.evaluation?.metrics.trust).toBeGreaterThan(
+      flashyRun.evaluation?.metrics.trust ?? 0
+    );
   });
 });

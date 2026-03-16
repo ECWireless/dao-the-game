@@ -5,6 +5,7 @@ export const TUTORIAL_TREASURY = 540;
 
 export const TUTORIAL_BRIEF: Brief = {
   id: 'brief-rfgc-01',
+  artifactType: 'conference-site',
   clientName: 'Regen Frontier Global Conference',
   mission: 'Rescue a failing Web3 conference brand by rebuilding its website with autonomous operations.',
   requirements: [

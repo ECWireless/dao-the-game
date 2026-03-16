@@ -274,7 +274,8 @@ export function GuildSecondCycleScene({
                   <span>@{candidate.handle}</span>
                 </p>
                 <p className="guild-feed-submeta">
-                  {candidate.title} • rel {agent.reliability} • cost {formatCredits(agent.cost)}
+                  {candidate.title} • {agent.temperament.profile.toLowerCase()} • contract{' '}
+                  {formatCredits(agent.contractCost)}
                 </p>
                 <p className="guild-feed-text">{replyText}</p>
               </div>
@@ -373,8 +374,8 @@ export function GuildSecondCycleScene({
                         <span>@{candidate.handle}</span>
                       </p>
                       <p className="guild-feed-submeta">
-                        {candidate.title} • rel {agent.reliability} • cost{' '}
-                        {formatCredits(agent.cost)}
+                        {candidate.title} • {agent.temperament.profile.toLowerCase()} • contract{' '}
+                        {formatCredits(agent.contractCost)}
                       </p>
                       <p className="guild-feed-text">
                         {sequence.replies[candidateIndex] ?? sequence.replies[0]}

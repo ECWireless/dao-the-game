@@ -8,6 +8,7 @@ import type {
   RunResult,
   RunState
 } from '../types';
+import { evaluateDeployment } from './evaluateDeployment';
 import { clamp, createRng, hashSeedParts } from './rng';
 
 type EventTemplate = {
@@ -18,9 +19,10 @@ type EventTemplate = {
 };
 
 type StageWeights = {
-  creativity: number;
-  reliability: number;
-  speed: number;
+  capability: number;
+  pace: number;
+  resilience: number;
+  teamwork: number;
   qualityMultiplier: number;
   missingDelta: number;
   affinityKeywords: string[];
@@ -70,33 +72,37 @@ const STAGE_OPERATION_COST: Record<PipelineStageId, number> = {
 
 const STAGE_WEIGHTS: Record<PipelineStageId, StageWeights> = {
   design: {
-    creativity: 0.55,
-    reliability: 0.25,
-    speed: 0.2,
+    capability: 0.6,
+    pace: 0.08,
+    resilience: 0.12,
+    teamwork: 0.2,
     qualityMultiplier: 0.3,
     missingDelta: -10,
     affinityKeywords: ['design', 'brand', 'strategy', 'content']
   },
   implementation: {
-    creativity: 0.2,
-    reliability: 0.35,
-    speed: 0.45,
+    capability: 0.58,
+    pace: 0.24,
+    resilience: 0.12,
+    teamwork: 0.06,
     qualityMultiplier: 0.33,
     missingDelta: -12,
     affinityKeywords: ['frontend', 'build', 'engineer', 'architect']
   },
   review: {
-    creativity: 0.1,
-    reliability: 0.65,
-    speed: 0.25,
+    capability: 0.56,
+    pace: 0.04,
+    resilience: 0.26,
+    teamwork: 0.14,
     qualityMultiplier: 0.28,
     missingDelta: -9,
     affinityKeywords: ['qa', 'review', 'tester', 'verifier']
   },
   deployment: {
-    creativity: 0.1,
-    reliability: 0.5,
-    speed: 0.4,
+    capability: 0.56,
+    pace: 0.2,
+    resilience: 0.18,
+    teamwork: 0.06,
     qualityMultiplier: 0.3,
     missingDelta: -11,
     affinityKeywords: ['deploy', 'release', 'operations', 'ops']
@@ -131,10 +137,10 @@ function getAssignedAgents(state: RunState): Agent[] {
     .filter((agent): agent is Agent => Boolean(agent));
 }
 
-function rollRunEvent(rng: ReturnType<typeof createRng>, reliability: number) {
+function rollRunEvent(rng: ReturnType<typeof createRng>, resilience: number) {
   const roll = rng.next();
   const template = EVENT_TABLE[Math.floor(roll * EVENT_TABLE.length)] ?? EVENT_TABLE[0];
-  const variance = Math.max(2, Math.round((100 - reliability) / 10));
+  const variance = Math.max(2, Math.round((100 - resilience) / 10));
   const jitter = rng.int(-variance, variance);
 
   return {
@@ -295,13 +301,16 @@ function buildStageResult(
   }
 
   const composite =
-    agent.creativity * tuning.creativity +
-    agent.reliability * tuning.reliability +
-    agent.speed * tuning.speed;
+    agent.capabilityVector[stageId] * tuning.capability +
+    agent.temperament.pace * tuning.pace +
+    agent.temperament.resilience * tuning.resilience +
+    agent.temperament.teamwork * tuning.teamwork;
   const affinityBonus = matchesStageAffinity(agent, stageId) ? 6 : 0;
-  const reliabilityDrag =
-    agent.reliability < 50 ? Math.round((50 - agent.reliability) * 0.15) : 0;
-  const rawScore = clamp(Math.round(composite + affinityBonus - reliabilityDrag), 0, 100);
+  const resilienceDrag =
+    agent.temperament.resilience < 50
+      ? Math.round((50 - agent.temperament.resilience) * 0.16)
+      : 0;
+  const rawScore = clamp(Math.round(composite + affinityBonus - resilienceDrag), 0, 100);
   const displayScore = clamp(rawScore + eventScoreAdjustment, 0, 100);
   const status = getStageStatus(displayScore, true);
 
@@ -314,7 +323,8 @@ function buildStageResult(
     operatorAffinity: agent.roleAffinity,
     score: displayScore,
     qualityDelta: Math.round((rawScore - 58) * tuning.qualityMultiplier),
-    cost: STAGE_OPERATION_COST[stageId] + 2 + agent.cost + (eventLabel ? event.costDelta : 0),
+    cost:
+      STAGE_OPERATION_COST[stageId] + 2 + agent.contractCost + (eventLabel ? event.costDelta : 0),
     status,
     note: buildStageNote(stageId, status, role.name),
     eventLabel
@@ -348,31 +358,27 @@ function buildRunPipeline(state: RunState, event: ReturnType<typeof rollRunEvent
 export function simulateRun(state: RunState): RunResult {
   const duplicateStageIds = getDuplicateStageIds(state);
   const assignedAgents = getAssignedAgents(state);
-  const avgCreativity = average(assignedAgents.map((agent) => agent.creativity));
-  const avgReliability = average(assignedAgents.map((agent) => agent.reliability));
-  const avgSpeed = average(assignedAgents.map((agent) => agent.speed));
+  const avgResilience = average(assignedAgents.map((agent) => agent.temperament.resilience));
 
-  const seed = hashSeedParts(state.seed, assignedAgents.length, Math.round(avgReliability));
+  const seed = hashSeedParts(state.seed, assignedAgents.length, Math.round(avgResilience));
   const rng = createRng(seed);
-  const event = rollRunEvent(rng, avgReliability);
+  const event = rollRunEvent(rng, avgResilience);
   const pipeline = buildRunPipeline(state, event);
-  const blockedStageCount = pipeline.stages.filter((stage) => stage.status === 'blocked').length;
-  const strainedStageCount = pipeline.stages.filter((stage) => stage.status === 'strained').length;
+  const evaluation = evaluateDeployment(state, pipeline);
   const stageInfluence = pipeline.stages.reduce((sum, stage) => sum + stage.qualityDelta, 0);
 
   const baseScore = state.brief.baseScore;
-  const creativityInfluence = Math.round((avgCreativity - 50) * 0.18);
-  const speedInfluence = Math.round((avgSpeed - 50) * 0.12);
+  const visualIdentityInfluence = Math.round((evaluation.metrics.visualIdentity - 50) * 0.08);
+  const launchStabilityInfluence = Math.round((evaluation.metrics.launchStability - 50) * 0.12);
+  const communityHypeInfluence = Math.round((evaluation.metrics.communityHype - 50) * 0.07);
+  const trustInfluence = Math.round((evaluation.metrics.trust - 50) * 0.11);
   const roleCoverageBonus =
     pipeline.coveredStageCount === PIPELINE_STAGE_ORDER.length
       ? 10
       : -pipeline.missingStageCount * 8;
-  const reliabilityPenalty = Math.round(
-    Math.max(0, 60 - avgReliability) * 0.55 + strainedStageCount * 2 + blockedStageCount * 5
-  );
 
   const baseCost = BASE_OPERATIONAL_COST + state.roles.length * 2;
-  const agentCost = assignedAgents.reduce((sum, agent) => sum + agent.cost, 0);
+  const agentCost = assignedAgents.reduce((sum, agent) => sum + agent.contractCost, 0);
   const eventCost = event.costDelta;
   const totalCost = pipeline.stages.reduce((sum, stage) => sum + stage.cost, 0);
 
@@ -382,11 +388,12 @@ export function simulateRun(state: RunState): RunResult {
   const totalScore = Math.round(
     baseScore +
       stageInfluence +
-      creativityInfluence +
-      speedInfluence +
+      visualIdentityInfluence +
+      launchStabilityInfluence +
+      communityHypeInfluence +
+      trustInfluence +
       roleCoverageBonus +
       event.qualityDelta -
-      reliabilityPenalty -
       budgetPenalty
   );
 
@@ -410,7 +417,7 @@ export function simulateRun(state: RunState): RunResult {
       state.seed,
       finalQualityScore,
       totalCost,
-      Math.round(avgReliability),
+      Math.round(avgResilience),
       event.qualityDelta,
       stageInfluence,
       duplicateStageIds.length
@@ -423,6 +430,7 @@ export function simulateRun(state: RunState): RunResult {
     events: [event.label, weakestStage?.note, duplicateStageEvent].filter(Boolean) as string[],
     cid,
     passed,
+    evaluation,
     pipeline,
     diagnostics: {
       seed: state.seed,
@@ -443,9 +451,10 @@ export function simulateRun(state: RunState): RunResult {
       scoreBreakdown: {
         base: baseScore,
         stageInfluence,
-        creativityInfluence,
-        speedInfluence,
-        reliabilityPenalty,
+        visualIdentityInfluence,
+        launchStabilityInfluence,
+        communityHypeInfluence,
+        trustInfluence,
         roleCoverageBonus,
         eventModifier: event.qualityDelta,
         budgetPenalty: budgetPenalty + duplicateStagePenalty,

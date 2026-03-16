@@ -3,6 +3,7 @@ import { hatIdToTreeId } from '@hatsprotocol/sdk-v1-core';
 import { sepolia } from 'viem/chains';
 import type { OrgTreeRecord } from '../../../contracts/org';
 import type { Agent, HatRole } from '../../../types';
+import { getWorkerCapabilitySummary } from '../../../workers/catalog';
 import { findRaidGuildMember, getRaidGuildCandidatesForRole } from '../guildData';
 import {
   WhiteboardEdgeCue,
@@ -128,9 +129,10 @@ export function WhiteboardScene({
       ? [{
           ...candidate,
           agentId: candidate.agentId,
-          roleAffinity: candidate.affinityLabel ?? agent.roleAffinity,
-          reliability: agent.reliability,
-          speed: agent.speed
+          roleAffinity: candidate.roleAffinity ?? agent.roleAffinity,
+          archetype: agent.archetype,
+          temperamentProfile: agent.temperament.profile,
+          capabilitySummary: getWorkerCapabilitySummary(agent)
         }]
       : [];
   });

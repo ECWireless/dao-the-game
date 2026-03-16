@@ -9,8 +9,9 @@ type WhiteboardCandidateOption = {
   accent: string;
   shadow: string;
   roleAffinity: string;
-  reliability: number;
-  speed: number;
+  archetype: string;
+  temperamentProfile: string;
+  capabilitySummary: string;
 };
 
 type WhiteboardSheetProps = {
@@ -95,7 +96,12 @@ export function WhiteboardSheet({
                 </span>
                 <span className="whiteboard-candidate-copy">
                   <span className="whiteboard-candidate-name">{candidate.name}</span>
-                  <span className="whiteboard-candidate-meta">{candidate.roleAffinity} | rel {candidate.reliability} | spd {candidate.speed}</span>
+                  <span className="whiteboard-candidate-meta">
+                    {candidate.roleAffinity} • {candidate.temperamentProfile}
+                  </span>
+                  <span className="whiteboard-candidate-meta">
+                    {candidate.archetype} • {candidate.capabilitySummary}
+                  </span>
                 </span>
               </button>
             ))}

@@ -2,6 +2,7 @@ import type { Agent } from '../../../types';
 import { GuildMemberAvatar } from './GuildMemberAvatar';
 import { type GuildMemberProfile } from '../guildData';
 import { formatCredits } from '../utils';
+import { getWorkerCapabilitySummary } from '../../../workers/catalog';
 
 export function GuildMemberCard({
   member,
@@ -24,28 +25,39 @@ export function GuildMemberCard({
         <p className="guild-member-title">{member.title}</p>
 
         {agent ? (
-          <div className="guild-stats">
-            <div className="guild-stat-row">
-              <span>Affinity</span>
-              <strong>{member.affinityLabel ?? agent.roleAffinity}</strong>
+          <>
+            <div className="guild-stats">
+              <div className="guild-stat-row">
+                <span>Archetype</span>
+                <strong>{agent.archetype}</strong>
+              </div>
+              <div className="guild-stat-row">
+                <span>Affinity</span>
+                <strong>{member.roleAffinity ?? agent.roleAffinity}</strong>
+              </div>
+              <div className="guild-stat-row">
+                <span>Capabilities</span>
+                <strong>{getWorkerCapabilitySummary(agent)}</strong>
+              </div>
+              <div className="guild-stat-row">
+                <span>Temperament</span>
+                <strong>{agent.temperament.profile}</strong>
+              </div>
+              <div className="guild-stat-row">
+                <span>Style</span>
+                <strong>{agent.styleProfile.signature}</strong>
+              </div>
+              <div className="guild-stat-row">
+                <span>Traits</span>
+                <strong>{agent.traits.join(' • ')}</strong>
+              </div>
+              <div className="guild-stat-row">
+                <span>Contract</span>
+                <strong>{formatCredits(agent.contractCost)}</strong>
+              </div>
             </div>
-            <div className="guild-stat-row">
-              <span>Creativity</span>
-              <strong>{agent.creativity}</strong>
-            </div>
-            <div className="guild-stat-row">
-              <span>Reliability</span>
-              <strong>{agent.reliability}</strong>
-            </div>
-            <div className="guild-stat-row">
-              <span>Speed</span>
-              <strong>{agent.speed}</strong>
-            </div>
-            <div className="guild-stat-row">
-              <span>Cost</span>
-              <strong>{formatCredits(agent.cost)}</strong>
-            </div>
-          </div>
+            <p className="guild-member-note">{agent.bio}</p>
+          </>
         ) : (
           <p className="guild-member-note">Guild regular. Mostly here to keep the server weird.</p>
         )}

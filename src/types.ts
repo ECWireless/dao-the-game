@@ -1,13 +1,71 @@
-export type Agent = {
-  id: string;
-  roleAffinity: string;
-  creativity: number;
-  reliability: number;
-  speed: number;
-  cost: number;
+export type PipelineStageId = 'design' | 'implementation' | 'review' | 'deployment';
+
+export type ArtifactType = 'conference-site';
+
+export type DeploymentMetricId = 'visualIdentity' | 'launchStability' | 'communityHype' | 'trust';
+
+export type DeploymentMetrics = Record<DeploymentMetricId, number>;
+
+export type DeploymentProfileTag = 'premium' | 'flashy' | 'stable' | 'messy' | 'failed';
+
+export type DeploymentContribution = {
+  agentId: string;
+  agentName: string;
+  metricId: DeploymentMetricId;
+  impact: number;
+  summary: string;
 };
 
-export type PipelineStageId = 'design' | 'implementation' | 'review' | 'deployment';
+export type DeploymentSynergyNote = {
+  type: 'synergy' | 'tension';
+  metricId?: DeploymentMetricId;
+  impact: number;
+  relatedAgentIds: string[];
+  summary: string;
+};
+
+export type DeploymentEvaluation = {
+  artifactType: ArtifactType;
+  profileTag: DeploymentProfileTag;
+  headline: string;
+  strongestMetricId: DeploymentMetricId;
+  weakestMetricId: DeploymentMetricId;
+  metrics: DeploymentMetrics;
+  contributions: DeploymentContribution[];
+  synergies: DeploymentSynergyNote[];
+};
+
+export type CapabilityVector = Record<PipelineStageId, number>;
+
+export type WorkerStyleProfile = {
+  signature: string;
+  execution: string;
+  collaboration: string;
+};
+
+export type WorkerTemperament = {
+  profile: string;
+  pace: number;
+  resilience: number;
+  teamwork: number;
+};
+
+export type Agent = {
+  id: string;
+  name: string;
+  handle: string;
+  title: string;
+  archetype: string;
+  roleAffinity: string;
+  capabilityVector: CapabilityVector;
+  styleProfile: WorkerStyleProfile;
+  temperament: WorkerTemperament;
+  traits: string[];
+  bio: string;
+  accent: string;
+  shadow: string;
+  contractCost: number;
+};
 
 export type HatRole = {
   id: string;
@@ -19,6 +77,7 @@ export type HatRole = {
 
 export type Brief = {
   id: string;
+  artifactType: ArtifactType;
   clientName: string;
   mission: string;
   requirements: string[];
@@ -45,9 +104,10 @@ export type CostBreakdown = {
 export type ScoreBreakdown = {
   base: number;
   stageInfluence?: number;
-  creativityInfluence: number;
-  speedInfluence: number;
-  reliabilityPenalty: number;
+  visualIdentityInfluence: number;
+  launchStabilityInfluence: number;
+  communityHypeInfluence: number;
+  trustInfluence: number;
   roleCoverageBonus: number;
   eventModifier: number;
   budgetPenalty: number;
@@ -107,6 +167,7 @@ export type RunResult = {
   events: string[];
   cid: string;
   passed: boolean;
+  evaluation?: DeploymentEvaluation;
   diagnostics: RunDiagnostics;
   pipeline?: RunPipeline;
 };
