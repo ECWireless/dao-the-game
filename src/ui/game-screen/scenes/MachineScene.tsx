@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { hasPipelineStage } from '../../../pipeline';
 import type { Agent, ArtifactBundle, HatRole, RunResult } from '../../../types';
+import type { ArtifactGenerationProgress } from '../types';
 import { buildMachineRoleLanes } from '../machineUtils';
 import { usePannableViewport } from '../usePannableViewport';
 import { MachinePreview } from './MachinePreview';
@@ -13,6 +14,10 @@ type MachineSceneProps = {
   hasRun: boolean;
   latestRun?: RunResult;
   latestArtifacts?: ArtifactBundle;
+  artifactGenerationProgress?: ArtifactGenerationProgress | null;
+  artifactGenerationError?: string | null;
+  onRetryArtifactGeneration?: () => void | Promise<void>;
+  isRetryingArtifactGeneration?: boolean;
   onRun?: () => void | Promise<void>;
   onContinue?: () => void;
   onLockChange?: (isLocked: boolean) => void;
@@ -43,6 +48,10 @@ export function MachineScene({
   hasRun,
   latestRun,
   latestArtifacts,
+  artifactGenerationProgress = null,
+  artifactGenerationError = null,
+  onRetryArtifactGeneration,
+  isRetryingArtifactGeneration = false,
   onRun,
   onContinue,
   onLockChange,
@@ -51,13 +60,23 @@ export function MachineScene({
   const [isRunning, setIsRunning] = useState(false);
   const [packetIndex, setPacketIndex] = useState(0);
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
+  const hasTriggeredRunRef = useRef(false);
   const roleLanes = useMemo(() => buildMachineRoleLanes(roles, agents), [agents, roles]);
   const hasDesigner = hasPipelineStage(roles, 'design');
   const hasReviewer = hasPipelineStage(roles, 'review');
   const hasDeploymentRole = hasPipelineStage(roles, 'deployment');
   const deploymentTone = !hasDesigner || !hasReviewer ? 'rough' : 'polished';
-  const heroTitle = latestArtifacts?.siteTitle ?? 'Pending deployable';
-  const heroUrl = latestArtifacts?.publicUrl ?? 'Output rail locked until first run';
+  const isPipelineRunning = isRunning || Boolean(artifactGenerationProgress);
+  const heroTitle = latestArtifacts?.siteTitle ?? (artifactGenerationError ? 'Assembly failed' : 'Pending deployable');
+  const heroUrl =
+    latestArtifacts?.publicUrl ??
+    (latestArtifacts?.cid
+      ? `ipfs://${latestArtifacts.cid}`
+      : artifactGenerationError
+        ? 'No artifact available'
+        : latestArtifacts?.siteDocument
+        ? 'Pinning assembled site to IPFS...'
+        : 'Output rail locked until first run');
   const latestPipeline = latestRun?.pipeline;
   const weakestStage = latestPipeline?.stages.find((stage) => stage.id === latestPipeline.weakestStageId);
   const latestEvent = latestRun?.events.at(-1);
@@ -102,40 +121,58 @@ export function MachineScene({
   ];
   const lastPacketIndex = packetStops.length - 1;
   const safePacketIndex = Math.max(0, Math.min(packetIndex, lastPacketIndex));
+  const activeGenerationRoleIndex =
+    artifactGenerationProgress?.phase === 'worker'
+      ? roleNodes.findIndex((node) => node.stageId === artifactGenerationProgress.stageId)
+      : -1;
+  const runningTargetPacketIndex = artifactGenerationProgress?.phase === 'publishing'
+    ? lastPacketIndex
+    : activeGenerationRoleIndex >= 0
+      ? activeGenerationRoleIndex + 2
+      : roleNodes.length > 0
+        ? 2
+        : 1;
   const packetPosition = packetStops[safePacketIndex] ?? packetStops[0];
   const packetEnergy = packetStops.length > 1 ? 0.4 + safePacketIndex / (packetStops.length - 1) * 0.8 : 0.7;
-  const isOutputReady = hasRun && !isRunning;
+  const isOutputReady = hasRun && !isPipelineRunning && Boolean(latestArtifacts);
+  const isOutputErrored = hasRun && !isPipelineRunning && !latestArtifacts && Boolean(artifactGenerationError);
   const packetStyle = {
     left: `${packetPosition.x}px`,
     top: `${packetPosition.y}px`,
     '--packet-glow': `${0.6 + packetEnergy * 0.9}rem`,
     '--packet-scale': `${1 + packetEnergy * 0.08}`
   } as CSSProperties;
-  const statusLabel = isRunning
-    ? safePacketIndex === 0
-      ? 'Client requirements loaded'
-      : safePacketIndex === 1
-        ? 'Root node shaping request'
-        : safePacketIndex === lastPacketIndex
-          ? 'Output node fabricating creation'
-          : `${roleNodes[safePacketIndex - 2]?.stageLabel ?? roleNodes[safePacketIndex - 2]?.roleName ?? 'Stage'} processing`
+  const statusLabel = isPipelineRunning
+    ? artifactGenerationProgress?.phase === 'worker'
+      ? `${roleNodes[activeGenerationRoleIndex]?.stageLabel ?? roleNodes[activeGenerationRoleIndex]?.roleName ?? 'Worker'} generating`
+      : artifactGenerationProgress?.phase === 'publishing'
+        ? 'Publishing deploy'
+        : safePacketIndex === 0
+          ? 'Client requirements loaded'
+          : safePacketIndex === 1
+            ? 'Root node shaping request'
+            : `${roleNodes[safePacketIndex - 2]?.stageLabel ?? roleNodes[safePacketIndex - 2]?.roleName ?? 'Stage'} processing`
     : hasRun
-      ? latestPipeline
-        ? latestRun?.passed
-          ? `${latestPipeline.coveredStageCount}/${latestPipeline.order.length} stages stabilized`
-          : `${weakestStage?.label ?? 'Pipeline'} needs reinforcement`
-        : 'Creation routed to output node'
+      ? artifactGenerationError
+        ? 'Assembly failed'
+        : latestPipeline
+          ? latestRun?.passed
+            ? `${latestPipeline.coveredStageCount}/${latestPipeline.order.length} stages stabilized`
+            : `${weakestStage?.label ?? 'Pipeline'} needs reinforcement`
+          : 'Creation routed to output node'
       : 'Assembly line armed';
-  const statusDetail = isRunning
-    ? safePacketIndex <= 1
-      ? 'Requirements are being piped through the studio chassis.'
-      : safePacketIndex === lastPacketIndex
-        ? 'The final creation is being compressed and pushed into the output node.'
-        : `${roleNodes[safePacketIndex - 2]?.operatorName ?? 'Machine core'} is actively shaping the ${roleNodes[safePacketIndex - 2]?.stageLabel?.toLowerCase() ?? 'current'} pass.`
+  const statusDetail = isPipelineRunning
+    ? artifactGenerationProgress?.note ??
+      (safePacketIndex <= 1
+        ? 'Requirements are being piped through the studio chassis.'
+        : safePacketIndex === lastPacketIndex
+          ? 'The final creation is being compressed and pushed into the output node.'
+          : `${roleNodes[safePacketIndex - 2]?.operatorName ?? 'Machine core'} is actively shaping the ${roleNodes[safePacketIndex - 2]?.stageLabel?.toLowerCase() ?? 'current'} pass.`)
     : hasRun
-      ? weakestStage?.note ??
+      ? artifactGenerationError ??
+        weakestStage?.note ??
         latestEvent ??
-        'The line has cooled and the deploy preview is latched open.'
+        'The line stalled before a public-facing site could be assembled.'
       : `Ready to route through ${roleLanes.length} linked role ${roleLanes.length === 1 ? 'node' : 'nodes'}.`;
   const sharedRoleCenterY = roleNodes[0]?.y ? roleNodes[0].y + roleNodes[0].height / 2 : rootNode.y + rootNode.height / 2;
   const pipeSegments: PipeSegment[] = [
@@ -209,8 +246,7 @@ export function MachineScene({
 
     const timer = window.setInterval(() => {
       setPacketIndex((current) => {
-        if (current >= lastPacketIndex) {
-          window.clearInterval(timer);
+        if (current >= runningTargetPacketIndex) {
           return current;
         }
 
@@ -221,23 +257,28 @@ export function MachineScene({
     return () => {
       window.clearInterval(timer);
     };
-  }, [isReadOnly, isRunning, lastPacketIndex]);
+  }, [isReadOnly, isRunning, runningTargetPacketIndex]);
 
   useEffect(() => {
-    if (!isRunning || isReadOnly || packetIndex < lastPacketIndex || !onRun) {
+    if (!isRunning || isReadOnly || !onRun) {
       return;
     }
 
-    const finalize = window.setTimeout(async () => {
-      await onRun();
-      setIsRunning(false);
-      setIsPreviewVisible(false);
-    }, 720);
+    if (hasTriggeredRunRef.current) {
+      return;
+    }
 
-    return () => {
-      window.clearTimeout(finalize);
-    };
-  }, [isReadOnly, isRunning, lastPacketIndex, onRun, packetIndex]);
+    hasTriggeredRunRef.current = true;
+
+    void (async () => {
+      try {
+        await onRun();
+      } finally {
+        setIsRunning(false);
+        setIsPreviewVisible(false);
+      }
+    })();
+  }, [isReadOnly, isRunning, onRun]);
 
   useEffect(() => {
     if (!isRunning || isDragging) {
@@ -345,7 +386,7 @@ export function MachineScene({
             })}
 
             <button
-              className={`machine-node machine-node-output ${isOutputReady ? 'is-actionable is-ready' : ''}`}
+              className={`machine-node machine-node-output ${isOutputReady || isOutputErrored ? 'is-actionable' : ''} ${isOutputReady ? 'is-ready' : ''} ${isOutputErrored ? 'is-error' : ''}`}
               type="button"
               data-pan-block="true"
               style={{ left: `${outputNode.x}px`, top: `${outputNode.y}px` }}
@@ -358,15 +399,29 @@ export function MachineScene({
                   ? isPreviewVisible
                     ? 'Preview Loaded'
                     : 'Preview Ready'
-                  : isRunning
+                  : isOutputErrored
+                    ? 'Generation failed'
+                  : artifactGenerationProgress?.phase === 'publishing'
+                    ? 'Publishing...'
+                    : isPipelineRunning
                     ? 'Fabricating...'
                     : 'Awaiting build'}
               </span>
               <span className="machine-node-meta">
-                {isOutputReady ? 'Open the deployed site preview' : 'Finished builds land here'}
+                {isOutputReady
+                  ? 'Open the deployed site preview'
+                  : isOutputErrored
+                    ? 'Open the error state and retry generation'
+                    : 'Finished builds land here'}
               </span>
-              {isOutputReady ? (
-                <span className="machine-node-callout">{isPreviewVisible ? 'Preview open' : 'Open deploy'}</span>
+              {isOutputReady || isOutputErrored ? (
+                <span className="machine-node-callout">
+                  {isOutputReady
+                    ? isPreviewVisible
+                      ? 'Preview open'
+                      : 'Open deploy'
+                    : 'Retry'}
+                </span>
               ) : null}
             </button>
           </div>
@@ -384,6 +439,7 @@ export function MachineScene({
           type="button"
           disabled={!canRun || isRunning || !onRun}
           onClick={() => {
+            hasTriggeredRunRef.current = false;
             setIsPreviewVisible(false);
             setIsRunning(true);
             setPacketIndex(0);
@@ -400,8 +456,11 @@ export function MachineScene({
           heroUrl={heroUrl}
           latestRun={latestRun}
           latestArtifacts={latestArtifacts}
+          generationError={artifactGenerationError}
           capabilityGaps={capabilityGaps}
           isReadOnly={isReadOnly}
+          onRetryGeneration={onRetryArtifactGeneration}
+          isRetryingGeneration={isRetryingArtifactGeneration}
           onContinue={onContinue}
         />
       ) : null}

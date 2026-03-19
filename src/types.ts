@@ -75,6 +75,36 @@ export type HatRole = {
   pipelineStageId?: PipelineStageId;
 };
 
+export type ConferenceSiteProgramPillar = {
+  id: string;
+  metricId: DeploymentMetricId;
+  eyebrow: string;
+  title: string;
+  summary: string;
+};
+
+export type ConferenceSiteExperienceMoment = {
+  id: string;
+  label: string;
+  title: string;
+  summary: string;
+};
+
+export type ConferenceSiteBriefSpec = {
+  editionLabel: string;
+  location: string;
+  audience: string[];
+  positioning: string;
+  attendeePromise: string;
+  heroPrimaryCta: string;
+  heroSecondaryCta: string;
+  toneKeywords: string[];
+  visualDirection: string[];
+  internalRequirements: string[];
+  programPillars: ConferenceSiteProgramPillar[];
+  experienceMoments: ConferenceSiteExperienceMoment[];
+};
+
 export type Brief = {
   id: string;
   artifactType: ArtifactType;
@@ -83,15 +113,44 @@ export type Brief = {
   requirements: string[];
   baseScore: number;
   passThreshold: number;
+  conferenceSiteSpec?: ConferenceSiteBriefSpec;
+};
+
+export type ArtifactContributor = {
+  agentId: string;
+  agentName: string;
+  agentHandle: string;
+  roleId?: string;
+  roleName?: string;
+  stageId?: PipelineStageId;
+  archetype: string;
+  traits: string[];
+};
+
+export type ArtifactProvenance = {
+  artifactType: ArtifactType;
+  briefId: string;
+  clientName: string;
+  studioName: string;
+  cycle: 1 | 2;
+  profileTag: DeploymentProfileTag;
+  rawProfileTag?: DeploymentProfileTag;
+  headline?: string;
+  metrics?: DeploymentMetrics;
+  contributors: ArtifactContributor[];
 };
 
 export type ArtifactBundle = {
+  artifactType: ArtifactType;
+  profileTag: DeploymentProfileTag;
   siteTitle: string;
-  publicUrl: string;
+  publicUrl?: string;
   previewUrl?: string;
   ensName: string;
-  cid: string;
+  cid?: string;
   notes: string[];
+  siteDocument: string;
+  provenance: ArtifactProvenance;
 };
 
 export type CostBreakdown = {
@@ -185,4 +244,6 @@ export type RunArtifactsInput = {
   brief: Brief;
   cycle: 1 | 2;
   studioName?: string;
+  roles: HatRole[];
+  agents: Agent[];
 };

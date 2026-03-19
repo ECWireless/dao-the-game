@@ -12,7 +12,7 @@ import { MailInboxScene } from './game-screen/scenes/MailScenes';
 import { StatusBar } from './game-screen/components/StatusBar';
 import { renderSceneContent } from './game-screen/sceneContent';
 import { DormantAppPanel } from './game-screen/scenes/OperationsScenes';
-import type { AppSwitchPhase } from './game-screen/types';
+import type { AppSwitchPhase, ArtifactGenerationProgress } from './game-screen/types';
 import { getAppLaunchOrigin, getLatestReachedSceneForApp, getUnlockedApps } from './game-screen/utils';
 import './game-screen.css';
 
@@ -30,8 +30,13 @@ type GameScreenProps = {
   introDialogConfig?: IntroDialogConfig | null;
   headerAccessory?: ReactNode;
   orgTree?: OrgTreeRecord | null;
+  artifactGenerationProgress?: ArtifactGenerationProgress | null;
+  artifactGenerationError?: string | null;
+  onRetryArtifactGeneration?: () => Promise<void> | void;
+  isRetryingArtifactGeneration?: boolean;
   onSetStudioName?: (name: string) => Promise<void> | void;
   onConfigureRole?: (roleId: string, name: string) => Promise<void> | void;
+  onRunProduction?: () => Promise<void> | void;
   onResetDemo?: () => Promise<void> | void;
 };
 
@@ -41,8 +46,13 @@ export default function GameScreen({
   introDialogConfig = null,
   headerAccessory = null,
   orgTree = null,
+  artifactGenerationProgress = null,
+  artifactGenerationError = null,
+  onRetryArtifactGeneration,
+  isRetryingArtifactGeneration = false,
   onSetStudioName,
   onConfigureRole,
+  onRunProduction,
   onResetDemo
 }: GameScreenProps) {
   const storySceneIndex = useGameStore((state) => state.storySceneIndex);
@@ -136,6 +146,14 @@ export default function GameScreen({
     },
     [requestAppSwitch]
   );
+
+  const handleRunProduction = useCallback(() => {
+    if (onRunProduction) {
+      return onRunProduction();
+    }
+
+    runProduction();
+  }, [onRunProduction, runProduction]);
 
   const advanceStoryAndOpenApp = useCallback((targetApp: StoryApp) => {
     advanceStory();
@@ -334,13 +352,17 @@ export default function GameScreen({
         latestArtifacts,
         runCount,
         runwayAfterRun,
+        artifactGenerationProgress,
+        artifactGenerationError,
+        retryArtifactGeneration: onRetryArtifactGeneration,
+        isRetryingArtifactGeneration,
         advanceStory,
         queueCrossAppAdvance,
         setStudioName: onSetStudioName ?? setStudioName,
         configureRole: onConfigureRole ?? configureRole,
         unlockExpandedRoles,
         assignRole,
-        runProduction,
+        runProduction: handleRunProduction,
         resetDemo: handleReplayDemo,
         setIsMachineLocked
       })

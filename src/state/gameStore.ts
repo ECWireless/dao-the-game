@@ -8,7 +8,7 @@ import {
   TUTORIAL_SEED,
   TUTORIAL_TREASURY
 } from '../levels/tutorial';
-import { generateArtifacts, generateStartingAgents, simulateRun } from '../sim';
+import { generateStartingAgents, simulateRun } from '../sim';
 import type { Agent, ArtifactBundle, HatRole, RunResult, RunState, ScoreBreakdown } from '../types';
 
 const GAME_STATE_STORAGE_KEY = 'dao-the-game:state:v2';
@@ -41,6 +41,7 @@ type GameStore = {
   assignRole: (roleId: string, agentId: string) => void;
   unassignRole: (roleId: string) => void;
   runProduction: () => RunResult | undefined;
+  setLatestArtifacts: (artifacts?: ArtifactBundle) => void;
   resetTutorial: () => void;
 };
 
@@ -404,7 +405,6 @@ export const useGameStore = create<GameStore>()(
         const state = get();
         const activeRoles = getActiveRoles(state.roles, state.unlockedRoleCount);
         const runnableRoles = getConfiguredRunRoles(activeRoles);
-        const cycle = state.runCount === 0 ? 1 : 2;
 
         if (!areRolesFullyAssigned(runnableRoles)) {
           return undefined;
@@ -419,17 +419,10 @@ export const useGameStore = create<GameStore>()(
           result = forceSecondCycleSuccess(result);
         }
 
-        const artifacts = generateArtifacts({
-          result,
-          brief: TUTORIAL_BRIEF,
-          cycle,
-          studioName: state.studioName
-        });
-
         set({
           runCount: state.runCount + 1,
           latestRun: result,
-          latestArtifacts: artifacts,
+          latestArtifacts: undefined,
           treasury: state.treasury - result.cost,
           assignmentLog: [
             createAssignmentLogEntry(
@@ -442,6 +435,9 @@ export const useGameStore = create<GameStore>()(
         });
 
         return result;
+      },
+      setLatestArtifacts: (artifacts) => {
+        set({ latestArtifacts: artifacts });
       },
       resetTutorial: () => {
         set(getInitialState(get().ownerPlayerId));

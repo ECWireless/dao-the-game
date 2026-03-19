@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { OrgTreeRecord } from '../../contracts/org';
 import type { Agent, ArtifactBundle, HatRole, RunResult } from '../../types';
-import type { AssignmentLogEntry, ChatLine } from './types';
+import type { ArtifactGenerationProgress, AssignmentLogEntry, ChatLine } from './types';
 import { MessagesScene } from './scenes/CommunicationScenes';
 import { MailScene } from './scenes/MailScenes';
 import { GuildScene } from './scenes/GuildScene';
@@ -27,13 +27,17 @@ type SceneContentArgs = {
   latestArtifacts?: ArtifactBundle;
   runCount: number;
   runwayAfterRun: number;
+  artifactGenerationProgress?: ArtifactGenerationProgress | null;
+  artifactGenerationError?: string | null;
+  retryArtifactGeneration?: () => Promise<void> | void;
+  isRetryingArtifactGeneration?: boolean;
   advanceStory: () => void;
   queueCrossAppAdvance: () => void;
   setStudioName: (name: string) => Promise<void> | void;
   configureRole: (roleId: string, name: string) => Promise<void> | void;
   unlockExpandedRoles: () => void;
   assignRole: (roleId: string, agentId: string) => void;
-  runProduction: () => void;
+  runProduction: () => Promise<void> | void;
   resetDemo: () => Promise<void> | void;
   setIsMachineLocked: (isLocked: boolean) => void;
 };
@@ -98,6 +102,10 @@ export function renderSceneContent({
   latestArtifacts,
   runCount,
   runwayAfterRun,
+  artifactGenerationProgress,
+  artifactGenerationError,
+  retryArtifactGeneration,
+  isRetryingArtifactGeneration = false,
   advanceStory,
   queueCrossAppAdvance,
   setStudioName,
@@ -252,6 +260,10 @@ export function renderSceneContent({
           hasRun={runCount >= 1}
           latestRun={runCount >= 1 ? latestRun : undefined}
           latestArtifacts={runCount >= 1 ? latestArtifacts : undefined}
+          artifactGenerationProgress={artifactGenerationProgress}
+          artifactGenerationError={runCount >= 1 ? artifactGenerationError : undefined}
+          onRetryArtifactGeneration={isInteractive ? retryArtifactGeneration : undefined}
+          isRetryingArtifactGeneration={isRetryingArtifactGeneration}
           onRun={isInteractive ? runProduction : undefined}
           onContinue={isInteractive ? queueCrossAppAdvance : undefined}
           onLockChange={isInteractive ? setIsMachineLocked : undefined}
@@ -339,6 +351,10 @@ export function renderSceneContent({
           hasRun={runCount >= 2}
           latestRun={runCount >= 2 ? latestRun : undefined}
           latestArtifacts={runCount >= 2 ? latestArtifacts : undefined}
+          artifactGenerationProgress={artifactGenerationProgress}
+          artifactGenerationError={runCount >= 2 ? artifactGenerationError : undefined}
+          onRetryArtifactGeneration={isInteractive ? retryArtifactGeneration : undefined}
+          isRetryingArtifactGeneration={isRetryingArtifactGeneration}
           onRun={isInteractive ? runProduction : undefined}
           onContinue={isInteractive ? queueCrossAppAdvance : undefined}
           onLockChange={isInteractive ? setIsMachineLocked : undefined}

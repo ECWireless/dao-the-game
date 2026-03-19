@@ -1,19 +1,6 @@
-import type { ArtifactBundle, DeploymentMetricId, RunResult } from '../../../types';
+import { useEffect, useState } from 'react';
+import type { ArtifactBundle, RunResult } from '../../../types';
 import { formatCredits } from '../utils';
-
-const DEPLOYMENT_METRIC_ORDER: DeploymentMetricId[] = [
-  'visualIdentity',
-  'launchStability',
-  'communityHype',
-  'trust'
-];
-
-const DEPLOYMENT_METRIC_LABELS: Record<DeploymentMetricId, string> = {
-  visualIdentity: 'Visual',
-  launchStability: 'Stability',
-  communityHype: 'Hype',
-  trust: 'Trust'
-};
 
 const DEPLOYMENT_PROFILE_LABELS = {
   premium: 'Premium launch',
@@ -29,16 +16,13 @@ type MachinePreviewProps = {
   heroUrl: string;
   latestRun?: RunResult;
   latestArtifacts?: ArtifactBundle;
+  generationError?: string | null;
   capabilityGaps: string[];
   isReadOnly?: boolean;
+  onRetryGeneration?: () => void | Promise<void>;
+  isRetryingGeneration?: boolean;
   onContinue?: () => void;
 };
-
-function getFallbackPreviewUrl(deploymentTone: 'rough' | 'polished'): string {
-  return deploymentTone === 'rough'
-    ? '/deployments/cycle-one/index.html'
-    : '/deployments/cycle-two/index.html';
-}
 
 export function MachinePreview({
   deploymentTone,
@@ -46,14 +30,25 @@ export function MachinePreview({
   heroUrl,
   latestRun,
   latestArtifacts,
+  generationError = null,
   capabilityGaps,
   isReadOnly = false,
+  onRetryGeneration,
+  isRetryingGeneration = false,
   onContinue
 }: MachinePreviewProps) {
-  const previewUrl = latestArtifacts?.previewUrl ?? getFallbackPreviewUrl(deploymentTone);
+  const [isFrameLoading, setIsFrameLoading] = useState(false);
+  const previewUrl = latestArtifacts?.previewUrl;
+  const iframeSrc = latestArtifacts?.siteDocument ? undefined : previewUrl;
+  const iframeSrcDoc = latestArtifacts?.siteDocument;
+  const hasDeployPreview = Boolean(iframeSrc || iframeSrcDoc);
   const latestEvent = latestRun?.events.at(-1);
-  const openLabel = deploymentTone === 'rough' ? 'Open draft deploy' : 'Open launch build';
+  const openLabel = latestArtifacts?.previewUrl ? 'Open deployed site' : null;
   const deploymentProfile = latestRun?.evaluation;
+
+  useEffect(() => {
+    setIsFrameLoading(hasDeployPreview);
+  }, [hasDeployPreview, iframeSrc, iframeSrcDoc]);
 
   return (
     <article className={`deployment-cassette is-ejected is-${deploymentTone}`}>
@@ -75,35 +70,64 @@ export function MachinePreview({
           <span className="deployment-browser-dot" />
           <span className="deployment-browser-dot" />
           <span className="deployment-browser-address">{heroUrl}</span>
-          <a className="deployment-browser-link" href={previewUrl} target="_blank" rel="noreferrer">
-            {openLabel}
-          </a>
+          {previewUrl && openLabel ? (
+            <a className="deployment-browser-link" href={previewUrl} target="_blank" rel="noreferrer">
+              {openLabel}
+            </a>
+          ) : null}
         </div>
 
         <div className="deployment-frame-shell">
-          <iframe
-            className="deployment-frame"
-            src={previewUrl}
-            title={`${heroTitle} deploy preview`}
-            loading="lazy"
-          />
+          {hasDeployPreview ? (
+            <>
+              <iframe
+                className="deployment-frame"
+                src={iframeSrc}
+                srcDoc={iframeSrcDoc}
+                sandbox=""
+                title={`${heroTitle} deploy preview`}
+                loading="lazy"
+                onLoad={() => setIsFrameLoading(false)}
+              />
+              {isFrameLoading ? (
+                <div className="deployment-frame-loading" aria-hidden="true">
+                  <span />
+                  <p>Loading preview</p>
+                </div>
+              ) : null}
+            </>
+          ) : generationError ? (
+            <div className="deployment-frame deployment-frame-placeholder">
+              <p>Artifact generation failed</p>
+              <strong>{generationError}</strong>
+              {!isReadOnly && onRetryGeneration ? (
+                <button
+                  className="secondary-action machine-submit-button"
+                  type="button"
+                  onClick={() => void onRetryGeneration()}
+                  disabled={isRetryingGeneration}
+                >
+                  {isRetryingGeneration ? 'Retrying...' : 'Retry generation'}
+                </button>
+              ) : null}
+            </div>
+          ) : (
+            <div className="deployment-frame deployment-frame-placeholder">
+              <p>Deploy preview pending</p>
+              <strong>Run this cycle to assemble a site.</strong>
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="deployment-artifact-grid">
-        <article className="deployment-artifact-card">
-          <p>Deployed URL</p>
-          <strong>{latestArtifacts?.publicUrl ?? heroUrl}</strong>
-        </article>
-        <article className="deployment-artifact-card">
-          <p>ENS Route</p>
-          <strong>{latestArtifacts?.ensName ?? 'pending-route.eth'}</strong>
-        </article>
-        <article className="deployment-artifact-card">
-          <p>Content ID</p>
-          <strong>{latestArtifacts?.cid ?? 'pending-upload'}</strong>
-        </article>
-      </div>
+      {latestArtifacts ? (
+        <div className="deployment-artifact-grid">
+          <article className="deployment-artifact-card">
+            <p>Deployed URL</p>
+            <strong>{latestArtifacts.publicUrl ?? heroUrl}</strong>
+          </article>
+        </div>
+      ) : null}
 
       {capabilityGaps.length > 0 ? (
         <div className="deployment-gaps" aria-label="Missing passes">
@@ -132,14 +156,6 @@ export function MachinePreview({
             <strong>{DEPLOYMENT_PROFILE_LABELS[deploymentProfile.profileTag]}</strong>
           </p>
           <p className="deployment-profile-copy">{deploymentProfile.headline}</p>
-          <div className="deployment-profile-grid">
-            {DEPLOYMENT_METRIC_ORDER.map((metricId) => (
-              <article key={metricId} className="deployment-profile-card">
-                <span>{DEPLOYMENT_METRIC_LABELS[metricId]}</span>
-                <strong>{deploymentProfile.metrics[metricId]}</strong>
-              </article>
-            ))}
-          </div>
         </div>
       ) : null}
 

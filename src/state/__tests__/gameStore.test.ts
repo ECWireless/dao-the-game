@@ -8,6 +8,8 @@ import {
   useGameStore
 } from '../gameStore';
 import { FINAL_SCENE_INDEX } from '../../levels/story';
+import { TUTORIAL_BRIEF } from '../../levels/tutorial';
+import { generateArtifacts } from '../../sim';
 
 beforeEach(() => {
   localStorage.clear();
@@ -160,7 +162,6 @@ describe('gameStore narrative run shaping', () => {
     assignAllVisibleRoles();
 
     const firstRun = useGameStore.getState().runProduction();
-    const firstArtifacts = useGameStore.getState().latestArtifacts;
 
     expect(firstRun).toBeDefined();
     expect(firstRun?.passed).toBe(false);
@@ -172,8 +173,7 @@ describe('gameStore narrative run shaping', () => {
     ]);
     expect(firstRun?.pipeline?.coveredStageCount).toBe(1);
     expect(firstRun?.events[firstRun.events.length - 1]).toContain('Critical role coverage gap');
-    expect(firstArtifacts?.notes.join(' ')).not.toContain('Client');
-    expect(firstArtifacts?.notes.join(' ')).not.toContain('rejection');
+    expect(useGameStore.getState().latestArtifacts).toBeUndefined();
   });
 
   it('forces second cycle to pass after expansion', () => {
@@ -191,24 +191,48 @@ describe('gameStore narrative run shaping', () => {
     expect(secondRun?.qualityScore).toBeGreaterThanOrEqual(72);
   });
 
-  it('attaches the prebuilt deployment preview to generated artifacts', () => {
-    useGameStore.getState().setStudioName('Coopa LLC');
+  it('attaches a generated deployment artifact to each run', () => {
+    const state = useGameStore.getState();
+    state.setStudioName('Coopa LLC');
     assignAllVisibleRoles();
-    useGameStore.getState().runProduction();
+    state.runProduction();
+    const firstRun = useGameStore.getState().latestRun;
+    const firstCycleArtifacts = firstRun
+      ? generateArtifacts({
+          result: firstRun,
+          brief: TUTORIAL_BRIEF,
+          cycle: 1,
+          studioName: useGameStore.getState().studioName,
+          roles: useGameStore.getState().roles,
+          agents: useGameStore.getState().agents
+        })
+      : undefined;
 
-    const firstCycleArtifacts = useGameStore.getState().latestArtifacts;
-
-    expect(firstCycleArtifacts?.previewUrl).toBe('/deployments/cycle-one/index.html');
-    expect(firstCycleArtifacts?.publicUrl).toBe('https://cycle1.coopa-llc.daothegame.com');
+    expect(['messy', 'failed']).toContain(firstCycleArtifacts?.profileTag);
+    expect(firstCycleArtifacts?.ensName).toBe('coopa-llc.daothegame.eth');
+    expect(firstCycleArtifacts?.publicUrl).toBeUndefined();
+    expect(firstCycleArtifacts?.siteDocument).toContain('Regen Frontier Global Conference');
+    expect(firstCycleArtifacts?.siteDocument).not.toContain('Visual identity');
+    expect(firstCycleArtifacts?.siteDocument).not.toContain('Launch stability');
 
     useGameStore.getState().unlockExpandedRoles();
     assignAllVisibleRoles();
     useGameStore.getState().runProduction();
+    const secondRun = useGameStore.getState().latestRun;
+    const secondCycleArtifacts = secondRun
+      ? generateArtifacts({
+          result: secondRun,
+          brief: TUTORIAL_BRIEF,
+          cycle: 2,
+          studioName: useGameStore.getState().studioName,
+          roles: useGameStore.getState().roles,
+          agents: useGameStore.getState().agents
+        })
+      : undefined;
 
-    const secondCycleArtifacts = useGameStore.getState().latestArtifacts;
-
-    expect(secondCycleArtifacts?.previewUrl).toBe('/deployments/cycle-two/index.html');
-    expect(secondCycleArtifacts?.publicUrl).toBe('https://cycle2.coopa-llc.daothegame.com');
+    expect(['stable', 'flashy', 'premium']).toContain(secondCycleArtifacts?.profileTag);
+    expect(secondCycleArtifacts?.publicUrl).toBeUndefined();
+    expect(secondCycleArtifacts?.siteDocument).toContain('Featured programming');
   });
 
   it('allows second cycle to run with configured branches even if later unlocked roles stay unconfigured', () => {
