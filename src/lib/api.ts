@@ -90,7 +90,18 @@ export async function deployArtifactWithProgress(
         continue;
       }
 
-      const event = JSON.parse(trimmed) as ArtifactDeployEvent;
+      let event: ArtifactDeployEvent;
+
+      try {
+        event = JSON.parse(trimmed) as ArtifactDeployEvent;
+      } catch {
+        const detail =
+          process.env.NODE_ENV !== 'production'
+            ? ` Malformed line: ${trimmed.slice(0, 240)}`
+            : '';
+        throw new ApiError(500, `Received malformed deploy event from server.${detail}`);
+      }
+
       onEvent?.(event);
 
       if (event.type === 'artifact-generated' || event.type === 'artifact-deployed') {

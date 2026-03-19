@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ArtifactBundle, RunResult } from '../../../types';
 import { formatCredits } from '../utils';
 
@@ -24,10 +24,6 @@ type MachinePreviewProps = {
   onContinue?: () => void;
 };
 
-function createInlinePreviewUrl(siteDocument: string): string {
-  return `data:text/html;charset=utf-8,${encodeURIComponent(siteDocument)}`;
-}
-
 export function MachinePreview({
   deploymentTone,
   heroTitle,
@@ -42,23 +38,12 @@ export function MachinePreview({
   onContinue
 }: MachinePreviewProps) {
   const [isFrameLoading, setIsFrameLoading] = useState(false);
-  const inlinePreviewUrl = useMemo(
-    () =>
-      latestArtifacts?.siteDocument
-        ? createInlinePreviewUrl(latestArtifacts.siteDocument)
-        : undefined,
-    [latestArtifacts?.siteDocument]
-  );
-  const previewUrl = latestArtifacts?.previewUrl ?? inlinePreviewUrl;
+  const previewUrl = latestArtifacts?.previewUrl;
   const iframeSrc = latestArtifacts?.siteDocument ? undefined : previewUrl;
   const iframeSrcDoc = latestArtifacts?.siteDocument;
   const hasDeployPreview = Boolean(iframeSrc || iframeSrcDoc);
   const latestEvent = latestRun?.events.at(-1);
-  const openLabel = latestArtifacts?.previewUrl
-    ? 'Open deployed site'
-    : latestArtifacts?.siteDocument
-      ? 'Open generated preview'
-      : null;
+  const openLabel = latestArtifacts?.previewUrl ? 'Open deployed site' : null;
   const deploymentProfile = latestRun?.evaluation;
 
   useEffect(() => {
@@ -99,6 +84,7 @@ export function MachinePreview({
                 className="deployment-frame"
                 src={iframeSrc}
                 srcDoc={iframeSrcDoc}
+                sandbox=""
                 title={`${heroTitle} deploy preview`}
                 loading="lazy"
                 onLoad={() => setIsFrameLoading(false)}

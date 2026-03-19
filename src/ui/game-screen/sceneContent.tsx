@@ -1,8 +1,7 @@
 import type { ReactNode } from 'react';
 import type { OrgTreeRecord } from '../../contracts/org';
 import type { Agent, ArtifactBundle, HatRole, RunResult } from '../../types';
-import type { ArtifactGenerationProgress } from '../GameScreen';
-import type { AssignmentLogEntry, ChatLine } from './types';
+import type { ArtifactGenerationProgress, AssignmentLogEntry, ChatLine } from './types';
 import { MessagesScene } from './scenes/CommunicationScenes';
 import { MailScene } from './scenes/MailScenes';
 import { GuildScene } from './scenes/GuildScene';

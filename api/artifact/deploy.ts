@@ -27,6 +27,19 @@ function validateRequestBody(body: ArtifactDeployRequest | null): asserts body i
   ) {
     throw new HttpError(400, 'A valid generated artifact payload is required.');
   }
+
+  const provenance = body.artifact.provenance as Record<string, unknown>;
+
+  if (
+    typeof provenance.studioName !== 'string' ||
+    !provenance.studioName.trim() ||
+    (provenance.cycle !== 1 && provenance.cycle !== 2) ||
+    typeof provenance.briefId !== 'string' ||
+    !provenance.briefId.trim() ||
+    provenance.artifactType !== body.artifact.artifactType
+  ) {
+    throw new HttpError(400, 'Artifact provenance is missing required fields.');
+  }
 }
 
 export async function POST(request: Request): Promise<Response> {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { hasPipelineStage } from '../../../pipeline';
 import type { Agent, ArtifactBundle, HatRole, RunResult } from '../../../types';
-import type { ArtifactGenerationProgress } from '../../GameScreen';
+import type { ArtifactGenerationProgress } from '../types';
 import { buildMachineRoleLanes } from '../machineUtils';
 import { usePannableViewport } from '../usePannableViewport';
 import { MachinePreview } from './MachinePreview';

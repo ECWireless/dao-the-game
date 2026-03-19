@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { OrgTreeRecord } from '../contracts/org';
 import { getScene, type StoryApp } from '../levels/story';
 import { countAssignedRoles, estimateRunwayAfterRun, getActiveRoles, useGameStore } from '../state/gameStore';
-import type { PipelineStageId } from '../types';
 import { APP_META } from './game-screen/constants';
 import { AppDock } from './game-screen/components/AppDock';
 import { IntroDialog } from './game-screen/components/IntroDialog';
@@ -13,7 +12,7 @@ import { MailInboxScene } from './game-screen/scenes/MailScenes';
 import { StatusBar } from './game-screen/components/StatusBar';
 import { renderSceneContent } from './game-screen/sceneContent';
 import { DormantAppPanel } from './game-screen/scenes/OperationsScenes';
-import type { AppSwitchPhase } from './game-screen/types';
+import type { AppSwitchPhase, ArtifactGenerationProgress } from './game-screen/types';
 import { getAppLaunchOrigin, getLatestReachedSceneForApp, getUnlockedApps } from './game-screen/utils';
 import './game-screen.css';
 
@@ -24,23 +23,6 @@ export type IntroDialogConfig = {
   secondaryActionLabel?: string;
   onSecondaryAction?: () => void;
 };
-
-export type ArtifactGenerationProgress =
-  | {
-      phase: 'starting';
-      note: string;
-    }
-  | {
-      phase: 'worker';
-      stageId: PipelineStageId;
-      workerName: string;
-      workerTitle: string;
-      note: string;
-    }
-  | {
-      phase: 'publishing';
-      note: string;
-    };
 
 type GameScreenProps = {
   forceIntroDialog?: boolean;

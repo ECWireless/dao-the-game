@@ -44,8 +44,8 @@ import { deployArtifactWithProgress, postApi } from './lib/api';
 import { buildGameStateSnapshot, useGameStore } from './state/gameStore';
 import { usePlayerStore } from './state/playerStore';
 import { generateArtifacts } from './sim';
-import type { PipelineStageId } from './types';
 import GameScreen, { type IntroDialogConfig } from './ui/GameScreen';
+import type { ArtifactGenerationProgress } from './ui/game-screen/types';
 import { PlayerSessionBar } from './ui/PlayerSessionBar';
 
 function getSessionLabel(walletAddress: string | null): string {
@@ -96,23 +96,6 @@ type ResolveExecutionClientOptions = {
   expectedWearerAddress?: string | null;
   requireSmartWallet?: boolean;
 };
-
-type ArtifactGenerationProgress =
-  | {
-      phase: 'starting';
-      note: string;
-    }
-  | {
-      phase: 'worker';
-      stageId: PipelineStageId;
-      workerName: string;
-      workerTitle: string;
-      note: string;
-    }
-  | {
-      phase: 'publishing';
-      note: string;
-    };
 
 type AppProps = {
   autoStartLogin?: boolean;
@@ -597,7 +580,7 @@ export default function App({
         });
         return;
       case 'worker-output':
-        if (import.meta.env.DEV) {
+        if (clientEnv.artifactDebugWorkers) {
           console.groupCollapsed(
             `[artifact worker] ${event.stageId} :: ${event.workerName}${event.usedFallback ? ' (fallback)' : ''}`
           );
@@ -610,7 +593,7 @@ export default function App({
         }
         return;
       case 'artifact-generated':
-        if (import.meta.env.DEV) {
+        if (clientEnv.artifactDebugWorkers) {
           console.groupCollapsed(
             `[artifact worker] generated site${event.usedFallback ? ' (with fallback fields)' : ''}`
           );
@@ -627,7 +610,7 @@ export default function App({
         });
         return;
       case 'artifact-deployed':
-        if (import.meta.env.DEV) {
+        if (clientEnv.artifactDebugWorkers) {
           console.groupCollapsed('[artifact worker] deployed site');
           console.log('artifact', event.artifact);
           console.groupEnd();
@@ -636,7 +619,7 @@ export default function App({
         setLatestArtifacts(event.artifact);
         return;
       case 'error':
-        if (import.meta.env.DEV) {
+        if (import.meta.env.DEV || clientEnv.artifactDebugWorkers) {
           console.error('[artifact worker] deploy error', event.error);
         }
         setArtifactGenerationError(event.error);

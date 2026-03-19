@@ -13,6 +13,10 @@ function optionalEnv(name: string): string | null {
   return value ? value : null;
 }
 
+function optionalBooleanEnv(name: string): boolean {
+  return optionalEnv(name) === 'true';
+}
+
 export function getDatabaseUrl(): string {
   return requireEnv('DATABASE_URL');
 }
@@ -40,4 +44,8 @@ export function getOpenAiApiKey(): string | null {
 
 export function getOpenAiArtifactModel(): string {
   return optionalEnv('OPENAI_ARTIFACT_MODEL') ?? 'gpt-5-mini';
+}
+
+export function getArtifactDebugWorkers(): boolean {
+  return optionalBooleanEnv('ARTIFACT_DEBUG_WORKERS');
 }

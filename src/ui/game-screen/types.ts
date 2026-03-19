@@ -1,5 +1,24 @@
+import type { PipelineStageId } from '../../types';
+
 export type ChatAuthor = 'friend' | 'player' | 'system' | 'client';
 export type AppSwitchPhase = 'idle' | 'out' | 'in';
+
+export type ArtifactGenerationProgress =
+  | {
+      phase: 'starting';
+      note: string;
+    }
+  | {
+      phase: 'worker';
+      stageId: PipelineStageId;
+      workerName: string;
+      workerTitle: string;
+      note: string;
+    }
+  | {
+      phase: 'publishing';
+      note: string;
+    };
 
 export type ChatLine = {
   id: string;

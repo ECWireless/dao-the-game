@@ -23,7 +23,7 @@ import type {
   PipelineStageId,
   RunArtifactsInput
 } from '../../src/types';
-import { getOpenAiApiKey, getOpenAiArtifactModel } from './env.js';
+import { getArtifactDebugWorkers, getOpenAiApiKey, getOpenAiArtifactModel } from './env.js';
 
 const LAYOUT_VARIANTS = [
   'balanced-summit',
@@ -181,6 +181,8 @@ export type WorkerGeneratedArtifactResult = {
   artifact: ArtifactBundle;
   usedFallback: boolean;
 };
+
+const shouldDebugWorkers = getArtifactDebugWorkers();
 
 function createOpenAiClient(): OpenAI | null {
   const apiKey = getOpenAiApiKey();
@@ -357,13 +359,13 @@ async function runStructuredWorker<TSchema extends z.ZodTypeAny>({
       stageId: assignment.stageId,
       workerName: assignment.agent.name,
       workerTitle: assignment.agent.title,
-      output: output as Record<string, unknown> | null,
-      rawOutputText,
+      output: shouldDebugWorkers ? ((output as Record<string, unknown> | null) ?? null) : null,
+      rawOutputText: shouldDebugWorkers ? rawOutputText : undefined,
       usedFallback,
       error: usedFallback ? 'Structured output was empty or failed schema validation.' : undefined
     });
 
-    if (process.env.NODE_ENV !== 'production') {
+    if (shouldDebugWorkers) {
       console.groupCollapsed(
         `[artifact worker] ${assignment.stageId} :: ${assignment.agent.name}${usedFallback ? ' (fallback)' : ''}`
       );
@@ -383,12 +385,12 @@ async function runStructuredWorker<TSchema extends z.ZodTypeAny>({
       workerName: assignment.agent.name,
       workerTitle: assignment.agent.title,
       output: null,
-      rawOutputText: null,
+      rawOutputText: shouldDebugWorkers ? null : undefined,
       usedFallback: true,
       error: message
     });
 
-    if (process.env.NODE_ENV !== 'production') {
+    if (shouldDebugWorkers) {
       console.error(`[artifact worker] ${assignment.stageId} :: ${assignment.agent.name}`, error);
     }
 
@@ -469,9 +471,6 @@ function getFinalDocumentSystemPrompt(stageId: PipelineStageId): string {
 }
 
 function buildFallbackContent(artifact: ReturnType<typeof buildConferenceSiteArtifact>): ConferenceSiteGeneratedContent {
-  const spec = artifact.provenance.metrics;
-  void spec;
-
   return {
     layoutVariant: 'balanced-summit',
     designLanguage: 'editorial',
