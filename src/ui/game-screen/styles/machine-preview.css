@@ -118,6 +118,7 @@
 }
 
 .deployment-frame-shell {
+  position: relative;
   padding: 0.68rem;
   background:
     radial-gradient(circle at top right, rgb(112 212 255 / 12%), transparent 35%),
@@ -136,9 +137,59 @@
     0 1rem 2rem rgb(2 7 15 / 30%);
 }
 
+.deployment-frame-placeholder {
+  padding: 1.2rem;
+  display: grid;
+  place-items: center;
+  gap: 0.42rem;
+  text-align: center;
+  color: rgb(223 236 255 / 72%);
+  background:
+    radial-gradient(circle at top, rgb(112 212 255 / 10%), transparent 30%),
+    linear-gradient(180deg, rgb(12 18 28 / 94%), rgb(10 16 24 / 98%));
+}
+
+.deployment-frame-placeholder p,
+.deployment-frame-placeholder strong {
+  margin: 0;
+}
+
+.deployment-frame-placeholder strong {
+  color: #f6f9ff;
+  font-size: 0.92rem;
+}
+
+.deployment-frame-loading {
+  position: absolute;
+  inset: 0.68rem;
+  border-radius: 0.82rem;
+  display: grid;
+  place-items: center;
+  gap: 0.4rem;
+  background: linear-gradient(180deg, rgb(12 18 28 / 52%), rgb(12 18 28 / 64%));
+  color: rgb(223 236 255 / 78%);
+  pointer-events: none;
+}
+
+.deployment-frame-loading span {
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 999px;
+  border: 2px solid rgb(255 255 255 / 16%);
+  border-top-color: rgb(159 203 255 / 82%);
+  animation: deploymentSpinner 760ms linear infinite;
+}
+
+.deployment-frame-loading p {
+  margin: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .deployment-artifact-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.42rem;
 }
 
@@ -214,35 +265,6 @@
   color: #f6f9ff;
 }
 
-.deployment-profile-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.42rem;
-}
-
-.deployment-profile-card {
-  border-radius: 0.76rem;
-  padding: 0.5rem 0.56rem;
-  display: grid;
-  gap: 0.18rem;
-  background: rgb(255 255 255 / 4%);
-  border: 1px solid rgb(176 208 255 / 10%);
-}
-
-.deployment-profile-card span {
-  color: rgb(159 203 255 / 58%);
-  font-size: 0.56rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.deployment-profile-card strong {
-  color: #f6f9ff;
-  font-size: 0.92rem;
-  line-height: 1.1;
-}
-
 .deployment-notes {
   display: grid;
   gap: 0.16rem;
@@ -257,5 +279,11 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes deploymentSpinner {
+  to {
+    transform: rotate(360deg);
   }
 }

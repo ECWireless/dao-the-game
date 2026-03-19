@@ -1,10 +1,11 @@
-import type { Agent, HatRole } from '../../types';
+import type { Agent, HatRole, PipelineStageId } from '../../types';
 import { getPipelineStageDefinition, inferPipelineStageId, sortRolesByPipelineStage } from '../../pipeline';
 import { findRaidGuildMember } from './guildData';
 
 export type MachineRoleLane = {
   id: string;
   roleName: string;
+  stageId?: PipelineStageId;
   stageLabel?: string;
   operatorName: string;
   operatorMeta: string;
@@ -46,6 +47,7 @@ export function buildMachineRoleLanes(roles: HatRole[], agents: Agent[]): Machin
       return {
         id: role.id,
         roleName: role.name,
+        stageId,
         stageLabel,
         operatorName: operator.operatorName,
         operatorMeta: operator.operatorMeta

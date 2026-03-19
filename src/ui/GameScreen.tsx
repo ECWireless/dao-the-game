@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { OrgTreeRecord } from '../contracts/org';
 import { getScene, type StoryApp } from '../levels/story';
 import { countAssignedRoles, estimateRunwayAfterRun, getActiveRoles, useGameStore } from '../state/gameStore';
+import type { PipelineStageId } from '../types';
 import { APP_META } from './game-screen/constants';
 import { AppDock } from './game-screen/components/AppDock';
 import { IntroDialog } from './game-screen/components/IntroDialog';
@@ -24,14 +25,36 @@ export type IntroDialogConfig = {
   onSecondaryAction?: () => void;
 };
 
+export type ArtifactGenerationProgress =
+  | {
+      phase: 'starting';
+      note: string;
+    }
+  | {
+      phase: 'worker';
+      stageId: PipelineStageId;
+      workerName: string;
+      workerTitle: string;
+      note: string;
+    }
+  | {
+      phase: 'publishing';
+      note: string;
+    };
+
 type GameScreenProps = {
   forceIntroDialog?: boolean;
   suppressIntroDialog?: boolean;
   introDialogConfig?: IntroDialogConfig | null;
   headerAccessory?: ReactNode;
   orgTree?: OrgTreeRecord | null;
+  artifactGenerationProgress?: ArtifactGenerationProgress | null;
+  artifactGenerationError?: string | null;
+  onRetryArtifactGeneration?: () => Promise<void> | void;
+  isRetryingArtifactGeneration?: boolean;
   onSetStudioName?: (name: string) => Promise<void> | void;
   onConfigureRole?: (roleId: string, name: string) => Promise<void> | void;
+  onRunProduction?: () => Promise<void> | void;
   onResetDemo?: () => Promise<void> | void;
 };
 
@@ -41,8 +64,13 @@ export default function GameScreen({
   introDialogConfig = null,
   headerAccessory = null,
   orgTree = null,
+  artifactGenerationProgress = null,
+  artifactGenerationError = null,
+  onRetryArtifactGeneration,
+  isRetryingArtifactGeneration = false,
   onSetStudioName,
   onConfigureRole,
+  onRunProduction,
   onResetDemo
 }: GameScreenProps) {
   const storySceneIndex = useGameStore((state) => state.storySceneIndex);
@@ -136,6 +164,14 @@ export default function GameScreen({
     },
     [requestAppSwitch]
   );
+
+  const handleRunProduction = useCallback(() => {
+    if (onRunProduction) {
+      return onRunProduction();
+    }
+
+    runProduction();
+  }, [onRunProduction, runProduction]);
 
   const advanceStoryAndOpenApp = useCallback((targetApp: StoryApp) => {
     advanceStory();
@@ -334,13 +370,17 @@ export default function GameScreen({
         latestArtifacts,
         runCount,
         runwayAfterRun,
+        artifactGenerationProgress,
+        artifactGenerationError,
+        retryArtifactGeneration: onRetryArtifactGeneration,
+        isRetryingArtifactGeneration,
         advanceStory,
         queueCrossAppAdvance,
         setStudioName: onSetStudioName ?? setStudioName,
         configureRole: onConfigureRole ?? configureRole,
         unlockExpandedRoles,
         assignRole,
-        runProduction,
+        runProduction: handleRunProduction,
         resetDemo: handleReplayDemo,
         setIsMachineLocked
       })

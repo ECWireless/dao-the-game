@@ -16,9 +16,9 @@ export const WORKER_CATALOG: Agent[] = [
       deployment: 76
     },
     styleProfile: {
-      signature: 'Spare interfaces with brutal clarity.',
-      execution: 'Builds reusable front-end rails under pressure.',
-      collaboration: 'Prefers tight handoffs and short feedback loops.'
+      signature: 'Hard-edged control surfaces with brutalist restraint and zero decorative mercy.',
+      execution: 'Turns design direction into rigid, reusable front-end rails under pressure.',
+      collaboration: 'Prefers tight handoffs, short feedback loops, and a crisp design contract.'
     },
     temperament: {
       profile: 'Decisive closer',
@@ -26,7 +26,7 @@ export const WORKER_CATALOG: Agent[] = [
       resilience: 68,
       teamwork: 57
     },
-    traits: ['Build-first', 'Minimalist', 'Deadline magnet'],
+    traits: ['Build-first', 'Brutalist rails', 'Deadline magnet'],
     bio: 'Turns vague product asks into working surfaces before the room has finished panicking.',
     accent: '#BD482D',
     shadow: '#6A2818',
@@ -46,9 +46,9 @@ export const WORKER_CATALOG: Agent[] = [
       deployment: 54
     },
     styleProfile: {
-      signature: 'High-contrast pathways and readable motion.',
-      execution: 'Prefers elegant systems over one-off heroics.',
-      collaboration: 'Leaves unusually clear handoff notes.'
+      signature: 'Tactile skeuomorphic control rooms, luminous glass, and surfaces that beg to be touched.',
+      execution: 'Turns navigation, buttons, and panels into layered product machinery.',
+      collaboration: 'Leaves handoff notes like a product blueprint, down to the bezel and button state.'
     },
     temperament: {
       profile: 'Calm systems thinker',
@@ -56,8 +56,8 @@ export const WORKER_CATALOG: Agent[] = [
       resilience: 79,
       teamwork: 82
     },
-    traits: ['Interaction-led', 'Player empathy', 'Strong handoffs'],
-    bio: 'Makes products feel understandable even when the underlying system is trying to fight back.',
+    traits: ['Skeuomorphic control rooms', 'Player empathy', 'Strong handoffs'],
+    bio: 'Makes products feel tactile and navigable even when the underlying system is trying to fight back.',
     accent: '#8B6C20',
     shadow: '#534A13',
     contractCost: 25
@@ -76,9 +76,9 @@ export const WORKER_CATALOG: Agent[] = [
       deployment: 38
     },
     styleProfile: {
-      signature: 'Graphic motifs with a taste for spectacle.',
-      execution: 'Delivers a striking first-pass visual language fast.',
-      collaboration: 'Needs a stronger finisher once the concept lands.'
+      signature: 'Brutalist poster systems, oversized type, and hard-edged blocks that read like public signage.',
+      execution: 'Delivers a ruthless first-pass visual language fast and expects the rest of the team to commit.',
+      collaboration: 'Throws down a visual thesis early and leaves little room for timid revisions.'
     },
     temperament: {
       profile: 'Instinctive stylist',
@@ -86,8 +86,8 @@ export const WORKER_CATALOG: Agent[] = [
       resilience: 61,
       teamwork: 66
     },
-    traits: ['Bold motifs', 'Fast concepting', 'Can overreach'],
-    bio: 'Great at making something feel alive before anyone has fully decided what it is.',
+    traits: ['Brutalist posters', 'Fast concepting', 'Can overreach'],
+    bio: 'Great at making something feel loud, inevitable, and publicly legible before anyone has fully decided what it is.',
     accent: '#8B3A2E',
     shadow: '#4D1A14',
     contractCost: 22
@@ -166,9 +166,9 @@ export const WORKER_CATALOG: Agent[] = [
       deployment: 74
     },
     styleProfile: {
-      signature: 'Turns messy requirements into solid scaffolds.',
-      execution: 'Builds foundations before polish.',
-      collaboration: 'Likes early constraints and direct questions.'
+      signature: 'Grid-first system architecture with disciplined hierarchy and control-room calm.',
+      execution: 'Builds foundations before polish and turns aesthetics into coherent scaffolds.',
+      collaboration: 'Likes early constraints, direct questions, and explicit design rules.'
     },
     temperament: {
       profile: 'Measured builder',
@@ -176,7 +176,7 @@ export const WORKER_CATALOG: Agent[] = [
       resilience: 82,
       teamwork: 70
     },
-    traits: ['Architecture first', 'Strong pairer', 'Constraint-friendly'],
+    traits: ['Architecture first', 'Control-room grids', 'Constraint-friendly'],
     bio: 'Rarely the loudest person on a project, but usually the one who made it shippable.',
     accent: '#6C4C89',
     shadow: '#332244',
@@ -196,9 +196,9 @@ export const WORKER_CATALOG: Agent[] = [
       deployment: 42
     },
     styleProfile: {
-      signature: 'Chain-native motifs with strange but memorable rhythm.',
-      execution: 'Excellent at first-pass visual identity.',
-      collaboration: 'Needs a stronger finisher after the concept lands.'
+      signature: 'Festival-scale gradients, liquid chrome, and generative spectacle with exhibition energy.',
+      execution: 'Builds visual worlds that feel like a launch event swallowed the city.',
+      collaboration: 'Needs a stronger finisher once the spectacle lands.'
     },
     temperament: {
       profile: 'Mercurial visionary',
@@ -206,8 +206,8 @@ export const WORKER_CATALOG: Agent[] = [
       resilience: 48,
       teamwork: 58
     },
-    traits: ['Generative instincts', 'High ceiling', 'Can drift'],
-    bio: 'Makes things that people remember, then dares the rest of the team to stabilize them.',
+    traits: ['Festival spectacle', 'High ceiling', 'Can drift'],
+    bio: 'Makes things that people remember, then dares the rest of the team to stabilize the afterimage.',
     accent: '#4A6FB1',
     shadow: '#243860',
     contractCost: 23

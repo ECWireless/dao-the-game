@@ -9,6 +9,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Address } from 'viem';
 import type {
+  ArtifactDeployEvent,
+  ArtifactDeployRequest
+} from './contracts/artifact';
+import type {
   OrgRoleHatRecord,
   OrgRoleHatUpsertRequest,
   OrgRoleHatUpsertResponse,
@@ -26,6 +30,7 @@ import type {
   ResetResponse
 } from './contracts/player';
 import { clientEnv } from './config';
+import { TUTORIAL_BRIEF } from './levels/tutorial';
 import { getScene } from './levels/story';
 import {
   HATS_CHAIN_ID,
@@ -35,9 +40,11 @@ import {
   mintTopHat,
   type HatsExecutionClient
 } from './lib/hats';
-import { postApi } from './lib/api';
+import { deployArtifactWithProgress, postApi } from './lib/api';
 import { buildGameStateSnapshot, useGameStore } from './state/gameStore';
 import { usePlayerStore } from './state/playerStore';
+import { generateArtifacts } from './sim';
+import type { PipelineStageId } from './types';
 import GameScreen, { type IntroDialogConfig } from './ui/GameScreen';
 import { PlayerSessionBar } from './ui/PlayerSessionBar';
 
@@ -90,6 +97,23 @@ type ResolveExecutionClientOptions = {
   requireSmartWallet?: boolean;
 };
 
+type ArtifactGenerationProgress =
+  | {
+      phase: 'starting';
+      note: string;
+    }
+  | {
+      phase: 'worker';
+      stageId: PipelineStageId;
+      workerName: string;
+      workerTitle: string;
+      note: string;
+    }
+  | {
+      phase: 'publishing';
+      note: string;
+    };
+
 type AppProps = {
   autoStartLogin?: boolean;
   onAutoStartLoginHandled?: () => void;
@@ -113,6 +137,8 @@ export default function App({
   const resetTutorial = useGameStore((state) => state.resetTutorial);
   const setStudioName = useGameStore((state) => state.setStudioName);
   const configureRole = useGameStore((state) => state.configureRole);
+  const runProduction = useGameStore((state) => state.runProduction);
+  const setLatestArtifacts = useGameStore((state) => state.setLatestArtifacts);
   const gameStateSnapshot = useGameStore((state) => buildGameStateSnapshot(state), shallow);
 
   const player = usePlayerStore((state) => state.player);
@@ -123,9 +149,13 @@ export default function App({
   const serializedSnapshot = useMemo(() => JSON.stringify(gameStateSnapshot), [gameStateSnapshot]);
 
   const [hasHydratedPlayerState, setHasHydratedPlayerState] = useState(false);
+  const [gameScreenKey, setGameScreenKey] = useState(0);
   const [identityToken, setIdentityToken] = useState<string | null>(null);
   const [identityTokenError, setIdentityTokenError] = useState<string | null>(null);
   const [identityTokenRequestCount, setIdentityTokenRequestCount] = useState(0);
+  const [artifactGenerationProgress, setArtifactGenerationProgress] =
+    useState<ArtifactGenerationProgress | null>(null);
+  const [artifactGenerationError, setArtifactGenerationError] = useState<string | null>(null);
   const [gameStateSaveRetry, setGameStateSaveRetry] = useState<{
     snapshot: string | null;
     attempt: number;
@@ -137,6 +167,7 @@ export default function App({
   const lastTrackedBeatRef = useRef<string | null>(null);
   const lastSavedSnapshotRef = useRef<string | null>(null);
   const pendingSnapshotRef = useRef<string | null>(null);
+  const artifactDeployRequestRef = useRef<ArtifactDeployRequest | null>(null);
   const hasTriggeredAutoLoginRef = useRef(false);
   const snapshotSaveRetryAttempt =
     gameStateSaveRetry.snapshot === serializedSnapshot ? gameStateSaveRetry.attempt : 0;
@@ -238,6 +269,22 @@ export default function App({
       }
 
       return postApi<undefined, ResetResponse>('/api/reset', identityToken);
+    }
+  });
+
+  const artifactDeployMutation = useMutation({
+    mutationFn: async ({
+      body,
+      onEvent
+    }: {
+      body: ArtifactDeployRequest;
+      onEvent?: (event: ArtifactDeployEvent) => void;
+    }) => {
+      if (!identityToken) {
+        throw new Error('Missing Privy identity token.');
+      }
+
+      return deployArtifactWithProgress(identityToken, body, onEvent);
     }
   });
 
@@ -525,8 +572,155 @@ export default function App({
       progress: response.progress,
       gameState: null
     }));
+    setArtifactGenerationProgress(null);
+    setArtifactGenerationError(null);
+    artifactDeployRequestRef.current = null;
     syncResetRefs();
   }, [resetMutation, syncResetRefs, updateBootstrapCache]);
+
+  const handleArtifactDeployEvent = useCallback((event: ArtifactDeployEvent) => {
+    switch (event.type) {
+      case 'generation-start':
+        setArtifactGenerationError(null);
+        setArtifactGenerationProgress({
+          phase: 'starting',
+          note: 'Routing the conference brief through the worker line.'
+        });
+        return;
+      case 'worker-start':
+        setArtifactGenerationProgress({
+          phase: 'worker',
+          stageId: event.stageId,
+          workerName: event.workerName,
+          workerTitle: event.workerTitle,
+          note: event.note
+        });
+        return;
+      case 'worker-output':
+        if (import.meta.env.DEV) {
+          console.groupCollapsed(
+            `[artifact worker] ${event.stageId} :: ${event.workerName}${event.usedFallback ? ' (fallback)' : ''}`
+          );
+          if (event.error) {
+            console.warn('error', event.error);
+          }
+          console.log('output', event.output);
+          console.log('rawOutputText', event.rawOutputText ?? null);
+          console.groupEnd();
+        }
+        return;
+      case 'artifact-generated':
+        if (import.meta.env.DEV) {
+          console.groupCollapsed(
+            `[artifact worker] generated site${event.usedFallback ? ' (with fallback fields)' : ''}`
+          );
+          console.log('artifact', event.artifact);
+          console.groupEnd();
+        }
+        setArtifactGenerationError(null);
+        setLatestArtifacts(event.artifact);
+        return;
+      case 'publishing-start':
+        setArtifactGenerationProgress({
+          phase: 'publishing',
+          note: 'Uploading the assembled site to Pinata.'
+        });
+        return;
+      case 'artifact-deployed':
+        if (import.meta.env.DEV) {
+          console.groupCollapsed('[artifact worker] deployed site');
+          console.log('artifact', event.artifact);
+          console.groupEnd();
+        }
+        setArtifactGenerationError(null);
+        setLatestArtifacts(event.artifact);
+        return;
+      case 'error':
+        if (import.meta.env.DEV) {
+          console.error('[artifact worker] deploy error', event.error);
+        }
+        setArtifactGenerationError(event.error);
+        setArtifactGenerationProgress(null);
+        return;
+    }
+  }, [setLatestArtifacts]);
+
+  const executeArtifactDeploy = useCallback(
+    async (body: ArtifactDeployRequest) => {
+      artifactDeployRequestRef.current = body;
+      setArtifactGenerationError(null);
+      setArtifactGenerationProgress({
+        phase: 'starting',
+        note: 'Routing the conference brief through the worker line.'
+      });
+      setLatestArtifacts(undefined);
+
+      try {
+        const response = await artifactDeployMutation.mutateAsync({
+          body,
+          onEvent: handleArtifactDeployEvent
+        });
+        setArtifactGenerationError(null);
+        setLatestArtifacts(response.artifact);
+        setArtifactGenerationProgress(null);
+      } catch (error) {
+        setArtifactGenerationError(
+          getErrorMessage(
+            error,
+            'Artifact generation failed before a site could be assembled.'
+          )
+        );
+        setArtifactGenerationProgress(null);
+      }
+    },
+    [artifactDeployMutation, handleArtifactDeployEvent, setLatestArtifacts]
+  );
+
+  const handleRunProduction = useCallback(async () => {
+    const result = runProduction();
+
+    if (!result) {
+      return;
+    }
+
+    const currentState = useGameStore.getState();
+    const draftArtifacts = generateArtifacts({
+      result,
+      brief: TUTORIAL_BRIEF,
+      cycle: currentState.runCount === 1 ? 1 : 2,
+      studioName: currentState.studioName,
+      roles: currentState.roles,
+      agents: currentState.agents
+    });
+
+    if (!draftArtifacts) {
+      setArtifactGenerationError('No draft artifact was available for generation.');
+      return;
+    }
+
+    await executeArtifactDeploy({
+      artifact: draftArtifacts,
+      generationInput: {
+        result,
+        brief: TUTORIAL_BRIEF,
+        cycle: draftArtifacts.provenance.cycle,
+        studioName: currentState.studioName,
+        roles: currentState.roles,
+        agents: currentState.agents
+      }
+    });
+  }, [executeArtifactDeploy, runProduction]);
+
+  const handleRetryArtifactDeploy = useCallback(async () => {
+    const previousRequest = artifactDeployRequestRef.current;
+
+    if (!previousRequest) {
+      setArtifactGenerationError('There is no failed artifact generation to retry yet.');
+      return;
+    }
+
+    await executeArtifactDeploy(previousRequest);
+  }, [executeArtifactDeploy]);
 
   useEffect(() => {
     if (!ready || authenticated) {
@@ -535,6 +729,7 @@ export default function App({
 
     clearPlayer();
     setHasHydratedPlayerState(false);
+    setArtifactGenerationProgress(null);
     setIdentityToken(null);
     setIdentityTokenError(null);
     hydrationKeyRef.current = null;
@@ -700,13 +895,19 @@ export default function App({
 
   return (
     <GameScreen
+      key={gameScreenKey}
       forceIntroDialog={forceIntroDialog}
       suppressIntroDialog={suppressIntroDialog}
       introDialogConfig={introDialogConfig}
       orgTree={orgTree}
       onSetStudioName={handleSetStudioName}
       onConfigureRole={handleConfigureRole}
+      onRunProduction={handleRunProduction}
+      onRetryArtifactGeneration={handleRetryArtifactDeploy}
+      isRetryingArtifactGeneration={artifactDeployMutation.isPending}
       onResetDemo={handleResetDemo}
+      artifactGenerationProgress={artifactGenerationProgress}
+      artifactGenerationError={artifactGenerationError}
       headerAccessory={
         showSessionBar && player ? (
           <PlayerSessionBar
@@ -723,8 +924,12 @@ export default function App({
                 }
 
                 try {
+                  setArtifactGenerationProgress(null);
+                  setArtifactGenerationError(null);
+                  artifactDeployRequestRef.current = null;
                   await handleResetDemo();
                   resetTutorial();
+                  setGameScreenKey((current) => current + 1);
                 } catch (error) {
                   window.alert(
                     getErrorMessage(error, 'Could not reset the current run right now.')
@@ -734,6 +939,9 @@ export default function App({
             }}
             onSignOut={() => {
               void (async () => {
+                setArtifactGenerationProgress(null);
+                setArtifactGenerationError(null);
+                artifactDeployRequestRef.current = null;
                 await logout();
                 queryClient.clear();
               })();

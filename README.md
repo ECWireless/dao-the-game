@@ -16,6 +16,7 @@ In the full game, the player would be allowed 3 types of focuses: building worke
 - Zustand
 - Vitest
 - ESLint
+- Pinata (for generated artifact deploys)
 
 ## Getting Started
 
@@ -39,6 +40,10 @@ Optional env vars:
 - `VITE_API_BASE_URL`
 - `VITE_SEPOLIA_RPC_URL`
 - `VITE_PREFER_SMART_WALLET_EXECUTION`
+- `PINATA_JWT`
+- `PINATA_GATEWAY_BASE_URL`
+- `OPENAI_API_KEY`
+- `OPENAI_ARTIFACT_MODEL`
 
 `pnpm dev:all` runs:
 
@@ -64,6 +69,7 @@ The Vite dev server proxies `/api/*` requests to `localhost:3000`, which matches
 
 ```text
 src/
+  artifacts/ generated site assembly
   sim/       pure simulation logic
   state/     Zustand game state
   levels/    story and tutorial configuration

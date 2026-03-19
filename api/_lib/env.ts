@@ -8,6 +8,11 @@ function requireEnv(name: string): string {
   return value;
 }
 
+function optionalEnv(name: string): string | null {
+  const value = process.env[name]?.trim();
+  return value ? value : null;
+}
+
 export function getDatabaseUrl(): string {
   return requireEnv('DATABASE_URL');
 }
@@ -18,4 +23,21 @@ export function getPrivyAppId(): string {
 
 export function getPrivyAppSecret(): string {
   return requireEnv('PRIVY_APP_SECRET');
+}
+
+export function getPinataJwt(): string | null {
+  return optionalEnv('PINATA_JWT');
+}
+
+export function getPinataGatewayBaseUrl(): string | null {
+  const value = optionalEnv('PINATA_GATEWAY_BASE_URL');
+  return value ? value.replace(/\/$/, '') : null;
+}
+
+export function getOpenAiApiKey(): string | null {
+  return optionalEnv('OPENAI_API_KEY');
+}
+
+export function getOpenAiArtifactModel(): string {
+  return optionalEnv('OPENAI_ARTIFACT_MODEL') ?? 'gpt-5-mini';
 }
