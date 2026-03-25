@@ -489,7 +489,7 @@ export default function App({
       }
 
       if (existingRoleHat) {
-        configureRole(roleId, existingRoleHat.roleName);
+        configureRole(roleId, normalizedName);
         return;
       }
 

@@ -9,7 +9,7 @@ const brief: Brief = {
   artifactType: 'conference-site',
   clientName: 'Meta Summit',
   mission: 'Rebuild a failing conference brand website.',
-  requirements: ['No human labor', 'Autonomous execution'],
+  requirements: ['Autonomous execution'],
   baseScore: 58,
   passThreshold: 72
 };

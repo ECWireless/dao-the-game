@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { hasPipelineStage } from '../../../pipeline';
-import type { Agent, ArtifactBundle, HatRole, RunResult } from '../../../types';
+import type { Agent, ArtifactBundle, Brief, HatRole, RunResult } from '../../../types';
 import type { ArtifactGenerationProgress } from '../types';
 import { buildFactoryRoleLanes } from '../factoryUtils';
 import { usePannableViewport } from '../usePannableViewport';
 import { FactoryPreview } from './FactoryPreview';
+import { FactoryRequirementsSheet } from './FactoryRequirementsSheet';
+import { FactoryWorkerSheet } from './FactoryWorkerSheet';
 type FactorySceneProps = {
   studioName?: string;
+  brief: Brief;
   cycle: 1 | 2;
   roles: HatRole[];
   agents: Agent[];
@@ -42,6 +45,7 @@ type PipeSegment = {
 
 export function FactoryScene({
   studioName,
+  brief,
   cycle,
   roles,
   agents,
@@ -62,8 +66,15 @@ export function FactoryScene({
   const [isRunning, setIsRunning] = useState(false);
   const [packetIndex, setPacketIndex] = useState(0);
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
+  const [isRequirementsVisible, setIsRequirementsVisible] = useState(false);
+  const [openTraceStageId, setOpenTraceStageId] = useState<PositionedRoleLane['stageId'] | null>(null);
   const hasTriggeredRunRef = useRef(false);
+  const hasSettledOnOutputRef = useRef(false);
   const roleLanes = useMemo(() => buildFactoryRoleLanes(roles, agents), [agents, roles]);
+  const workerTraceByStageId = useMemo(
+    () => new Map((latestArtifacts?.workerTrace ?? []).map((trace) => [trace.stageId, trace])),
+    [latestArtifacts?.workerTrace]
+  );
   const hasDesigner = hasPipelineStage(roles, 'design');
   const hasReviewer = hasPipelineStage(roles, 'review');
   const hasDeploymentRole = hasPipelineStage(roles, 'deployment');
@@ -138,6 +149,7 @@ export function FactoryScene({
   const packetEnergy = packetStops.length > 1 ? 0.4 + safePacketIndex / (packetStops.length - 1) * 0.8 : 0.7;
   const isOutputReady = hasRun && !isPipelineRunning && Boolean(latestArtifacts);
   const isOutputErrored = hasRun && !isPipelineRunning && !latestArtifacts && Boolean(artifactGenerationError);
+  const openTrace = openTraceStageId ? workerTraceByStageId.get(openTraceStageId) ?? null : null;
   const packetStyle = {
     left: `${packetPosition.x}px`,
     top: `${packetPosition.y}px`,
@@ -283,18 +295,83 @@ export function FactoryScene({
   }, [isReadOnly, isRunning, onRun]);
 
   useEffect(() => {
-    if (!isRunning || isDragging) {
+    if (isPipelineRunning) {
+      hasSettledOnOutputRef.current = false;
+    }
+  }, [isPipelineRunning]);
+
+  useEffect(() => {
+    if (isDragging) {
+      return;
+    }
+
+    const shouldFollowPacket = isPipelineRunning;
+
+    if (!shouldFollowPacket) {
       return;
     }
 
     const frame = window.requestAnimationFrame(() => {
-      focusViewportOnPoint(packetPosition.x, packetPosition.y, safePacketIndex === 0 ? 'auto' : 'smooth');
+      focusViewportOnPoint(
+        packetPosition.x,
+        packetPosition.y,
+        safePacketIndex === 0 ? 'auto' : 'smooth'
+      );
     });
 
     return () => {
       window.cancelAnimationFrame(frame);
     };
-  }, [focusViewportOnPoint, isDragging, isRunning, packetPosition.x, packetPosition.y, safePacketIndex]);
+  }, [
+    focusViewportOnPoint,
+    hasRun,
+    isDragging,
+    isPipelineRunning,
+    lastPacketIndex,
+    packetPosition.x,
+    packetPosition.y,
+    safePacketIndex
+  ]);
+
+  useEffect(() => {
+    if (
+      isDragging ||
+      isPipelineRunning ||
+      !hasRun ||
+      safePacketIndex !== lastPacketIndex ||
+      hasSettledOnOutputRef.current
+    ) {
+      return;
+    }
+
+    hasSettledOnOutputRef.current = true;
+
+    const frame = window.requestAnimationFrame(() => {
+      focusViewportOnPoint(packetPosition.x, packetPosition.y, 'smooth');
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [
+    focusViewportOnPoint,
+    hasRun,
+    isDragging,
+    isPipelineRunning,
+    lastPacketIndex,
+    packetPosition.x,
+    packetPosition.y,
+    safePacketIndex
+  ]);
+
+  useEffect(() => {
+    if (!isPipelineRunning) {
+      return;
+    }
+
+    setIsRequirementsVisible(false);
+    setOpenTraceStageId(null);
+  }, [isPipelineRunning]);
 
   return (
     <section className="scene-body factory-assembly-scene">
@@ -345,14 +422,17 @@ export function FactoryScene({
               <span />
             </div>
 
-            <div
-              className={`factory-node factory-node-input ${isRunning && safePacketIndex === 0 ? 'is-active' : safePacketIndex > 0 ? 'is-processed' : ''}`}
+            <button
+              className={`factory-node factory-node-input is-actionable ${isRunning && safePacketIndex === 0 ? 'is-active' : safePacketIndex > 0 ? 'is-processed' : ''}`}
+              type="button"
+              data-pan-block="true"
               style={{ left: `${sourceNode.x}px`, top: `${sourceNode.y}px` }}
+              onClick={() => setIsRequirementsVisible(true)}
             >
               <span className="factory-node-kicker">Client requirements</span>
-              <span className="factory-node-title">Input feed</span>
-              <span className="factory-node-meta">Raw brief enters the line</span>
-            </div>
+              <span className="factory-node-title">Brief intake</span>
+              <span className="factory-node-meta">Tap to inspect the conference brief</span>
+            </button>
 
             <div
               className={`factory-node factory-node-root ${safePacketIndex >= 1 ? 'is-active' : ''}`}
@@ -373,17 +453,29 @@ export function FactoryScene({
                 : hasRun
                   ? 'is-processed'
                   : '';
+              const trace = node.stageId ? workerTraceByStageId.get(node.stageId) : undefined;
+              const isTraceAvailable = Boolean(trace);
 
               return (
-                <div
+                <button
                   key={node.id}
-                  className={`factory-node factory-node-role ${nodeState}`}
+                  className={`factory-node factory-node-role ${nodeState} ${isTraceAvailable ? 'is-actionable' : ''}`}
+                  type="button"
+                  data-pan-block={isTraceAvailable || undefined}
                   style={{ left: `${node.x}px`, top: `${node.y}px` }}
+                  disabled={!isTraceAvailable}
+                  onClick={() => {
+                    if (!node.stageId || !isTraceAvailable) {
+                      return;
+                    }
+
+                    setOpenTraceStageId(node.stageId);
+                  }}
                 >
                   <span className="factory-node-kicker">{node.roleName}</span>
                   <span className="factory-node-title">{node.operatorName}</span>
                   <span className="factory-node-meta">{node.operatorMeta}</span>
-                </div>
+                </button>
               );
             })}
 
@@ -468,6 +560,11 @@ export function FactoryScene({
           onContinue={onContinue}
         />
       ) : null}
+
+      {isRequirementsVisible ? (
+        <FactoryRequirementsSheet brief={brief} onClose={() => setIsRequirementsVisible(false)} />
+      ) : null}
+      {openTrace ? <FactoryWorkerSheet trace={openTrace} onClose={() => setOpenTraceStageId(null)} /> : null}
     </section>
   );
 }

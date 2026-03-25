@@ -134,6 +134,23 @@ export type ArtifactContributor = {
   traits: string[];
 };
 
+export type ArtifactWorkerHighlight = {
+  label: string;
+  value: string;
+};
+
+export type ArtifactWorkerTrace = {
+  stageId: PipelineStageId;
+  roleName?: string;
+  workerName: string;
+  workerSpecialty: string;
+  reportTo: string;
+  reportBody: string;
+  summary: string;
+  highlights: ArtifactWorkerHighlight[];
+  finalizedDocument?: boolean;
+};
+
 export type ArtifactProvenance = {
   artifactType: ArtifactType;
   briefId: string;
@@ -158,6 +175,7 @@ export type ArtifactBundle = {
   notes: string[];
   siteDocument: string;
   provenance: ArtifactProvenance;
+  workerTrace?: ArtifactWorkerTrace[];
 };
 
 export type ClientReview = {

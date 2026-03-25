@@ -9,7 +9,6 @@ export const TUTORIAL_BRIEF: Brief = {
   clientName: 'Regen Frontier Global Conference',
   mission: 'Rescue a failing Web3 conference brand by rebuilding its website with autonomous operations.',
   requirements: [
-    'No human labor allowed',
     'All authority flows through a Hats role tree',
     'Ship an IPFS deployment mapped to ENS',
     'Pass client review before treasury depletion'

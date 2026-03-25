@@ -24,6 +24,7 @@ export type GuildSceneProps = {
 
 function FirstCycleGuildScene({ studioName, roles, agents, onContinue, isReadOnly = false }: GuildSceneProps) {
   const role = roles[0];
+  const roleDisplayName = role?.name ?? 'Frontend Engineer';
   const roster = useMemo(() => getRaidGuildRoster(agents), [agents]);
   const candidates = useMemo(() => getRaidGuildCandidates(agents, 2), [agents]);
   const [postStage, setPostStage] = useState(isReadOnly ? 3 : 0);
@@ -159,7 +160,7 @@ function FirstCycleGuildScene({ studioName, roles, agents, onContinue, isReadOnl
                 </p>
                 <div className="guild-brief-embed">
                   <p className="guild-brief-kicker">Role Brief</p>
-                  <h2>{role.name}</h2>
+                  <h2>{roleDisplayName}</h2>
                   <p>Need someone to rebuild a conference site fast, clean, and production-safe.</p>
                   <ul>
                     <li>Responsive front-end build</li>

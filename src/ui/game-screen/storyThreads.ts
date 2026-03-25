@@ -7,7 +7,7 @@ export const INTRO_MESSAGES_THREAD: ChatLine[] = [
   {
     id: 'a',
     author: 'friend',
-    text: 'new co-op crawler just dropped. weird relics, procedural bosses. you in?'
+    text: 'new management sim just dropped. supply chains, bottlenecks, tiny disasters. you in?'
   },
   { id: 'b', author: 'player', text: 'not tonight.' },
   {

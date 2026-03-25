@@ -130,20 +130,27 @@ function normalizeGameStateSnapshot(
         ? candidate.hasSeenIntroDialog
         : initial.hasSeenIntroDialog,
     roles: Array.isArray(candidate.roles)
-      ? initial.roles.map((role, index) => {
+        ? initial.roles.map((role, index) => {
           const persistedRole = candidate.roles?.[index];
 
           if (!persistedRole) {
             return role;
           }
 
+          const isConfigured =
+            typeof persistedRole.isConfigured === 'boolean'
+              ? persistedRole.isConfigured
+              : Boolean(persistedRole.assignedAgentId) || persistedRole.name !== role.name;
+
           return {
             ...role,
             ...persistedRole,
+            name:
+              typeof persistedRole.name === 'string' && isConfigured
+                ? persistedRole.name
+                : role.name,
             isConfigured:
-              typeof persistedRole.isConfigured === 'boolean'
-                ? persistedRole.isConfigured
-                : Boolean(persistedRole.assignedAgentId) || persistedRole.name !== role.name
+              isConfigured
           };
         })
       : initial.roles,

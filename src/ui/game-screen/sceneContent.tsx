@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { OrgTreeRecord } from '../../contracts/org';
+import { TUTORIAL_BRIEF } from '../../levels/tutorial';
 import type { Agent, ArtifactBundle, ClientReview, HatRole, RunResult } from '../../types';
 import type { ArtifactGenerationProgress, AssignmentLogEntry, ChatLine } from './types';
 import { MessagesScene } from './scenes/CommunicationScenes';
@@ -259,6 +260,7 @@ export function renderSceneContent({
       return (
         <FactoryScene
           studioName={studioName}
+          brief={TUTORIAL_BRIEF}
           cycle={1}
           roles={activeRoles}
           agents={agents}
@@ -353,6 +355,7 @@ export function renderSceneContent({
       return (
         <FactoryScene
           studioName={studioName}
+          brief={TUTORIAL_BRIEF}
           cycle={2}
           roles={configuredExpandedRoles}
           agents={agents}
