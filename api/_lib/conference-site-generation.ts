@@ -24,7 +24,7 @@ import type {
   PipelineStageId,
   RunArtifactsInput
 } from '../../src/types';
-import { getArtifactDebugWorkers, getOpenAiApiKey, getOpenAiArtifactModel } from './env.js';
+import { getArtifactDebugWorkers, getOpenAiApiKey } from './env.js';
 
 const LAYOUT_VARIANTS = [
   'balanced-summit',
@@ -98,6 +98,13 @@ const SECTION_IDS = [
   'experience'
 ] as const satisfies readonly ConferenceSiteSectionId[];
 
+const ARTIFACT_STAGE_MODELS: Record<PipelineStageId, string> = {
+  design: 'gpt-5-mini',
+  implementation: 'gpt-5-mini',
+  review: 'gpt-5-nano',
+  deployment: 'gpt-5-nano'
+};
+
 const StudioReportSchema = z.object({
   body: z.string().min(60).max(320)
 });
@@ -132,7 +139,7 @@ const DesignWorkerSchema = z.object({
 
 const ImplementationWorkerSchema = z.object({
   siteTitle: z.string().min(8).max(120),
-  siteDocument: z.string().min(1200).max(50000),
+  siteDocument: z.string().min(900).max(28000),
   buildSummary: z.string().min(40).max(220),
   mobileStrategy: z.string().min(30).max(180),
   preservedSignals: z.array(z.string().min(8).max(120)).length(3),
@@ -140,9 +147,8 @@ const ImplementationWorkerSchema = z.object({
   studioReport: StudioReportSchema
 });
 
-const ReviewWorkerSchema = z.object({
-  siteTitle: z.string().min(8).max(120),
-  siteDocument: z.string().min(1200).max(50000),
+const ReviewJudgeSchema = z.object({
+  needsChanges: z.boolean(),
   reviewSummary: z.string().min(40).max(220),
   correctionsMade: z.array(z.string().min(10).max(140)).length(3),
   mobileChecks: z.array(z.string().min(10).max(140)).length(2),
@@ -151,8 +157,6 @@ const ReviewWorkerSchema = z.object({
 });
 
 const DeploymentWorkerSchema = z.object({
-  siteTitle: z.string().min(8).max(120),
-  siteDocument: z.string().min(1200).max(50000),
   launchSummary: z.string().min(40).max(220),
   shipReadiness: z.string().min(20).max(180),
   finalChecks: z.array(z.string().min(10).max(120)).length(3),
@@ -161,7 +165,7 @@ const DeploymentWorkerSchema = z.object({
 
 type DesignWorkerOutput = z.infer<typeof DesignWorkerSchema>;
 type ImplementationWorkerOutput = z.infer<typeof ImplementationWorkerSchema>;
-type ReviewWorkerOutput = z.infer<typeof ReviewWorkerSchema>;
+type ReviewJudgeOutput = z.infer<typeof ReviewJudgeSchema>;
 type DeploymentWorkerOutput = z.infer<typeof DeploymentWorkerSchema>;
 
 type StageAssignment = {
@@ -176,6 +180,8 @@ type WorkerRunResult<TSchema extends z.ZodTypeAny> = {
   output: z.infer<TSchema> | null;
   rawOutputText: string | null;
   usedFallback: boolean;
+  model: string;
+  durationMs: number;
   error?: string;
 };
 
@@ -198,6 +204,10 @@ const shouldDebugWorkers = getArtifactDebugWorkers();
 function createOpenAiClient(): OpenAI | null {
   const apiKey = getOpenAiApiKey();
   return apiKey ? new OpenAI({ apiKey }) : null;
+}
+
+function getArtifactStageModel(stageId: PipelineStageId): string {
+  return ARTIFACT_STAGE_MODELS[stageId];
 }
 
 export function canUseConferenceSiteGeneration(): boolean {
@@ -277,19 +287,118 @@ function buildBaseContext(input: RunArtifactsInput): Record<string, unknown> {
           weakestMetricId: input.result.evaluation.weakestMetricId,
           synergies: input.result.evaluation.synergies
         }
-      : null,
-    pipeline: input.result.pipeline
-      ? {
-          strongestStageId: input.result.pipeline.strongestStageId,
-          weakestStageId: input.result.pipeline.weakestStageId,
-          stages: input.result.pipeline.stages.map((stage) => ({
-            id: stage.id,
-            roleName: stage.roleName,
-            note: stage.note,
-            status: stage.status
-          }))
-        }
       : null
+  };
+}
+
+function buildDesignStageContext({
+  baseContext,
+  worker,
+  workerDirective,
+  currentDraft
+}: {
+  baseContext: ReturnType<typeof buildBaseContext>;
+  worker: Record<string, unknown>;
+  workerDirective: WorkerGenerationDirective;
+  currentDraft: Record<string, unknown>;
+}): Record<string, unknown> {
+  return {
+    studioName: baseContext.studioName,
+    clientName: baseContext.clientName,
+    conferenceBrief: baseContext.conferenceBrief,
+    deploymentProfile: baseContext.deploymentProfile,
+    stage: 'design',
+    worker,
+    workerDirective,
+    currentDraft
+  };
+}
+
+function buildImplementationStageContext({
+  baseContext,
+  worker,
+  workerDirective,
+  designContract,
+  contentSeed
+}: {
+  baseContext: ReturnType<typeof buildBaseContext>;
+  worker: Record<string, unknown>;
+  workerDirective: WorkerGenerationDirective;
+  designContract: Record<string, unknown>;
+  contentSeed: Record<string, unknown>;
+}): Record<string, unknown> {
+  return {
+    studioName: baseContext.studioName,
+    clientName: baseContext.clientName,
+    conferenceBrief: baseContext.conferenceBrief,
+    stage: 'implementation',
+    worker,
+    workerDirective,
+    designContract,
+    contentSeed
+  };
+}
+
+function buildReviewStageContext({
+  baseContext,
+  stage,
+  worker,
+  workerDirective,
+  designGuardrails,
+  implementedSite,
+  implementationSummary
+}: {
+  baseContext: ReturnType<typeof buildBaseContext>;
+  stage: 'review';
+  worker: Record<string, unknown>;
+  workerDirective: WorkerGenerationDirective;
+  designGuardrails: Record<string, unknown>;
+  implementedSite: Record<string, unknown>;
+  implementationSummary: Record<string, unknown>;
+}): Record<string, unknown> {
+  const conferenceBrief =
+    baseContext.conferenceBrief && typeof baseContext.conferenceBrief === 'object'
+      ? (baseContext.conferenceBrief as Record<string, unknown>)
+      : null;
+
+  return {
+    studioName: baseContext.studioName,
+    clientName: baseContext.clientName,
+    conferenceLens: conferenceBrief
+      ? {
+          audience: conferenceBrief.audience,
+          positioning: conferenceBrief.positioning,
+          attendeePromise: conferenceBrief.attendeePromise
+        }
+      : null,
+    stage,
+    worker,
+    workerDirective,
+    designGuardrails,
+    implementedSite,
+    implementationSummary
+  };
+}
+
+function buildDeploymentStageContext({
+  baseContext,
+  worker,
+  workerDirective,
+  finalSiteSummary
+}: {
+  baseContext: ReturnType<typeof buildBaseContext>;
+  worker: Record<string, unknown>;
+  workerDirective: WorkerGenerationDirective;
+  finalSiteSummary: Record<string, unknown>;
+}): Record<string, unknown> {
+  return {
+    studioName: baseContext.studioName,
+    clientName: baseContext.clientName,
+    deploymentProfile: baseContext.deploymentProfile,
+    stage: 'deployment',
+    worker,
+    workerDirective,
+    finalSiteSummary
   };
 }
 
@@ -439,6 +548,35 @@ function trimValue(value: string, maxLength = 120): string {
   return trimmed.length <= maxLength ? trimmed : `${trimmed.slice(0, maxLength - 1).trimEnd()}…`;
 }
 
+function minifyCss(css: string): string {
+  return css
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/\s*([:;{},>])\s*/g, '$1')
+    .replace(/;}/g, '}')
+    .trim();
+}
+
+function minifyHtmlDocument(document: string): string {
+  const withoutScripts = document.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+  const withoutComments = withoutScripts.replace(/<!--[\s\S]*?-->/g, '');
+  const minifiedStyles = withoutComments.replace(
+    /<style\b([^>]*)>([\s\S]*?)<\/style>/gi,
+    (_match, attributes: string, css: string) => `<style${attributes}>${minifyCss(css)}</style>`
+  );
+
+  return minifiedStyles
+    .replace(/>\s+</g, '><')
+    .replace(/\n{2,}/g, '\n')
+    .trim();
+}
+
+function buildHtmlHandoff(document: string) {
+  const minified = minifyHtmlDocument(document);
+
+  return { document: minified };
+}
+
 function buildDesignTrace(
   assignment: StageAssignment,
   output: DesignWorkerOutput,
@@ -501,9 +639,35 @@ function buildImplementationTrace(
 
 function buildReviewTrace(
   assignment: StageAssignment,
-  output: ReviewWorkerOutput,
+  output: ReviewJudgeOutput,
+  reportTo: string
+): ArtifactWorkerTrace {
+  const flaggedIssues = Boolean(output.needsChanges);
+
+  return {
+    stageId: assignment.stageId,
+    roleName: assignment.roleName,
+    workerName: assignment.agent.name,
+    workerSpecialty: assignment.agent.specialty,
+    reportTo,
+    reportBody: trimValue(output.studioReport.body, 320),
+    summary: flaggedIssues
+      ? `${assignment.agent.name} reviewed the built site, flagged the risky edges, and handed those concerns upward without rewriting the document.`
+      : `${assignment.agent.name} reviewed the built site and approved it without reopening the document.`,
+    highlights: [
+      { label: 'Review summary', value: trimValue(output.reviewSummary, 120) },
+      { label: 'Corrections', value: output.correctionsMade.map((item) => trimValue(item, 42)).join(' • ') },
+      { label: 'Mobile checks', value: output.mobileChecks.map((item) => trimValue(item, 44)).join(' • ') },
+      { label: 'Risk callout', value: trimValue(output.riskCallout, 120) }
+    ],
+    finalizedDocument: false
+  };
+}
+
+function buildDeploymentTrace(
+  assignment: StageAssignment,
+  output: DeploymentWorkerOutput,
   reportTo: string,
-  finalizedDocument = false,
   siteTitle?: string
 ): ArtifactWorkerTrace {
   return {
@@ -513,42 +677,13 @@ function buildReviewTrace(
     workerSpecialty: assignment.agent.specialty,
     reportTo,
     reportBody: trimValue(output.studioReport.body, 320),
-    summary: finalizedDocument
-      ? `${assignment.agent.name} reviewed the built site, corrected the risky edges, and that reviewed version shipped.`
-      : `${assignment.agent.name} reviewed the actual HTML build and returned a corrected site document.`,
+    summary: `${assignment.agent.name} performed the final launch pass and prepared the assembled site for publishing.`,
     highlights: [
-      { label: 'Review summary', value: trimValue(output.reviewSummary, 120) },
-      { label: 'Corrections', value: output.correctionsMade.map((item) => trimValue(item, 42)).join(' • ') },
-      { label: 'Mobile checks', value: output.mobileChecks.map((item) => trimValue(item, 44)).join(' • ') },
-      { label: 'Risk callout', value: trimValue(output.riskCallout, 120) },
-      ...(finalizedDocument && siteTitle
-        ? [{ label: 'Final output', value: trimValue(siteTitle, 72) }]
-        : [])
-    ],
-    finalizedDocument
-  };
-}
-
-function buildDeploymentTrace(
-  assignment: StageAssignment,
-  output: DeploymentWorkerOutput,
-  reportTo: string
-): ArtifactWorkerTrace {
-  return {
-    stageId: assignment.stageId,
-    roleName: assignment.roleName,
-    workerName: assignment.agent.name,
-    workerSpecialty: assignment.agent.specialty,
-    reportTo,
-    reportBody: trimValue(output.studioReport.body, 320),
-    summary: `${assignment.agent.name} performed the final launch pass and prepared the standalone site for publishing.`,
-    highlights: [
-      { label: 'Final site title', value: trimValue(output.siteTitle, 72) },
+      ...(siteTitle ? [{ label: 'Final site title', value: trimValue(siteTitle, 72) }] : []),
       { label: 'Launch summary', value: trimValue(output.launchSummary, 120) },
       { label: 'Ship readiness', value: trimValue(output.shipReadiness, 120) },
       { label: 'Final checks', value: output.finalChecks.map((item) => trimValue(item, 38)).join(' • ') }
-    ],
-    finalizedDocument: true
+    ]
   };
 }
 
@@ -560,6 +695,8 @@ function buildWorkerTrace({
   implementation,
   reviewWorker,
   review,
+  deploymentWorker,
+  deployment,
   finalDocumentWorker,
   finalDocument
 }: {
@@ -569,12 +706,12 @@ function buildWorkerTrace({
   implementationWorker: StageAssignment | undefined;
   implementation: ImplementationWorkerOutput | null;
   reviewWorker: StageAssignment | undefined;
-  review: ReviewWorkerOutput | null;
+  review: ReviewJudgeOutput | null;
+  deploymentWorker: StageAssignment | undefined;
+  deployment: DeploymentWorkerOutput | null;
   finalDocumentWorker: StageAssignment | null;
   finalDocument:
     | Pick<ImplementationWorkerOutput, 'siteTitle'>
-    | Pick<ReviewWorkerOutput, 'siteTitle'>
-    | Pick<DeploymentWorkerOutput, 'siteTitle'>
     | null;
 }): ArtifactWorkerTrace[] {
   const traces: ArtifactWorkerTrace[] = [];
@@ -605,20 +742,12 @@ function buildWorkerTrace({
   }
 
   if (reviewWorker && review) {
-    traces.push(
-      buildReviewTrace(
-        reviewWorker,
-        review,
-        reportTo,
-        finalDocumentWorker?.stageId === 'review',
-        finalDocument?.siteTitle
-      )
-    );
+    traces.push(buildReviewTrace(reviewWorker, review, reportTo));
   }
 
-  if (finalDocumentWorker?.stageId === 'deployment' && finalDocument) {
+  if (deploymentWorker && deployment) {
     traces.push(
-      buildDeploymentTrace(finalDocumentWorker, finalDocument as DeploymentWorkerOutput, reportTo)
+      buildDeploymentTrace(deploymentWorker, deployment, reportTo, finalDocument?.siteTitle)
     );
   }
 
@@ -660,6 +789,7 @@ async function runStructuredWorker<TSchema extends z.ZodTypeAny>({
   systemPrompt,
   context,
   assignment,
+  modelOverride,
   sink
 }: {
   client: OpenAI;
@@ -668,8 +798,14 @@ async function runStructuredWorker<TSchema extends z.ZodTypeAny>({
   systemPrompt: string;
   context: Record<string, unknown>;
   assignment: StageAssignment;
+  modelOverride?: string;
   sink?: GenerationEventSink;
 }): Promise<WorkerRunResult<TSchema>> {
+  const startedAt = Date.now();
+  const model = modelOverride ?? getArtifactStageModel(assignment.stageId);
+  const compactContext = JSON.stringify(context);
+  const inputChars = compactContext.length;
+
   await sink?.({
       type: 'worker-start',
       stageId: assignment.stageId,
@@ -680,7 +816,7 @@ async function runStructuredWorker<TSchema extends z.ZodTypeAny>({
 
   try {
     const response = await client.responses.parse({
-      model: getOpenAiArtifactModel(),
+      model,
       input: [
         {
           role: 'system',
@@ -688,7 +824,7 @@ async function runStructuredWorker<TSchema extends z.ZodTypeAny>({
         },
         {
           role: 'user',
-          content: JSON.stringify(context, null, 2)
+          content: compactContext
         }
       ],
       text: {
@@ -699,42 +835,61 @@ async function runStructuredWorker<TSchema extends z.ZodTypeAny>({
     const rawOutputText = response.output_text?.trim() || null;
     const output = extractStructuredOutput(schema, response);
     const usedFallback = !output;
+    const durationMs = Date.now() - startedAt;
+    const outputChars = rawOutputText?.length ?? 0;
 
     await sink?.({
       type: 'worker-output',
       stageId: assignment.stageId,
       workerName: assignment.agent.name,
       workerSpecialty: assignment.agent.specialty,
+      model,
+      durationMs,
       output: shouldDebugWorkers ? ((output as Record<string, unknown> | null) ?? null) : null,
       rawOutputText: shouldDebugWorkers ? rawOutputText : undefined,
       usedFallback,
       error: usedFallback ? 'Structured output was empty or failed schema validation.' : undefined
     });
 
+    console.info(
+      `[artifact timing] ${assignment.stageId} :: ${assignment.agent.name} finished in ${durationMs}ms using ${model} (in ${inputChars} chars, out ${outputChars} chars)${usedFallback ? ' (fallback)' : ''}`
+    );
+
     if (shouldDebugWorkers) {
       console.groupCollapsed(
         `[artifact worker] ${assignment.stageId} :: ${assignment.agent.name}${usedFallback ? ' (fallback)' : ''}`
       );
+      console.log('model', model);
+      console.log('durationMs', durationMs);
+      console.log('inputChars', inputChars);
+      console.log('outputChars', outputChars);
       console.log('context', context);
       console.log('rawOutputText', rawOutputText);
       console.log('parsedOutput', output);
       console.groupEnd();
     }
 
-    return { output, rawOutputText, usedFallback };
+    return { output, rawOutputText, usedFallback, model, durationMs };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Worker generation failed.';
+    const durationMs = Date.now() - startedAt;
 
     await sink?.({
       type: 'worker-output',
       stageId: assignment.stageId,
       workerName: assignment.agent.name,
       workerSpecialty: assignment.agent.specialty,
+      model,
+      durationMs,
       output: null,
       rawOutputText: shouldDebugWorkers ? null : undefined,
       usedFallback: true,
       error: message
     });
+
+    console.info(
+      `[artifact timing] ${assignment.stageId} :: ${assignment.agent.name} failed in ${durationMs}ms using ${model} (in ${inputChars} chars)`
+    );
 
     if (shouldDebugWorkers) {
       console.error(`[artifact worker] ${assignment.stageId} :: ${assignment.agent.name}`, error);
@@ -744,6 +899,8 @@ async function runStructuredWorker<TSchema extends z.ZodTypeAny>({
       output: null,
       rawOutputText: null,
       usedFallback: true,
+      model,
+      durationMs,
       error: message
     };
   }
@@ -760,6 +917,7 @@ function getDesignSystemPrompt(): string {
     'Write for a real conference audience. Never mention internal scores, QA language, pipelines, Hats, workers, authority systems, org charts, automation, deployment cycles, or that this text was generated.',
     'If the context contains internal production constraints, treat them as private implementation context rather than public-facing website copy.',
     'Your choices should reflect your authored worker identity strongly enough that Kestrel and Hexa would produce unmistakably different sites.',
+    'Keep the design contract concise and high-signal. Choose only what implementation actually needs to build the page faithfully.',
     'You must also return a very short report body for the studio root wearer identified by studioName in the context.',
     'That report should be 2 or 3 concise first-person sentences explaining what you received, what you did, and what the next stage should know.',
     'Return only the schema fields.'
@@ -774,6 +932,8 @@ function getImplementationSystemPrompt(): string {
     'Your own workerDirective affects execution quality, structure, and fidelity. It does not overrule the design worker when a design contract exists.',
     'Assume the design worker may have chosen an unusual layout or aesthetic; your job is to build that exact world into a believable conference site.',
     'Return a complete standalone HTML document with inline CSS and no script tags or external dependencies.',
+    'Build a compact single-page site with one hero and up to four major sections. Reuse shared classes and keep the CSS lean.',
+    'Aim to keep the full document under 18,000 characters and definitely under 28,000 characters.',
     'The page must work cleanly down to 250px width with no horizontal scrolling, clipped hero content, or broken CTA wrapping.',
     'Stay grounded, specific, and conference-legible. Never expose internal mechanics, org mechanics, role systems, deployment process language, or game jargon.',
     'A screenshot of your implementation should still obviously read as the assigned designer’s site, not a generic frontend engineer override.',
@@ -783,18 +943,17 @@ function getImplementationSystemPrompt(): string {
   ].join(' ');
 }
 
-function getReviewSystemPrompt(): string {
+function getReviewJudgeSystemPrompt(): string {
   return [
     'You are the isolated review worker for a public-facing web3 conference website.',
     'You are reviewing an actual built HTML/CSS site, not a text draft.',
-    'You must inspect the provided standalone document, correct the risky parts, and return a revised standalone HTML document.',
-    'Preserve the design contract. Do not sand away the intended aesthetic just to make the page safer.',
-    'Your workerDirective is binding. Follow its reviewFocus, non-negotiables, and anti-patterns.',
-    'The site must hold together down to 250px width with no horizontal scrolling, clipped cards, unreadable navigation, or broken CTA wrapping.',
-    'Fix trust, clarity, hierarchy, and responsive issues without flattening the concept into generic conference boilerplate.',
-    'Never mention internal tooling, generated artifacts, QA, client safety, org mechanics, or deployment process language in the public page.',
+    'Your first job is to decide whether the current document truly needs a rewrite.',
+    'Only set needsChanges to true when there are concrete trust, clarity, hierarchy, or mobile issues that would materially improve the shipped site.',
+    'If the page is already credible, responsive, and aligned to the design guardrails, approve it without asking for a rewrite.',
+    'Preserve the intended aesthetic. Do not request changes just to flatten the concept into safer generic conference styling.',
+    'Pay special attention to 250px width, CTA wrapping, navigation clarity, and trust-undermining copy.',
     'You must also return a very short report body for the studio root wearer identified by studioName in the context.',
-    'That report should be 2 or 3 concise first-person sentences explaining what you received, what you corrected, and what the next stage should know.',
+    'That report should be 2 or 3 concise first-person sentences explaining what you reviewed, whether a rewrite is necessary, and what the next stage should know.',
     'Return only the schema fields.'
   ].join(' ');
 }
@@ -802,12 +961,12 @@ function getReviewSystemPrompt(): string {
 function getDeploymentSystemPrompt(): string {
   return [
     'You are the isolated deployment worker for a public-facing web3 conference website.',
-    'You are responsible for the final shipped HTML document after implementation and review have already done their work.',
-    'Use the reviewed site as your source of truth. Preserve the upstream design and implementation unless a final launch correction is necessary.',
-    'Return a complete standalone HTML document with inline CSS. Do not rely on any pre-existing renderer, component library, or external stylesheet.',
-    'Do not redesign the site from scratch. This is a final launch pass, not a new concept pass.',
-    'The document must remain responsive and believable for a real web3 conference site, including 250px width with no horizontal scrolling.',
-    'Do not include script tags, external asset dependencies, placeholder lorem ipsum, internal jargon, org mechanics, deployment process language, or comments explaining the generation process.',
+    'You are responsible for the launch handoff after implementation and review have already done the heavy lifting.',
+    'You are not rewriting the HTML document. Your job is to evaluate the final assembled site, describe launch readiness, and report what should be carried into publishing.',
+    'Use the final site summary as your source of truth. Preserve the upstream design and implementation in your assessment.',
+    'Focus on launch readiness, release confidence, and the final details that matter at handoff.',
+    'Do not redesign the site, rewrite the document, or introduce new content ideas at this stage.',
+    'Do not mention internal tooling, org mechanics, deployment process language, or comments explaining the generation process.',
     'You must also return a very short report body for the studio root wearer identified by studioName in the context.',
     'That report should be 2 or 3 concise first-person sentences explaining what you received, what you assembled, and the launch state you are handing upward.',
     'Return only the schema fields.'
@@ -933,6 +1092,43 @@ function buildFallbackDesignContract(fallback: ConferenceSiteGeneratedContent) {
   };
 }
 
+function buildDeploymentSummaryContext({
+  siteTitle,
+  buildSummary,
+  reviewSummary,
+  mobileStrategy,
+  mobileChecks,
+  preservedSignals,
+  sectionHighlights,
+  correctionsMade,
+  riskCallout,
+  htmlCharCount
+}: {
+  siteTitle: string;
+  buildSummary: string;
+  reviewSummary?: string;
+  mobileStrategy: string;
+  mobileChecks?: string[];
+  preservedSignals: string[];
+  sectionHighlights: string[];
+  correctionsMade?: string[];
+  riskCallout?: string;
+  htmlCharCount: number;
+}) {
+  return {
+    siteTitle,
+    htmlCharCount,
+    buildSummary,
+    reviewSummary: reviewSummary ?? null,
+    mobileStrategy,
+    mobileChecks: mobileChecks ?? [],
+    preservedSignals,
+    sectionHighlights,
+    correctionsMade: correctionsMade ?? [],
+    riskCallout: riskCallout ?? null
+  };
+}
+
 export async function generateConferenceSiteArtifactWithWorkers(
   input: RunArtifactsInput,
   fallbackArtifact?: ReturnType<typeof buildConferenceSiteArtifact>,
@@ -940,7 +1136,6 @@ export async function generateConferenceSiteArtifactWithWorkers(
 ): Promise<WorkerGeneratedArtifactResult> {
   const client = createOpenAiClient();
   const deterministicFallback = fallbackArtifact ?? buildConferenceSiteArtifact(input);
-  void deterministicFallback;
 
   if (!client) {
     throw new Error('OpenAI artifact generation is unavailable. Add OPENAI_API_KEY and retry.');
@@ -961,9 +1156,8 @@ export async function generateConferenceSiteArtifactWithWorkers(
           systemPrompt: getDesignSystemPrompt(),
           assignment: designWorker,
           sink,
-          context: {
-            ...baseContext,
-            stage: 'design',
+          context: buildDesignStageContext({
+            baseContext,
             worker: summarizeWorker(designWorker.agent, designWorker.roleName),
             workerDirective: getWorkerGenerationDirective(designWorker.agent),
             currentDraft: {
@@ -982,7 +1176,7 @@ export async function generateConferenceSiteArtifactWithWorkers(
               heroAtmosphere: fallback.heroAtmosphere,
               layoutVariant: fallback.layoutVariant
             }
-          }
+          })
         })
       : null;
     const design = designResult?.output ?? null;
@@ -1017,6 +1211,19 @@ export async function generateConferenceSiteArtifactWithWorkers(
           }
         : {})
     };
+    const reviewDesignGuardrails = {
+      designLanguage: designContract.designLanguage,
+      heroLayout: designContract.heroLayout,
+      visualTreatment: designContract.visualTreatment,
+      panelStyle: designContract.panelStyle,
+      cardGeometry: designContract.cardGeometry,
+      density: designContract.density,
+      sectionOrder: designContract.sectionOrder,
+      mobileDirection: designContract.mobileDirection,
+      nonNegotiables: designContract.nonNegotiables,
+      antiPatterns: designContract.antiPatterns,
+      screenshotTest: designContract.screenshotTest
+    };
     const implementationSeed = {
       siteTitle: deterministicFallback.siteTitle,
       heroHeadline: designContract.heroHeadline,
@@ -1046,37 +1253,35 @@ export async function generateConferenceSiteArtifactWithWorkers(
           systemPrompt: getImplementationSystemPrompt(),
           assignment: implementationWorker,
           sink,
-          context: {
-            ...baseContext,
-            stage: 'implementation',
+          context: buildImplementationStageContext({
+            baseContext,
             worker: summarizeWorker(implementationWorker.agent, implementationWorker.roleName),
             workerDirective: getWorkerGenerationDirective(implementationWorker.agent),
             designContract,
-            designOutput: design,
             contentSeed: implementationSeed
-          }
+          })
         })
       : null;
-    const implementation = implementationResult?.output ?? null;
+    const implementation = implementationResult?.output
+      ? {
+          ...implementationResult.output,
+          siteDocument: buildHtmlHandoff(implementationResult.output.siteDocument).document
+        }
+      : null;
 
     const reviewWorker = assignments.get('review');
-    const reviewResult = reviewWorker && implementation?.siteDocument?.trim()
-      ? await runStructuredWorker({
-          client,
-          schema: ReviewWorkerSchema,
-          schemaName: 'conference_review_worker_output',
-          systemPrompt: getReviewSystemPrompt(),
-          assignment: reviewWorker,
-          sink,
-          context: {
-            ...baseContext,
+    const reviewJudgeContext =
+      reviewWorker && implementation?.siteDocument?.trim()
+        ? buildReviewStageContext({
+            baseContext,
             stage: 'review',
             worker: summarizeWorker(reviewWorker.agent, reviewWorker.roleName),
             workerDirective: getWorkerGenerationDirective(reviewWorker.agent),
-            designContract,
+            designGuardrails: reviewDesignGuardrails,
             implementedSite: {
               siteTitle: implementation.siteTitle,
-              siteDocument: implementation.siteDocument
+              siteDocument: implementation.siteDocument,
+              htmlCharCount: implementation.siteDocument.length
             },
             implementationSummary: {
               buildSummary: implementation.buildSummary,
@@ -1084,23 +1289,51 @@ export async function generateConferenceSiteArtifactWithWorkers(
               preservedSignals: implementation.preservedSignals,
               sectionHighlights: implementation.sectionHighlights
             }
-          }
+          })
+        : null;
+    const reviewJudgeInitialResult = reviewWorker && reviewJudgeContext
+      ? await runStructuredWorker({
+          client,
+          schema: ReviewJudgeSchema,
+          schemaName: 'conference_review_judge_output',
+          systemPrompt: getReviewJudgeSystemPrompt(),
+          assignment: reviewWorker,
+          sink,
+          context: reviewJudgeContext
         })
       : null;
-    const review = reviewResult?.output ?? null;
+    const reviewJudgeResult =
+      reviewWorker &&
+      reviewJudgeContext &&
+      reviewJudgeInitialResult?.usedFallback
+        ? await runStructuredWorker({
+            client,
+            schema: ReviewJudgeSchema,
+            schemaName: 'conference_review_judge_output_retry',
+            systemPrompt: getReviewJudgeSystemPrompt(),
+            assignment: reviewWorker,
+            modelOverride: 'gpt-5-mini',
+            sink,
+            context: reviewJudgeContext
+          })
+        : reviewJudgeInitialResult;
+    const reviewJudge = reviewJudgeResult?.output ?? null;
 
     const deploymentWorker = assignments.get('deployment');
-    const deploymentSource = review?.siteDocument?.trim()
-      ? {
-          siteTitle: review.siteTitle,
-          siteDocument: review.siteDocument
-        }
-      : implementation?.siteDocument?.trim()
-        ? {
-            siteTitle: implementation.siteTitle,
-            siteDocument: implementation.siteDocument
-          }
-        : null;
+    const deploymentSource = implementation?.siteDocument?.trim()
+      ? buildDeploymentSummaryContext({
+          siteTitle: implementation.siteTitle,
+          buildSummary: implementation.buildSummary,
+          reviewSummary: reviewJudge?.reviewSummary,
+          mobileStrategy: implementation.mobileStrategy,
+          mobileChecks: reviewJudge?.mobileChecks,
+          preservedSignals: implementation.preservedSignals,
+          sectionHighlights: implementation.sectionHighlights,
+          correctionsMade: reviewJudge?.correctionsMade,
+          riskCallout: reviewJudge?.riskCallout,
+          htmlCharCount: implementation.siteDocument.length
+        })
+      : null;
     const deploymentResult = deploymentWorker && deploymentSource
       ? await runStructuredWorker({
           client,
@@ -1109,51 +1342,49 @@ export async function generateConferenceSiteArtifactWithWorkers(
           systemPrompt: getDeploymentSystemPrompt(),
           assignment: deploymentWorker,
           sink,
-          context: {
-            ...baseContext,
-            stage: 'deployment',
+          context: buildDeploymentStageContext({
+            baseContext,
             worker: summarizeWorker(deploymentWorker.agent, deploymentWorker.roleName),
             workerDirective: getWorkerGenerationDirective(deploymentWorker.agent),
-            designContract,
-            reviewedSite: deploymentSource,
-            reviewSummary: review
-              ? {
-                  reviewSummary: review.reviewSummary,
-                  correctionsMade: review.correctionsMade,
-                  mobileChecks: review.mobileChecks,
-                  riskCallout: review.riskCallout
-                }
-              : null
-          }
+            finalSiteSummary: deploymentSource
+          })
         })
       : null;
+    const deployment = deploymentResult?.output
+      ? deploymentResult.output
+      : deploymentWorker && deploymentSource
+        ? {
+            launchSummary: 'I prepared the assembled site for publish without reopening the HTML build.',
+            shipReadiness: reviewJudge?.needsChanges
+              ? 'Built site is ready for publish, but the review pass flagged issues the studio should note.'
+              : 'Built site is ready for publish and client preview.',
+            finalChecks: [
+              'Pin the assembled site to IPFS',
+              'Verify final title and CTA framing',
+              'Keep launch handoff grounded in the reviewed build'
+            ],
+            studioReport: {
+              body: `I received the final assembled site for ${deploymentSource.siteTitle}. I kept the launch handoff focused on readiness and publish state rather than redesigning the page. The package is ready to move upward for release.`
+            }
+          }
+        : null;
     const finalDocumentWorker =
-      deploymentResult?.output && deploymentWorker
-        ? deploymentWorker
-        : review?.siteDocument?.trim() && reviewWorker
-          ? reviewWorker
-          : implementation?.siteDocument?.trim() && implementationWorker
-            ? implementationWorker
-            : null;
-    const finalDocument =
-      deploymentResult?.output ??
-      review ??
-      implementation ??
-      null;
+      implementation?.siteDocument?.trim() && implementationWorker
+        ? implementationWorker
+        : null;
+    const finalDocument = implementation ?? null;
 
     const usedFallback = Boolean(
       designResult?.usedFallback ||
         implementationResult?.usedFallback ||
-        reviewResult?.usedFallback ||
-        deploymentResult?.usedFallback
+        reviewJudgeResult?.usedFallback
     );
 
     if (usedFallback) {
       const failedStages = [
         designResult?.usedFallback ? designWorker?.stageId : null,
         implementationResult?.usedFallback ? implementationWorker?.stageId : null,
-        reviewResult?.usedFallback ? reviewWorker?.stageId : null,
-        deploymentResult?.usedFallback ? deploymentWorker?.stageId : null
+        reviewJudgeResult?.usedFallback ? reviewWorker?.stageId : null
       ].filter(Boolean);
 
       throw new Error(
@@ -1167,7 +1398,7 @@ export async function generateConferenceSiteArtifactWithWorkers(
 
     const artifact = buildConferenceSiteArtifactFromDocument(input, {
       siteTitle: finalDocument.siteTitle,
-      siteDocument: finalDocument.siteDocument
+      siteDocument: minifyHtmlDocument(finalDocument.siteDocument)
     });
     const workerTrace = buildWorkerTrace({
       studioName: input.studioName?.trim() || 'Ghost Studio',
@@ -1176,7 +1407,9 @@ export async function generateConferenceSiteArtifactWithWorkers(
       implementationWorker,
       implementation,
       reviewWorker,
-      review,
+      review: reviewJudge,
+      deploymentWorker,
+      deployment,
       finalDocumentWorker,
       finalDocument
     });

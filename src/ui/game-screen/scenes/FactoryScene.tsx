@@ -83,7 +83,9 @@ export function FactoryScene({
   const hasDeploymentRole = hasPipelineStage(roles, 'deployment');
   const isRecoveryInterrupted = artifactGenerationRecovery?.status === 'pending';
   const deploymentTone = !hasDesigner || !hasReviewer ? 'rough' : 'polished';
-  const isPipelineRunning = isRunning || Boolean(artifactGenerationProgress);
+  const isPublishingInBackground = artifactGenerationProgress?.phase === 'publishing';
+  const isPipelineRunning =
+    isRunning || Boolean(artifactGenerationProgress && artifactGenerationProgress.phase !== 'publishing');
   const heroTitle =
     latestArtifacts?.siteTitle ??
     (isRecoveryInterrupted
@@ -163,6 +165,7 @@ export function FactoryScene({
   const hasRecoverableOutput =
     hasRun &&
     !isPipelineRunning &&
+    !isPublishingInBackground &&
     (!latestArtifacts || Boolean(artifactGenerationRecovery)) &&
     Boolean(onRetryArtifactGeneration) &&
     !isReadOnly;
@@ -191,23 +194,23 @@ export function FactoryScene({
   const statusLabel = isPipelineRunning
     ? artifactGenerationProgress?.phase === 'worker'
       ? `${roleNodes[activeGenerationRoleIndex]?.stageLabel ?? roleNodes[activeGenerationRoleIndex]?.roleName ?? 'Worker'} assembling`
-      : artifactGenerationProgress?.phase === 'publishing'
-        ? 'Publishing deploy'
-        : safePacketIndex === 0
+      : safePacketIndex === 0
           ? 'Client requirements loaded'
           : safePacketIndex === 1
             ? 'Root node shaping request'
             : `${roleNodes[safePacketIndex - 2]?.stageLabel ?? roleNodes[safePacketIndex - 2]?.roleName ?? 'Stage'} processing`
     : hasRun
-      ? isRecoveryInterrupted
-        ? 'Assembly interrupted'
-        : artifactGenerationError
-          ? 'Assembly failed'
-        : latestPipeline
-          ? latestRun?.passed
-            ? `${latestPipeline.coveredStageCount}/${latestPipeline.order.length} stages stabilized`
-            : `${weakestStage?.label ?? 'Pipeline'} needs reinforcement`
-          : 'Creation routed to output node'
+      ? isPublishingInBackground
+        ? 'Preview ready • publishing in background'
+        : isRecoveryInterrupted
+          ? 'Assembly interrupted'
+          : artifactGenerationError
+            ? 'Assembly failed'
+            : latestPipeline
+              ? latestRun?.passed
+                ? `${latestPipeline.coveredStageCount}/${latestPipeline.order.length} stages stabilized`
+                : `${weakestStage?.label ?? 'Pipeline'} needs reinforcement`
+              : 'Creation routed to output node'
       : 'Assembly line armed';
   const statusDetail = isPipelineRunning
     ? artifactGenerationProgress?.note ??
@@ -217,10 +220,12 @@ export function FactoryScene({
           ? 'The final creation is being compressed and pushed into the output node.'
           : `${roleNodes[safePacketIndex - 2]?.operatorName ?? 'Factory core'} is actively shaping the ${roleNodes[safePacketIndex - 2]?.stageLabel?.toLowerCase() ?? 'current'} pass.`)
     : hasRun
-      ? artifactGenerationError ??
-        weakestStage?.note ??
-        latestEvent ??
-        'The line stalled before a public-facing site could be assembled.'
+      ? isPublishingInBackground
+        ? 'The assembled site is already available in Factory while Pinata finishes the public publish.'
+        : artifactGenerationError ??
+          weakestStage?.note ??
+          latestEvent ??
+          'The line stalled before a public-facing site could be assembled.'
       : `Ready to route through ${roleLanes.length} linked role ${roleLanes.length === 1 ? 'node' : 'nodes'}.`;
   const sharedRoleCenterY = roleNodes[0]?.y ? roleNodes[0].y + roleNodes[0].height / 2 : rootNode.y + rootNode.height / 2;
   const pipeSegments: PipeSegment[] = [

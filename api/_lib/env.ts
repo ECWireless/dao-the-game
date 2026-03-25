@@ -42,10 +42,6 @@ export function getOpenAiApiKey(): string | null {
   return optionalEnv('OPENAI_API_KEY');
 }
 
-export function getOpenAiArtifactModel(): string {
-  return optionalEnv('OPENAI_ARTIFACT_MODEL') ?? 'gpt-5-mini';
-}
-
 export function getArtifactDebugWorkers(): boolean {
   return optionalBooleanEnv('ARTIFACT_DEBUG_WORKERS');
 }

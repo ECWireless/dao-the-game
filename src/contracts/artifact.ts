@@ -28,6 +28,8 @@ export type ArtifactDeployEvent =
       stageId: PipelineStageId;
       workerName: string;
       workerSpecialty: string;
+      model?: string | null;
+      durationMs?: number;
       output: Record<string, unknown> | null;
       rawOutputText?: string | null;
       usedFallback: boolean;

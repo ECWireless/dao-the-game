@@ -656,6 +656,8 @@ export default function App({
           console.groupCollapsed(
             `[artifact worker] ${event.stageId} :: ${event.workerName}${event.usedFallback ? ' (fallback)' : ''}`
           );
+          console.log('model', event.model ?? null);
+          console.log('durationMs', event.durationMs ?? null);
           if (event.error) {
             console.warn('error', event.error);
           }
