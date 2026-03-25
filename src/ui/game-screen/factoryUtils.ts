@@ -9,7 +9,23 @@ export type FactoryRoleLane = {
   stageLabel?: string;
   operatorName: string;
   operatorMeta: string;
+  durationHint?: string;
 };
+
+function getStageDurationHint(stageId?: PipelineStageId): string | undefined {
+  switch (stageId) {
+    case 'design':
+      return 'Usually 25-40s';
+    case 'implementation':
+      return 'Usually 45-65s';
+    case 'review':
+      return 'Usually 15-25s';
+    case 'deployment':
+      return 'Usually under 10s';
+    default:
+      return undefined;
+  }
+}
 
 function getOperatorLabel(agent: Agent | undefined, agents: Agent[]): Pick<FactoryRoleLane, 'operatorName' | 'operatorMeta'> {
   if (!agent) {
@@ -50,7 +66,8 @@ export function buildFactoryRoleLanes(roles: HatRole[], agents: Agent[]): Factor
         stageId,
         stageLabel,
         operatorName: operator.operatorName,
-        operatorMeta: operator.operatorMeta
+        operatorMeta: operator.operatorMeta,
+        durationHint: getStageDurationHint(stageId)
       };
     });
 }

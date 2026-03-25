@@ -526,6 +526,7 @@ export function FactoryScene({
               <span className="factory-node-kicker">Client requirements</span>
               <span className="factory-node-title">Brief intake</span>
               <span className="factory-node-meta">Tap to inspect the conference brief</span>
+              <span className="factory-node-range">Usually instant</span>
             </button>
 
             <div
@@ -535,6 +536,7 @@ export function FactoryScene({
               <span className="factory-node-kicker">Studio root</span>
               <span className="factory-node-title">{studioName || 'Unnamed Studio'}</span>
               <span className="factory-node-meta">Factory routes through your org</span>
+              <span className="factory-node-range">Usually instant</span>
             </div>
 
             {roleNodes.map((node, index) => {
@@ -569,6 +571,7 @@ export function FactoryScene({
                   <span className="factory-node-kicker">{node.roleName}</span>
                   <span className="factory-node-title">{node.operatorName}</span>
                   <span className="factory-node-meta">{node.operatorMeta}</span>
+                  {node.durationHint ? <span className="factory-node-range">{node.durationHint}</span> : null}
                 </button>
               );
             })}
@@ -606,6 +609,7 @@ export function FactoryScene({
                       : 'Open the error state and retry assembly'
                     : 'Finished builds land here'}
               </span>
+              <span className="factory-node-range">Publish usually under 5s</span>
               {isOutputReady || isOutputErrored ? (
                 <span className="factory-node-callout">
                   {isOutputReady
