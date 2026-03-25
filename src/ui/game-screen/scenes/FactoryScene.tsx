@@ -2,10 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import { hasPipelineStage } from '../../../pipeline';
 import type { Agent, ArtifactBundle, HatRole, RunResult } from '../../../types';
 import type { ArtifactGenerationProgress } from '../types';
-import { buildMachineRoleLanes } from '../machineUtils';
+import { buildFactoryRoleLanes } from '../factoryUtils';
 import { usePannableViewport } from '../usePannableViewport';
-import { MachinePreview } from './MachinePreview';
-type MachineSceneProps = {
+import { FactoryPreview } from './FactoryPreview';
+type FactorySceneProps = {
   studioName?: string;
   cycle: 1 | 2;
   roles: HatRole[];
@@ -14,6 +14,7 @@ type MachineSceneProps = {
   hasRun: boolean;
   latestRun?: RunResult;
   latestArtifacts?: ArtifactBundle;
+  previousRun?: RunResult;
   artifactGenerationProgress?: ArtifactGenerationProgress | null;
   artifactGenerationError?: string | null;
   onRetryArtifactGeneration?: () => void | Promise<void>;
@@ -24,7 +25,7 @@ type MachineSceneProps = {
   isReadOnly?: boolean;
 };
 
-type PositionedRoleLane = ReturnType<typeof buildMachineRoleLanes>[number] & {
+type PositionedRoleLane = ReturnType<typeof buildFactoryRoleLanes>[number] & {
   x: number;
   y: number;
   width: number;
@@ -39,7 +40,7 @@ type PipeSegment = {
   y2: number;
 };
 
-export function MachineScene({
+export function FactoryScene({
   studioName,
   cycle,
   roles,
@@ -48,6 +49,7 @@ export function MachineScene({
   hasRun,
   latestRun,
   latestArtifacts,
+  previousRun,
   artifactGenerationProgress = null,
   artifactGenerationError = null,
   onRetryArtifactGeneration,
@@ -56,12 +58,12 @@ export function MachineScene({
   onContinue,
   onLockChange,
   isReadOnly = false
-}: MachineSceneProps) {
+}: FactorySceneProps) {
   const [isRunning, setIsRunning] = useState(false);
   const [packetIndex, setPacketIndex] = useState(0);
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
   const hasTriggeredRunRef = useRef(false);
-  const roleLanes = useMemo(() => buildMachineRoleLanes(roles, agents), [agents, roles]);
+  const roleLanes = useMemo(() => buildFactoryRoleLanes(roles, agents), [agents, roles]);
   const hasDesigner = hasPipelineStage(roles, 'design');
   const hasReviewer = hasPipelineStage(roles, 'review');
   const hasDeploymentRole = hasPipelineStage(roles, 'deployment');
@@ -167,7 +169,7 @@ export function MachineScene({
         ? 'Requirements are being piped through the studio chassis.'
         : safePacketIndex === lastPacketIndex
           ? 'The final creation is being compressed and pushed into the output node.'
-          : `${roleNodes[safePacketIndex - 2]?.operatorName ?? 'Machine core'} is actively shaping the ${roleNodes[safePacketIndex - 2]?.stageLabel?.toLowerCase() ?? 'current'} pass.`)
+          : `${roleNodes[safePacketIndex - 2]?.operatorName ?? 'Factory core'} is actively shaping the ${roleNodes[safePacketIndex - 2]?.stageLabel?.toLowerCase() ?? 'current'} pass.`)
     : hasRun
       ? artifactGenerationError ??
         weakestStage?.note ??
@@ -295,28 +297,28 @@ export function MachineScene({
   }, [focusViewportOnPoint, isDragging, isRunning, packetPosition.x, packetPosition.y, safePacketIndex]);
 
   return (
-    <section className="scene-body machine-assembly-scene">
-      <section className="machine-assembly-header">
+    <section className="scene-body factory-assembly-scene">
+      <section className="factory-assembly-header">
         <div>
-          <p className="machine-assembly-kicker">Machine companion • cycle {cycle}</p>
-          <h2 className="machine-assembly-title">{studioName || 'Unnamed Studio'} assembly line</h2>
+          <p className="factory-assembly-kicker">Factory • cycle {cycle}</p>
+          <h2 className="factory-assembly-title">{studioName || 'Unnamed Studio'} assembly line</h2>
         </div>
-        <span className={`machine-assembly-pill ${isRunning ? 'is-running' : hasRun ? 'is-ready' : 'is-armed'}`}>
+        <span className={`factory-assembly-pill ${isRunning ? 'is-running' : hasRun ? 'is-ready' : 'is-armed'}`}>
           {isRunning ? 'Deploying' : hasRun ? 'Creation Ready' : 'Armed'}
         </span>
       </section>
 
-      <section className={`machine-board-shell ${isOutputReady ? 'is-complete' : ''}`}>
+      <section className={`factory-board-shell ${isOutputReady ? 'is-complete' : ''}`}>
         <div
-          className={`machine-board-viewport ${isDragging ? 'is-dragging' : ''}`}
+          className={`factory-board-viewport ${isDragging ? 'is-dragging' : ''}`}
           ref={viewportRef}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerEnd}
           onPointerCancel={handlePointerEnd}
         >
-          <div className="machine-board-canvas" aria-label="Machine assembly tree">
-            <svg className="machine-board-pipes" viewBox="0 0 1560 440" aria-hidden="true">
+          <div className="factory-board-canvas" aria-label="Factory assembly tree">
+            <svg className="factory-board-pipes" viewBox="0 0 1560 440" aria-hidden="true">
               {pipeSegments.map((segment, index) => {
                 const segmentState = isRunning
                   ? safePacketIndex > index + 1
@@ -330,35 +332,35 @@ export function MachineScene({
                 const linePath = `M ${segment.x1} ${segment.y1} L ${segment.x2} ${segment.y2}`;
 
                 return (
-                  <g key={segment.id} className={`machine-pipe is-${segmentState}`}>
-                    <path className="machine-pipe-shell" d={linePath} />
-                    <path className="machine-pipe-core" d={linePath} />
-                    <path className="machine-pipe-flow" d={linePath} />
+                  <g key={segment.id} className={`factory-pipe is-${segmentState}`}>
+                    <path className="factory-pipe-shell" d={linePath} />
+                    <path className="factory-pipe-core" d={linePath} />
+                    <path className="factory-pipe-flow" d={linePath} />
                   </g>
                 );
               })}
             </svg>
 
-            <div className="machine-packet" style={packetStyle}>
+            <div className="factory-packet" style={packetStyle}>
               <span />
             </div>
 
             <div
-              className={`machine-node machine-node-input ${isRunning && safePacketIndex === 0 ? 'is-active' : safePacketIndex > 0 ? 'is-processed' : ''}`}
+              className={`factory-node factory-node-input ${isRunning && safePacketIndex === 0 ? 'is-active' : safePacketIndex > 0 ? 'is-processed' : ''}`}
               style={{ left: `${sourceNode.x}px`, top: `${sourceNode.y}px` }}
             >
-              <span className="machine-node-kicker">Client requirements</span>
-              <span className="machine-node-title">Input feed</span>
-              <span className="machine-node-meta">Raw brief enters the line</span>
+              <span className="factory-node-kicker">Client requirements</span>
+              <span className="factory-node-title">Input feed</span>
+              <span className="factory-node-meta">Raw brief enters the line</span>
             </div>
 
             <div
-              className={`machine-node machine-node-root ${safePacketIndex >= 1 ? 'is-active' : ''}`}
+              className={`factory-node factory-node-root ${safePacketIndex >= 1 ? 'is-active' : ''}`}
               style={{ left: `${rootNode.x}px`, top: `${rootNode.y}px` }}
             >
-              <span className="machine-node-kicker">Studio root</span>
-              <span className="machine-node-title">{studioName || 'Unnamed Studio'}</span>
-              <span className="machine-node-meta">Machine routes through your org</span>
+              <span className="factory-node-kicker">Studio root</span>
+              <span className="factory-node-title">{studioName || 'Unnamed Studio'}</span>
+              <span className="factory-node-meta">Factory routes through your org</span>
             </div>
 
             {roleNodes.map((node, index) => {
@@ -375,26 +377,26 @@ export function MachineScene({
               return (
                 <div
                   key={node.id}
-                  className={`machine-node machine-node-role ${nodeState}`}
+                  className={`factory-node factory-node-role ${nodeState}`}
                   style={{ left: `${node.x}px`, top: `${node.y}px` }}
                 >
-                  <span className="machine-node-kicker">{node.roleName}</span>
-                  <span className="machine-node-title">{node.operatorName}</span>
-                  <span className="machine-node-meta">{node.operatorMeta}</span>
+                  <span className="factory-node-kicker">{node.roleName}</span>
+                  <span className="factory-node-title">{node.operatorName}</span>
+                  <span className="factory-node-meta">{node.operatorMeta}</span>
                 </div>
               );
             })}
 
             <button
-              className={`machine-node machine-node-output ${isOutputReady || isOutputErrored ? 'is-actionable' : ''} ${isOutputReady ? 'is-ready' : ''} ${isOutputErrored ? 'is-error' : ''}`}
+              className={`factory-node factory-node-output ${isOutputReady || isOutputErrored ? 'is-actionable' : ''} ${isOutputReady ? 'is-ready' : ''} ${isOutputErrored ? 'is-error' : ''}`}
               type="button"
               data-pan-block="true"
               style={{ left: `${outputNode.x}px`, top: `${outputNode.y}px` }}
               disabled={!hasRun || isReadOnly}
               onClick={() => setIsPreviewVisible(true)}
             >
-              <span className="machine-node-kicker">Output node</span>
-              <span className="machine-node-title">
+              <span className="factory-node-kicker">Output node</span>
+              <span className="factory-node-title">
                 {isOutputReady
                   ? isPreviewVisible
                     ? 'Preview Loaded'
@@ -407,7 +409,7 @@ export function MachineScene({
                     ? 'Fabricating...'
                     : 'Awaiting build'}
               </span>
-              <span className="machine-node-meta">
+              <span className="factory-node-meta">
                 {isOutputReady
                   ? 'Open the deployed site preview'
                   : isOutputErrored
@@ -415,7 +417,7 @@ export function MachineScene({
                     : 'Finished builds land here'}
               </span>
               {isOutputReady || isOutputErrored ? (
-                <span className="machine-node-callout">
+                <span className="factory-node-callout">
                   {isOutputReady
                     ? isPreviewVisible
                       ? 'Preview open'
@@ -427,7 +429,7 @@ export function MachineScene({
           </div>
         </div>
 
-        <div className="machine-board-hud">
+        <div className="factory-board-hud">
           <span>{statusLabel}</span>
           <span>{statusDetail}</span>
         </div>
@@ -435,7 +437,7 @@ export function MachineScene({
 
       {!hasRun && !isReadOnly ? (
         <button
-          className="primary-action machine-run-button"
+          className="primary-action factory-run-button"
           type="button"
           disabled={!canRun || isRunning || !onRun}
           onClick={() => {
@@ -445,17 +447,19 @@ export function MachineScene({
             setPacketIndex(0);
           }}
         >
-          {isRunning ? 'Deploying...' : 'Deploy Through Machine'}
+          {isRunning ? 'Deploying...' : 'Deploy Through Factory'}
         </button>
       ) : null}
 
       {isPreviewVisible && hasRun ? (
-        <MachinePreview
+        <FactoryPreview
           deploymentTone={deploymentTone}
           heroTitle={heroTitle}
           heroUrl={heroUrl}
+          cycle={cycle}
           latestRun={latestRun}
           latestArtifacts={latestArtifacts}
+          previousRun={previousRun}
           generationError={artifactGenerationError}
           capabilityGaps={capabilityGaps}
           isReadOnly={isReadOnly}

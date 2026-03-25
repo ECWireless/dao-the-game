@@ -308,6 +308,22 @@ function getStageEntries(agent: Agent): Array<[PipelineStageId, number]> {
   return PIPELINE_STAGE_ORDER.map((stageId) => [stageId, agent.capabilityVector[stageId]]);
 }
 
+export function getWorkerStageScoreEntries(
+  agent: Agent
+): Array<{ stageId: PipelineStageId; label: string; value: number }> {
+  return getStageEntries(agent).map(([stageId, value]) => ({
+    stageId,
+    label: getPipelineStageDefinition(stageId).shortLabel,
+    value
+  }));
+}
+
+export function getWorkerStageScoreSummary(agent: Agent): string {
+  return getWorkerStageScoreEntries(agent)
+    .map(({ label, value }) => `${label} ${value}`)
+    .join(' • ');
+}
+
 export function getWorkerCapabilitySummary(agent: Agent, count = 2): string {
   return getStageEntries(agent)
     .sort((left, right) => right[1] - left[1])
@@ -323,4 +339,64 @@ export function getWorkerPrimaryStageId(agent: Agent): PipelineStageId {
 export function getWorkerAverageCapability(agent: Agent): number {
   const values = getStageEntries(agent).map((entry) => entry[1]);
   return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+export function getWorkerWeakestStageId(agent: Agent): PipelineStageId {
+  return getStageEntries(agent).sort((left, right) => left[1] - right[1])[0]?.[0] ?? 'implementation';
+}
+
+export function getWorkerStrengthLabel(agent: Agent): string {
+  const stageId = getWorkerPrimaryStageId(agent);
+  const score = agent.capabilityVector[stageId];
+  return `Best for ${getPipelineStageDefinition(stageId).shortLabel.toLowerCase()} (${score})`;
+}
+
+export function getWorkerRiskLabel(agent: Agent): string {
+  const explicitRisk = [...agent.traits].reverse().find((trait) => /^can |^needs /i.test(trait));
+
+  if (explicitRisk) {
+    return explicitRisk;
+  }
+
+  if (agent.temperament.resilience < 55) {
+    return 'Can wobble under pressure';
+  }
+
+  if (agent.temperament.teamwork < 60) {
+    return 'Needs tighter handoffs';
+  }
+
+  const weakestStageId = getWorkerWeakestStageId(agent);
+  return `Needs support on ${getPipelineStageDefinition(weakestStageId).shortLabel.toLowerCase()}`;
+}
+
+export function getWorkerPairingHint(agent: Agent): string {
+  const strongestStageId = getWorkerPrimaryStageId(agent);
+  const weakestStageId = getWorkerWeakestStageId(agent);
+
+  if (strongestStageId === 'design' && weakestStageId === 'implementation') {
+    return 'Pair with a disciplined builder';
+  }
+
+  if (strongestStageId === 'implementation' && weakestStageId === 'review') {
+    return 'Pair with a ruthless reviewer';
+  }
+
+  if (strongestStageId === 'deployment' && weakestStageId === 'design') {
+    return 'Pair with a sharper designer';
+  }
+
+  if (strongestStageId === 'review' && weakestStageId === 'design') {
+    return 'Pair with a stronger visual lead';
+  }
+
+  if (agent.temperament.teamwork >= 80) {
+    return 'Elevates messy lineups';
+  }
+
+  if (agent.temperament.resilience >= 85) {
+    return 'Stabilizes risky teams';
+  }
+
+  return 'Works best with complementary coverage';
 }

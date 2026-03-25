@@ -9,7 +9,15 @@ import {
   TUTORIAL_TREASURY
 } from '../levels/tutorial';
 import { generateStartingAgents, simulateRun } from '../sim';
-import type { Agent, ArtifactBundle, HatRole, RunResult, RunState, ScoreBreakdown } from '../types';
+import type {
+  Agent,
+  ArtifactBundle,
+  ClientReview,
+  HatRole,
+  RunResult,
+  RunState,
+  ScoreBreakdown
+} from '../types';
 
 const GAME_STATE_STORAGE_KEY = 'dao-the-game:state:v2';
 const FIRST_CYCLE_ROLE_COUNT = 1;
@@ -27,6 +35,9 @@ type GameStore = {
   agents: Agent[];
   latestRun?: RunResult;
   latestArtifacts?: ArtifactBundle;
+  runHistory: Partial<Record<1 | 2, RunResult>>;
+  artifactHistory: Partial<Record<1 | 2, ArtifactBundle>>;
+  clientReviews: Partial<Record<1 | 2, ClientReview>>;
   runCount: number;
   assignmentLog: AssignmentLogEntry[];
   hydrateForPlayer: (playerId: string, snapshot?: Partial<GameStateSnapshot> | null) => void;
@@ -42,10 +53,14 @@ type GameStore = {
   unassignRole: (roleId: string) => void;
   runProduction: () => RunResult | undefined;
   setLatestArtifacts: (artifacts?: ArtifactBundle) => void;
+  setClientReview: (cycle: 1 | 2, review: ClientReview) => void;
   resetTutorial: () => void;
 };
 
-type PersistedGameState = GameStateSnapshot & {
+type PersistedGameState = Omit<GameStateSnapshot, 'clientReviews'> & {
+  runHistory: Partial<Record<1 | 2, RunResult>>;
+  artifactHistory: Partial<Record<1 | 2, ArtifactBundle>>;
+  clientReviews: Partial<Record<1 | 2, ClientReview>>;
   ownerPlayerId: string | null;
 };
 
@@ -73,6 +88,9 @@ function getInitialState(ownerPlayerId: string | null = null): PersistedGameStat
     agents: generateStartingAgents(TUTORIAL_SEED),
     latestRun: undefined,
     latestArtifacts: undefined,
+    runHistory: {},
+    artifactHistory: {},
+    clientReviews: {},
     runCount: 0,
     assignmentLog: []
   };
@@ -132,6 +150,18 @@ function normalizeGameStateSnapshot(
     agents: Array.isArray(candidate.agents) ? candidate.agents : initial.agents,
     latestRun: candidate.latestRun,
     latestArtifacts: candidate.latestArtifacts,
+    runHistory:
+      candidate.runHistory && typeof candidate.runHistory === 'object'
+        ? (candidate.runHistory as Partial<Record<1 | 2, RunResult>>)
+        : initial.runHistory,
+    artifactHistory:
+      candidate.artifactHistory && typeof candidate.artifactHistory === 'object'
+        ? (candidate.artifactHistory as Partial<Record<1 | 2, ArtifactBundle>>)
+        : initial.artifactHistory,
+    clientReviews:
+      candidate.clientReviews && typeof candidate.clientReviews === 'object'
+        ? (candidate.clientReviews as Partial<Record<1 | 2, ClientReview>>)
+        : initial.clientReviews,
     runCount: typeof candidate.runCount === 'number' ? candidate.runCount : initial.runCount,
     assignmentLog: Array.isArray(candidate.assignmentLog)
       ? candidate.assignmentLog
@@ -152,6 +182,9 @@ export function buildGameStateSnapshot(
     | 'agents'
     | 'latestRun'
     | 'latestArtifacts'
+    | 'runHistory'
+    | 'artifactHistory'
+    | 'clientReviews'
     | 'runCount'
     | 'assignmentLog'
   >
@@ -167,6 +200,9 @@ export function buildGameStateSnapshot(
     agents: state.agents,
     latestRun: state.latestRun,
     latestArtifacts: state.latestArtifacts,
+    runHistory: state.runHistory,
+    artifactHistory: state.artifactHistory,
+    clientReviews: state.clientReviews,
     runCount: state.runCount,
     assignmentLog: state.assignmentLog
   };
@@ -420,6 +456,10 @@ export const useGameStore = create<GameStore>()(
         }
 
         set({
+          runHistory: {
+            ...state.runHistory,
+            [Math.min(state.runCount + 1, 2) as 1 | 2]: result
+          },
           runCount: state.runCount + 1,
           latestRun: result,
           latestArtifacts: undefined,
@@ -437,7 +477,24 @@ export const useGameStore = create<GameStore>()(
         return result;
       },
       setLatestArtifacts: (artifacts) => {
-        set({ latestArtifacts: artifacts });
+        set((state) => ({
+          latestArtifacts: artifacts,
+          artifactHistory:
+            artifacts && (state.runCount === 1 || state.runCount === 2)
+              ? {
+                  ...state.artifactHistory,
+                  [state.runCount]: artifacts
+                }
+              : state.artifactHistory
+        }));
+      },
+      setClientReview: (cycle, review) => {
+        set((state) => ({
+          clientReviews: {
+            ...state.clientReviews,
+            [cycle]: review
+          }
+        }));
       },
       resetTutorial: () => {
         set(getInitialState(get().ownerPlayerId));
@@ -445,11 +502,14 @@ export const useGameStore = create<GameStore>()(
     }),
     {
       name: GAME_STATE_STORAGE_KEY,
-      version: 5,
+      version: 6,
       storage: createJSONStorage(() => localStorage),
       partialize: (state): PersistedGameState => ({
         ownerPlayerId: state.ownerPlayerId,
-        ...buildGameStateSnapshot(state)
+        ...buildGameStateSnapshot(state),
+        runHistory: state.runHistory,
+        artifactHistory: state.artifactHistory,
+        clientReviews: state.clientReviews
       }),
       migrate: (persistedState) => {
         if (!persistedState || typeof persistedState !== 'object') {

@@ -50,7 +50,11 @@ export function AppDock({
             disabled={disabled}
             aria-label={`Open ${APP_META[app].label}`}
           >
-            <DockTile app={app} isInstalling={isInstalling} isTarget={isTarget} />
+            <DockTile
+              app={app}
+              isInstalling={isInstalling}
+              isTarget={isTarget}
+            />
           </button>
         );
       })}

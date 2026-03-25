@@ -3,7 +3,12 @@ import { hatIdToTreeId } from '@hatsprotocol/sdk-v1-core';
 import { sepolia } from 'viem/chains';
 import type { OrgTreeRecord } from '../../../contracts/org';
 import type { Agent, HatRole } from '../../../types';
-import { getWorkerCapabilitySummary } from '../../../workers/catalog';
+import {
+  getWorkerPairingHint,
+  getWorkerRiskLabel,
+  getWorkerStageScoreSummary,
+  getWorkerStrengthLabel
+} from '../../../workers/catalog';
 import { findRaidGuildMember, getRaidGuildCandidatesForRole } from '../guildData';
 import {
   WhiteboardEdgeCue,
@@ -132,7 +137,10 @@ export function WhiteboardScene({
           roleAffinity: candidate.roleAffinity ?? agent.roleAffinity,
           archetype: agent.archetype,
           temperamentProfile: agent.temperament.profile,
-          capabilitySummary: getWorkerCapabilitySummary(agent)
+          stageScoreSummary: getWorkerStageScoreSummary(agent),
+          strengthLabel: getWorkerStrengthLabel(agent),
+          pairingHint: getWorkerPairingHint(agent),
+          riskLabel: getWorkerRiskLabel(agent)
         }]
       : [];
   });

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { StoryApp } from '../../../levels/story';
+import { FactoryGlyph } from '../components/DockVisuals';
 import type { ChatLine } from '../types';
 
 export type MessageNotification = {
@@ -81,12 +82,8 @@ export function NotificationBanner({ notification }: { notification: MessageNoti
           <svg viewBox="0 0 24 24" fill="none">
             <path d="M9.2 5.5 7 18.5M16.9 5.5l-2.2 13M5 9.2h14M4.1 14.8h14" stroke="currentColor" strokeLinecap="round" strokeWidth="1.7" />
           </svg>
-        ) : icon === 'machine' ? (
-          <svg viewBox="0 0 24 24" fill="none">
-            <rect x="5.4" y="6.1" width="13.2" height="11.8" rx="2.3" fill="currentColor" opacity="0.94" />
-            <path d="M9.1 10.1h5.8M9.1 13.9h3.6" stroke="rgb(255 255 255 / 0.9)" strokeLinecap="round" strokeWidth="1.5" />
-            <path d="M3.8 9.5h1.8M3.8 14.5h1.8M18.4 9.5h1.8M18.4 14.5h1.8" stroke="currentColor" strokeLinecap="round" strokeWidth="1.4" />
-          </svg>
+        ) : icon === 'factory' ? (
+          <FactoryGlyph />
         ) : (
           <svg viewBox="0 0 24 24" fill="none">
             <rect

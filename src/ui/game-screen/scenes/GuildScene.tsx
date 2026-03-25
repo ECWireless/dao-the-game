@@ -205,6 +205,12 @@ function FirstCycleGuildScene({ studioName, roles, agents, onContinue, isReadOnl
                       {formatCredits(agent.contractCost)}
                     </p>
                     <p className="guild-feed-text">{replyText}</p>
+                    <div className="guild-feed-strategy">
+                      <span className="guild-feed-pill">{candidate.strengthLabel}</span>
+                      <span className="guild-feed-pill is-muted">{candidate.pairingHint}</span>
+                    </div>
+                    <p className="guild-feed-submeta">{candidate.stageScoreSummary}</p>
+                    <p className="guild-feed-submeta is-warning">Watch for: {candidate.riskLabel}</p>
                   </div>
                 </article>
               );

@@ -829,7 +829,7 @@ function buildFallbackGeneratedContent({
       title: moment.title,
       summary: moment.summary
     })),
-    footerNote: 'Built for the current deployment cycle'
+    footerNote: 'Programming, venue, and ticket updates continue throughout the season.'
   };
 }
 
@@ -1502,7 +1502,7 @@ function renderConferenceSiteHtml({
 
       <footer>
         <span>${clientName}</span>
-        <span>Conference site preview</span>
+        <span>${escapeHtml(spec.editionLabel)} • ${escapeHtml(spec.location)}</span>
         <span>${escapeHtml(content.footerNote)}</span>
       </footer>
     </main>

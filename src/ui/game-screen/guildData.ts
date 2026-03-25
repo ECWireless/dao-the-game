@@ -1,7 +1,10 @@
 import type { Agent } from '../../types';
 import {
   getWorkerAverageCapability,
-  getWorkerCapabilitySummary
+  getWorkerPairingHint,
+  getWorkerRiskLabel,
+  getWorkerStageScoreSummary,
+  getWorkerStrengthLabel
 } from '../../workers/catalog';
 
 export type GuildMemberProfile = {
@@ -15,7 +18,10 @@ export type GuildMemberProfile = {
   roleAffinity?: string;
   archetype?: string;
   temperamentProfile?: string;
-  capabilitySummary?: string;
+  stageScoreSummary?: string;
+  strengthLabel?: string;
+  pairingHint?: string;
+  riskLabel?: string;
 };
 
 export type GuildFeedEntry = {
@@ -88,7 +94,10 @@ function createGuildProfile(agent: Agent, id: string): GuildMemberProfile {
     roleAffinity: agent.roleAffinity,
     archetype: agent.archetype,
     temperamentProfile: agent.temperament.profile,
-    capabilitySummary: getWorkerCapabilitySummary(agent)
+    stageScoreSummary: getWorkerStageScoreSummary(agent),
+    strengthLabel: getWorkerStrengthLabel(agent),
+    pairingHint: getWorkerPairingHint(agent),
+    riskLabel: getWorkerRiskLabel(agent)
   };
 }
 

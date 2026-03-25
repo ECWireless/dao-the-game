@@ -2,7 +2,7 @@ import type { Agent } from '../../../types';
 import { GuildMemberAvatar } from './GuildMemberAvatar';
 import { type GuildMemberProfile } from '../guildData';
 import { formatCredits } from '../utils';
-import { getWorkerCapabilitySummary } from '../../../workers/catalog';
+import { getWorkerStageScoreEntries } from '../../../workers/catalog';
 
 export function GuildMemberCard({
   member,
@@ -26,6 +26,31 @@ export function GuildMemberCard({
 
         {agent ? (
           <>
+            <div className="guild-member-strategy">
+              <p className="guild-member-strategy-kicker">How to use them</p>
+              <div className="guild-member-strategy-row">
+                <span>Best use</span>
+                <strong>{member.strengthLabel}</strong>
+              </div>
+              <div className="guild-member-strategy-row">
+                <span>Interesting combo</span>
+                <strong>{member.pairingHint}</strong>
+              </div>
+              <div className="guild-member-strategy-row">
+                <span>Watch for</span>
+                <strong>{member.riskLabel}</strong>
+              </div>
+            </div>
+
+            <div className="guild-stage-grid" aria-label={`${member.name} stage strengths`}>
+              {getWorkerStageScoreEntries(agent).map((entry) => (
+                <div key={entry.stageId} className="guild-stage-tile">
+                  <span>{entry.label}</span>
+                  <strong>{entry.value}</strong>
+                </div>
+              ))}
+            </div>
+
             <div className="guild-stats">
               <div className="guild-stat-row">
                 <span>Archetype</span>
@@ -36,16 +61,12 @@ export function GuildMemberCard({
                 <strong>{member.roleAffinity ?? agent.roleAffinity}</strong>
               </div>
               <div className="guild-stat-row">
-                <span>Capabilities</span>
-                <strong>{getWorkerCapabilitySummary(agent)}</strong>
+                <span>Style</span>
+                <strong>{agent.styleProfile.signature}</strong>
               </div>
               <div className="guild-stat-row">
                 <span>Temperament</span>
                 <strong>{agent.temperament.profile}</strong>
-              </div>
-              <div className="guild-stat-row">
-                <span>Style</span>
-                <strong>{agent.styleProfile.signature}</strong>
               </div>
               <div className="guild-stat-row">
                 <span>Traits</span>

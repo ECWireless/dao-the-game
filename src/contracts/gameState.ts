@@ -1,6 +1,7 @@
 import type {
   Agent,
   ArtifactBundle,
+  ClientReview,
   HatRole,
   RunResult
 } from '../types';
@@ -21,6 +22,9 @@ export type GameStateSnapshot = {
   agents: Agent[];
   latestRun?: RunResult;
   latestArtifacts?: ArtifactBundle;
+  runHistory?: Partial<Record<1 | 2, RunResult>>;
+  artifactHistory?: Partial<Record<1 | 2, ArtifactBundle>>;
+  clientReviews?: Partial<Record<1 | 2, ClientReview>>;
   runCount: number;
   assignmentLog: AssignmentLogEntry[];
 };

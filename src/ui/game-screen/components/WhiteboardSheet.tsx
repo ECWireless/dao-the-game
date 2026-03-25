@@ -11,7 +11,10 @@ type WhiteboardCandidateOption = {
   roleAffinity: string;
   archetype: string;
   temperamentProfile: string;
-  capabilitySummary: string;
+  stageScoreSummary: string;
+  strengthLabel: string;
+  pairingHint: string;
+  riskLabel: string;
 };
 
 type WhiteboardSheetProps = {
@@ -97,10 +100,17 @@ export function WhiteboardSheet({
                 <span className="whiteboard-candidate-copy">
                   <span className="whiteboard-candidate-name">{candidate.name}</span>
                   <span className="whiteboard-candidate-meta">
-                    {candidate.roleAffinity} • {candidate.temperamentProfile}
+                    {candidate.archetype} • {candidate.roleAffinity}
+                  </span>
+                  <span className="whiteboard-candidate-flags">
+                    <span className="whiteboard-candidate-flag">{candidate.strengthLabel}</span>
+                    <span className="whiteboard-candidate-flag is-muted">{candidate.pairingHint}</span>
                   </span>
                   <span className="whiteboard-candidate-meta">
-                    {candidate.archetype} • {candidate.capabilitySummary}
+                    {candidate.stageScoreSummary}
+                  </span>
+                  <span className="whiteboard-candidate-meta">
+                    {candidate.temperamentProfile} • Watch for: {candidate.riskLabel}
                   </span>
                 </span>
               </button>

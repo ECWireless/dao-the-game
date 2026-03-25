@@ -13,6 +13,23 @@ function InstallWheel() {
   );
 }
 
+export function FactoryGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none">
+      <path
+        d="M5.1 19V9.8c0-.9.7-1.6 1.6-1.6h1.6c.3 0 .5-.2.5-.5V6.4c0-.8.7-1.5 1.5-1.5h1.3c.8 0 1.5.7 1.5 1.5v6.2h1.2V7.4c0-.8.7-1.5 1.5-1.5H17c.8 0 1.5.7 1.5 1.5v2.9c0 .3.3.5.6.5l-.1 8.2H5.1Z"
+        fill="currentColor"
+        opacity="0.98"
+      />
+      <path d="M12.7 19v-5.1h6.3" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.25" />
+      <rect x="14.4" y="12.8" width="1.75" height="1.75" rx="0.18" fill="rgb(242 246 249 / 0.95)" />
+      <rect x="17" y="12.8" width="1.75" height="1.75" rx="0.18" fill="rgb(242 246 249 / 0.95)" />
+      <rect x="14.4" y="15.4" width="1.75" height="1.75" rx="0.18" fill="rgb(242 246 249 / 0.95)" />
+      <rect x="17" y="15.4" width="1.75" height="1.75" rx="0.18" fill="rgb(242 246 249 / 0.95)" />
+    </svg>
+  );
+}
+
 function AppGlyph({ app }: { app: StoryApp }) {
   switch (app) {
     case 'messages':
@@ -49,6 +66,8 @@ function AppGlyph({ app }: { app: StoryApp }) {
       );
     case 'guild':
       return <img src={guildSymbol} alt="" />;
+    case 'factory':
+      return <FactoryGlyph />;
     default:
       return (
         <svg viewBox="0 0 24 24" fill="none">

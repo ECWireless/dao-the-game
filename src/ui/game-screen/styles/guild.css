@@ -213,12 +213,41 @@
   font-weight: 700;
 }
 
+.guild-feed-submeta.is-warning {
+  color: rgb(249 218 167 / 76%);
+}
+
 .guild-feed-text {
   margin-top: 0.14rem;
   color: rgb(249 247 231 / 82%);
   font-family: var(--font-raidguild-body);
   font-size: 0.8rem;
   line-height: 1.42;
+}
+
+.guild-feed-strategy {
+  margin-top: 0.28rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.34rem;
+}
+
+.guild-feed-pill {
+  padding: 0.22rem 0.42rem;
+  border: 1px solid rgb(189 72 45 / 32%);
+  border-radius: 999px;
+  background: rgb(189 72 45 / 12%);
+  color: #f9f7e7;
+  font-family: var(--font-raidguild-body);
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.guild-feed-pill.is-muted {
+  border-color: rgb(249 247 231 / 10%);
+  background: rgb(249 247 231 / 5%);
+  color: rgb(249 247 231 / 74%);
 }
 
 .guild-brief-embed {

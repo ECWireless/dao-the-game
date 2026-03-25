@@ -153,6 +153,18 @@ export type ArtifactBundle = {
   provenance: ArtifactProvenance;
 };
 
+export type ClientReview = {
+  cycle: 1 | 2;
+  outcome: 'rejected' | 'approved';
+  tone: 'fail' | 'success';
+  sender: string;
+  subject: string;
+  notificationTitle: string;
+  notificationPreview: string;
+  inboxPreview: string;
+  body: string[];
+};
+
 export type CostBreakdown = {
   base: number;
   agents: number;

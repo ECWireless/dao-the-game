@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
 import type { OrgTreeRecord } from '../../contracts/org';
-import type { Agent, ArtifactBundle, HatRole, RunResult } from '../../types';
+import type { Agent, ArtifactBundle, ClientReview, HatRole, RunResult } from '../../types';
 import type { ArtifactGenerationProgress, AssignmentLogEntry, ChatLine } from './types';
 import { MessagesScene } from './scenes/CommunicationScenes';
 import { MailScene } from './scenes/MailScenes';
 import { GuildScene } from './scenes/GuildScene';
-import { MachineScene } from './scenes/MachineScene';
+import { FactoryScene } from './scenes/FactoryScene';
 import { WhiteboardScene } from './scenes/WhiteboardScene';
 import {
   HELP_THREAD,
@@ -25,6 +25,8 @@ type SceneContentArgs = {
   assignedActiveRoles: number;
   latestRun?: RunResult;
   latestArtifacts?: ArtifactBundle;
+  runHistory?: Partial<Record<1 | 2, RunResult>>;
+  clientReviews: Partial<Record<1 | 2, ClientReview>>;
   runCount: number;
   runwayAfterRun: number;
   artifactGenerationProgress?: ArtifactGenerationProgress | null;
@@ -38,8 +40,9 @@ type SceneContentArgs = {
   unlockExpandedRoles: () => void;
   assignRole: (roleId: string, agentId: string) => void;
   runProduction: () => Promise<void> | void;
+  submitClientReview: (cycle: 1 | 2) => void;
   resetDemo: () => Promise<void> | void;
-  setIsMachineLocked: (isLocked: boolean) => void;
+  setIsFactoryLocked: (isLocked: boolean) => void;
 };
 
 function getPassiveThread(thread: ChatLine[], draft?: string, isInteractive = true): ChatLine[] {
@@ -100,6 +103,8 @@ export function renderSceneContent({
   assignedActiveRoles,
   latestRun,
   latestArtifacts,
+  runHistory,
+  clientReviews,
   runCount,
   runwayAfterRun,
   artifactGenerationProgress,
@@ -113,8 +118,9 @@ export function renderSceneContent({
   unlockExpandedRoles,
   assignRole,
   runProduction,
+  submitClientReview,
   resetDemo,
-  setIsMachineLocked
+  setIsFactoryLocked
 }: SceneContentArgs): ReactNode {
   const configuredExpandedRoles = activeRoles.filter((role) => role.isConfigured);
   const secondCycleHiringRoles = configuredExpandedRoles.filter(
@@ -249,9 +255,9 @@ export function renderSceneContent({
         />
       );
     }
-    case 'machine-first':
+    case 'factory-first':
       return (
-        <MachineScene
+        <FactoryScene
           studioName={studioName}
           cycle={1}
           roles={activeRoles}
@@ -260,27 +266,30 @@ export function renderSceneContent({
           hasRun={runCount >= 1}
           latestRun={runCount >= 1 ? latestRun : undefined}
           latestArtifacts={runCount >= 1 ? latestArtifacts : undefined}
+          previousRun={undefined}
           artifactGenerationProgress={artifactGenerationProgress}
           artifactGenerationError={runCount >= 1 ? artifactGenerationError : undefined}
           onRetryArtifactGeneration={isInteractive ? retryArtifactGeneration : undefined}
           isRetryingArtifactGeneration={isRetryingArtifactGeneration}
           onRun={isInteractive ? runProduction : undefined}
-          onContinue={isInteractive ? queueCrossAppAdvance : undefined}
-          onLockChange={isInteractive ? setIsMachineLocked : undefined}
+          onContinue={isInteractive ? () => submitClientReview(1) : undefined}
+          onLockChange={isInteractive ? setIsFactoryLocked : undefined}
           isReadOnly={!isInteractive}
         />
       );
     case 'mail-fail':
       return (
         <MailScene
-          tone="fail"
-          from="Lina, Event Director"
-          subject="Re: URGENT rebrand"
-          body={[
-            'I just opened this and my stomach dropped.',
-            'I cannot put this in front of attendees like this, and we are running out of time.',
-            'Please clean this up fast and send me something stronger before I completely lose my mind.'
-          ]}
+          tone={clientReviews[1]?.tone ?? 'fail'}
+          from={clientReviews[1]?.sender ?? 'Lina, Event Director'}
+          subject={clientReviews[1]?.subject ?? 'Re: URGENT rebrand'}
+          body={
+            clientReviews[1]?.body ?? [
+              'I just opened this and my stomach dropped.',
+              'I cannot put this in front of attendees like this, and we are running out of time.',
+              'Please clean this up fast and send me something stronger before I completely lose my mind.'
+            ]
+          }
         />
       );
     case 'messages-pivot':
@@ -340,9 +349,9 @@ export function renderSceneContent({
           isReadOnly={!isInteractive}
         />
       );
-    case 'machine-second':
+    case 'factory-second':
       return (
-        <MachineScene
+        <FactoryScene
           studioName={studioName}
           cycle={2}
           roles={configuredExpandedRoles}
@@ -351,14 +360,32 @@ export function renderSceneContent({
           hasRun={runCount >= 2}
           latestRun={runCount >= 2 ? latestRun : undefined}
           latestArtifacts={runCount >= 2 ? latestArtifacts : undefined}
+          previousRun={runHistory?.[1]}
           artifactGenerationProgress={artifactGenerationProgress}
           artifactGenerationError={runCount >= 2 ? artifactGenerationError : undefined}
           onRetryArtifactGeneration={isInteractive ? retryArtifactGeneration : undefined}
           isRetryingArtifactGeneration={isRetryingArtifactGeneration}
           onRun={isInteractive ? runProduction : undefined}
-          onContinue={isInteractive ? queueCrossAppAdvance : undefined}
-          onLockChange={isInteractive ? setIsMachineLocked : undefined}
+          onContinue={isInteractive ? () => submitClientReview(2) : undefined}
+          onLockChange={isInteractive ? setIsFactoryLocked : undefined}
           isReadOnly={!isInteractive}
+        />
+      );
+    case 'mail-success':
+      return (
+        <MailScene
+          tone={clientReviews[2]?.tone ?? 'success'}
+          from={clientReviews[2]?.sender ?? 'Lina, Event Director'}
+          subject={clientReviews[2]?.subject ?? 'Approved: Relaunch accepted'}
+          body={
+            clientReviews[2]?.body ?? [
+              `This is exactly what we needed, ${studioName || 'team'}.`,
+              'I can finally breathe again. The site looks polished, the experience feels intentional, and I am comfortable putting this in front of attendees.',
+              'Thank you for pulling this off under pressure. I am wiring the $15,000 over ASAP.'
+            ]
+          }
+          actionLabel={isInteractive ? 'Play Again' : undefined}
+          onAction={isInteractive ? () => void resetDemo() : undefined}
         />
       );
     default:

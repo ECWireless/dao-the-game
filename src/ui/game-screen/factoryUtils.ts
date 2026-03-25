@@ -2,7 +2,7 @@ import type { Agent, HatRole, PipelineStageId } from '../../types';
 import { getPipelineStageDefinition, inferPipelineStageId, sortRolesByPipelineStage } from '../../pipeline';
 import { findRaidGuildMember } from './guildData';
 
-export type MachineRoleLane = {
+export type FactoryRoleLane = {
   id: string;
   roleName: string;
   stageId?: PipelineStageId;
@@ -11,10 +11,10 @@ export type MachineRoleLane = {
   operatorMeta: string;
 };
 
-function getOperatorLabel(agent: Agent | undefined, agents: Agent[]): Pick<MachineRoleLane, 'operatorName' | 'operatorMeta'> {
+function getOperatorLabel(agent: Agent | undefined, agents: Agent[]): Pick<FactoryRoleLane, 'operatorName' | 'operatorMeta'> {
   if (!agent) {
     return {
-      operatorName: 'Machine core',
+      operatorName: 'Factory core',
       operatorMeta: 'awaiting contractor'
     };
   }
@@ -34,7 +34,7 @@ function getOperatorLabel(agent: Agent | undefined, agents: Agent[]): Pick<Machi
   };
 }
 
-export function buildMachineRoleLanes(roles: HatRole[], agents: Agent[]): MachineRoleLane[] {
+export function buildFactoryRoleLanes(roles: HatRole[], agents: Agent[]): FactoryRoleLane[] {
   const agentById = new Map(agents.map((agent) => [agent.id, agent]));
 
   return sortRolesByPipelineStage(roles)

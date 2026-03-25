@@ -127,6 +127,80 @@
   line-height: 1.35;
 }
 
+.guild-member-strategy {
+  margin-top: 0.18rem;
+  border: 1px solid rgb(189 72 45 / 18%);
+  border-radius: 0.94rem;
+  padding: 0.7rem;
+  display: grid;
+  gap: 0.38rem;
+  background:
+    linear-gradient(180deg, rgb(189 72 45 / 12%), rgb(83 74 19 / 6%)),
+    rgb(249 247 231 / 2%);
+}
+
+.guild-member-strategy-kicker {
+  margin: 0;
+  color: rgb(249 218 167 / 76%);
+  font-family: var(--font-raidguild-display);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.guild-member-strategy-row {
+  display: grid;
+  gap: 0.14rem;
+}
+
+.guild-member-strategy-row span {
+  color: rgb(249 247 231 / 44%);
+  font-family: var(--font-raidguild-display);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.guild-member-strategy-row strong {
+  color: #f9f7e7;
+  font-family: var(--font-raidguild-body);
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
+.guild-stage-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.42rem;
+}
+
+.guild-stage-tile {
+  border: 1px solid rgb(249 247 231 / 8%);
+  border-radius: 0.84rem;
+  padding: 0.48rem 0.42rem 0.52rem;
+  display: grid;
+  gap: 0.12rem;
+  background: rgb(249 247 231 / 3%);
+}
+
+.guild-stage-tile span {
+  color: rgb(249 247 231 / 48%);
+  font-family: var(--font-raidguild-display);
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.guild-stage-tile strong {
+  color: #f9f7e7;
+  font-family: var(--font-raidguild-brand);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
 .guild-stats {
   margin-top: 0.24rem;
   border: 1px solid rgb(249 247 231 / 6%);

@@ -1,4 +1,4 @@
-.machine-assembly-scene {
+.factory-assembly-scene {
   margin: -0.68rem;
   padding: 0.86rem;
   display: grid;
@@ -12,7 +12,7 @@
   color: #eff6ff;
 }
 
-.machine-assembly-header {
+.factory-assembly-header {
   border: 1px solid rgb(176 208 255 / 12%);
   border-radius: 1rem;
   padding: 0.72rem 0.82rem;
@@ -25,17 +25,17 @@
     rgb(20 29 44 / 88%);
 }
 
-.machine-assembly-kicker,
-.machine-assembly-title,
-.machine-node-kicker,
-.machine-node-title,
-.machine-node-meta,
-.machine-board-hud span {
+.factory-assembly-kicker,
+.factory-assembly-title,
+.factory-node-kicker,
+.factory-node-title,
+.factory-node-meta,
+.factory-board-hud span {
   margin: 0;
 }
 
-.machine-assembly-kicker,
-.machine-node-kicker {
+.factory-assembly-kicker,
+.factory-node-kicker {
   color: rgb(159 203 255 / 62%);
   font-size: 0.64rem;
   font-weight: 700;
@@ -43,7 +43,7 @@
   text-transform: uppercase;
 }
 
-.machine-assembly-title {
+.factory-assembly-title {
   margin-top: 0.12rem;
   color: #f5f8ff;
   font-family: var(--font-display);
@@ -51,7 +51,7 @@
   line-height: 1.08;
 }
 
-.machine-assembly-pill {
+.factory-assembly-pill {
   min-height: 2rem;
   border-radius: 999px;
   padding: 0 0.72rem;
@@ -67,19 +67,19 @@
   background: rgb(255 255 255 / 6%);
 }
 
-.machine-assembly-pill.is-running {
+.factory-assembly-pill.is-running {
   background: linear-gradient(135deg, rgb(44 138 194 / 42%), rgb(67 211 184 / 18%));
   box-shadow: 0 0 1rem rgb(90 207 255 / 12%);
 }
 
-.machine-assembly-pill.is-ready {
+.factory-assembly-pill.is-ready {
   background: linear-gradient(135deg, rgb(58 181 120 / 34%), rgb(28 104 81 / 18%));
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 6%),
     0 0 1rem rgb(88 214 164 / 12%);
 }
 
-.machine-board-shell {
+.factory-board-shell {
   border: 1px solid rgb(176 208 255 / 10%);
   border-radius: 1rem;
   display: grid;
@@ -94,7 +94,7 @@
     inset 0 -1px 0 rgb(0 0 0 / 35%);
 }
 
-.machine-board-viewport {
+.factory-board-viewport {
   position: relative;
   min-height: 0;
   overflow: auto;
@@ -105,20 +105,20 @@
   background: linear-gradient(180deg, rgb(31 41 60 / 72%), rgb(17 23 37 / 82%));
 }
 
-.machine-board-viewport::-webkit-scrollbar {
+.factory-board-viewport::-webkit-scrollbar {
   display: none;
 }
 
-.machine-board-viewport {
+.factory-board-viewport {
   scrollbar-width: none;
 }
 
-.machine-board-viewport.is-dragging {
+.factory-board-viewport.is-dragging {
   cursor: grabbing;
   user-select: none;
 }
 
-.machine-board-canvas {
+.factory-board-canvas {
   position: relative;
   width: 1560px;
   height: 440px;
@@ -129,7 +129,7 @@
     linear-gradient(180deg, rgb(31 41 60 / 20%), rgb(17 23 37 / 28%));
 }
 
-.machine-board-canvas::before {
+.factory-board-canvas::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -140,58 +140,58 @@
   pointer-events: none;
 }
 
-.machine-board-pipes {
+.factory-board-pipes {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
 }
 
-.machine-pipe-shell,
-.machine-pipe-core,
-.machine-pipe-flow {
+.factory-pipe-shell,
+.factory-pipe-core,
+.factory-pipe-flow {
   fill: none;
   stroke-linecap: round;
 }
 
-.machine-pipe-shell {
+.factory-pipe-shell {
   stroke: rgb(6 10 17 / 72%);
   stroke-width: 18;
 }
 
-.machine-pipe-core {
+.factory-pipe-core {
   stroke: rgb(112 138 184 / 38%);
   stroke-width: 10;
 }
 
-.machine-pipe-flow {
+.factory-pipe-flow {
   stroke-width: 4;
   stroke-dasharray: 12 14;
   opacity: 0;
 }
 
-.machine-pipe.is-active .machine-pipe-flow {
+.factory-pipe.is-active .factory-pipe-flow {
   opacity: 1;
   stroke: rgb(122 230 255 / 72%);
   animation: pipeFlow 620ms linear infinite;
 }
 
-.machine-pipe.is-done .machine-pipe-flow {
+.factory-pipe.is-done .factory-pipe-flow {
   opacity: 0.26;
   stroke: rgb(137 226 255 / 32%);
   stroke-dasharray: 10 10;
   animation: none;
 }
 
-.machine-pipe.is-done .machine-pipe-core {
+.factory-pipe.is-done .factory-pipe-core {
   stroke: rgb(103 221 184 / 34%);
 }
 
-.machine-board-shell.is-complete .machine-pipe.is-done .machine-pipe-core {
+.factory-board-shell.is-complete .factory-pipe.is-done .factory-pipe-core {
   stroke: rgb(124 226 197 / 28%);
 }
 
-.machine-node {
+.factory-node {
   position: absolute;
   border: 1px solid rgb(176 208 255 / 14%);
   border-radius: 0.92rem;
@@ -207,62 +207,62 @@
     0 12px 22px rgb(3 8 15 / 24%);
 }
 
-.machine-node-title {
+.factory-node-title {
   color: #f4f8ff;
   font-size: 0.8rem;
   font-weight: 800;
   line-height: 1.12;
 }
 
-.machine-node-meta {
+.factory-node-meta {
   color: rgb(214 228 255 / 52%);
   font-size: 0.65rem;
   line-height: 1.34;
 }
 
-.machine-node-input {
+.factory-node-input {
   width: 150px;
   min-height: 66px;
 }
 
-.machine-node-root {
+.factory-node-root {
   width: 220px;
   min-height: 82px;
 }
 
-.machine-node-role {
+.factory-node-role {
   width: 176px;
   min-height: 56px;
 }
 
-.machine-node-output {
+.factory-node-output {
   width: 170px;
   min-height: 70px;
   font: inherit;
 }
 
-.machine-node.is-active,
-.machine-node.is-processed,
-.machine-node-output.is-ready {
+.factory-node.is-active,
+.factory-node.is-processed,
+.factory-node-output.is-ready {
   border-color: rgb(113 197 255 / 26%);
 }
 
-.machine-node.is-active {
+.factory-node.is-active {
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 4%),
     0 0 0 2px rgb(113 197 255 / 12%),
     0 14px 24px rgb(7 27 56 / 28%);
 }
 
-.machine-node.is-processed {
+.factory-node.is-processed {
   border-color: rgb(91 215 171 / 24%);
 }
 
-.machine-node-output.is-actionable {
+.factory-node-output.is-actionable {
   cursor: pointer;
 }
 
-.machine-node-output.is-ready {
+.factory-node-output.is-ready {
   border-color: rgb(103 221 184 / 34%);
   background:
     linear-gradient(180deg, rgb(58 181 120 / 10%), rgb(255 255 255 / 2%)),
@@ -273,7 +273,7 @@
     0 16px 28px rgb(3 8 15 / 28%);
 }
 
-.machine-board-shell.is-complete .machine-node-output.is-ready {
+.factory-board-shell.is-complete .factory-node-output.is-ready {
   background:
     linear-gradient(180deg, rgb(95 200 154 / 14%), rgb(54 123 107 / 8%)),
     rgb(19 28 42 / 88%);
@@ -284,7 +284,7 @@
     0 16px 28px rgb(3 8 15 / 28%);
 }
 
-.machine-node-output.is-actionable::after {
+.factory-node-output.is-actionable::after {
   content: '';
   position: absolute;
   inset: -0.18rem;
@@ -293,7 +293,7 @@
   animation: outputPulse 900ms ease-in-out infinite alternate;
 }
 
-.machine-node-callout {
+.factory-node-callout {
   margin-top: 0.12rem;
   justify-self: start;
   min-height: 1.5rem;
@@ -310,7 +310,7 @@
   text-transform: uppercase;
 }
 
-.machine-packet {
+.factory-packet {
   position: absolute;
   width: 1.1rem;
   height: 1.1rem;
@@ -322,7 +322,7 @@
     top 560ms cubic-bezier(0.24, 0.84, 0.2, 1);
 }
 
-.machine-packet span {
+.factory-packet span {
   display: block;
   width: 100%;
   height: 100%;
@@ -335,12 +335,12 @@
   transform: scale(var(--packet-scale));
 }
 
-.machine-run-button,
-.machine-submit-button {
+.factory-run-button,
+.factory-submit-button {
   width: 100%;
 }
 
-.machine-board-hud {
+.factory-board-hud {
   min-height: 2.2rem;
   border-top: 1px solid rgb(176 208 255 / 8%);
   padding: 0 0.8rem;
@@ -350,13 +350,13 @@
   gap: 0.7rem;
 }
 
-.machine-board-hud span:first-child {
+.factory-board-hud span:first-child {
   color: #eff6ff;
   font-size: 0.7rem;
   font-weight: 700;
 }
 
-.machine-board-hud span:last-child {
+.factory-board-hud span:last-child {
   flex: 1;
   text-align: right;
   color: rgb(214 228 255 / 54%);
@@ -364,13 +364,13 @@
   line-height: 1.3;
 }
 
-.machine-board-shell.is-complete .machine-board-hud span:last-child {
+.factory-board-shell.is-complete .factory-board-hud span:last-child {
   color: rgb(203 235 224 / 62%);
 }
 
 @media (pointer: coarse) {
-  .machine-board-viewport,
-  .machine-board-viewport.is-dragging {
+  .factory-board-viewport,
+  .factory-board-viewport.is-dragging {
     cursor: default;
   }
 }

@@ -68,6 +68,6 @@ export const PIVOT_THREAD: ChatLine[] = [
   {
     id: 'pivot-d',
     author: 'friend',
-    text: 'same machine, better wiring. patch the tree, hire again, rerun.'
+    text: 'same factory, better wiring. patch the tree, hire again, rerun.'
   }
 ];

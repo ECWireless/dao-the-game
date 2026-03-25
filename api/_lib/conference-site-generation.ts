@@ -235,13 +235,28 @@ function summarizeWorker(agent: Agent, roleName?: string): Record<string, unknow
 }
 
 function buildBaseContext(input: RunArtifactsInput): Record<string, unknown> {
+  const conferenceBrief = input.brief.conferenceSiteSpec;
+
   return {
     cycle: input.cycle,
     studioName: input.studioName?.trim() || 'Ghost Studio',
     clientName: input.brief.clientName,
-    mission: input.brief.mission,
-    requirements: input.brief.requirements,
-    conferenceBrief: input.brief.conferenceSiteSpec ?? null,
+    conferenceBrief: conferenceBrief
+      ? {
+          editionLabel: conferenceBrief.editionLabel,
+          location: conferenceBrief.location,
+          audience: conferenceBrief.audience,
+          positioning: conferenceBrief.positioning,
+          attendeePromise: conferenceBrief.attendeePromise,
+          heroPrimaryCta: conferenceBrief.heroPrimaryCta,
+          heroSecondaryCta: conferenceBrief.heroSecondaryCta,
+          toneKeywords: conferenceBrief.toneKeywords,
+          visualDirection: conferenceBrief.visualDirection,
+          publicGuidance: conferenceBrief.internalRequirements,
+          programPillars: conferenceBrief.programPillars,
+          experienceMoments: conferenceBrief.experienceMoments
+        }
+      : null,
     deploymentProfile: input.result.evaluation
       ? {
           profileTag: input.result.evaluation.profileTag,
@@ -410,7 +425,8 @@ function getDesignSystemPrompt(): string {
     'You must choose a strong design language and commit to it. The available design languages are brutalist, skeuomorphic, editorial, systems, and festival.',
     'Do not choose a safe middle-ground conference aesthetic. The site should visibly belong to this specific worker.',
     'Use the schema to make real structural choices: choose how the hero is composed, how dense the page feels, how panels are treated, how program cards are arranged, and what order the main sections appear in.',
-    'Write for a real conference audience. Never mention internal scores, QA language, pipelines, Hats, workers, or that this text was generated.',
+    'Write for a real conference audience. Never mention internal scores, QA language, pipelines, Hats, workers, authority systems, org charts, automation, deployment cycles, or that this text was generated.',
+    'If the context contains internal production constraints, treat them as private implementation context rather than public-facing website copy.',
     'Your choices should reflect your authored worker identity strongly enough that a different worker would create a visibly different site.',
     'Return only the schema fields.'
   ].join(' ');
@@ -424,7 +440,7 @@ function getImplementationSystemPrompt(): string {
     'Assume the design worker may have chosen an unusual layout or aesthetic; your job is to fill that layout with believable conference information, not generic placeholder prose.',
     'Do not fight the design contract or collapse it back into a generic conference template.',
     'If the design language is extreme, your copy should still be client-believable but it should clearly belong inside that exact interface world.',
-    'Stay grounded, specific, and conference-legible. Never expose internal mechanics or game jargon.',
+    'Stay grounded, specific, and conference-legible. Never expose internal mechanics, org mechanics, role systems, deployment process language, or game jargon.',
     'Let the worker identity shape emphasis and language, but keep the site believable for a real marquee web3 event.',
     'Return only the schema fields.'
   ].join(' ');
@@ -435,7 +451,7 @@ function getReviewSystemPrompt(): string {
     'You are the isolated review worker for a public-facing web3 conference website.',
     'You do not redesign the whole site. You tighten clarity, credibility, and trust while preserving the point of view established earlier.',
     'Preserve the design contract. Do not sand away the intended aesthetic just to make the copy safer.',
-    'Rewrite the provided fields into cleaner public-facing conference copy. Never mention internal tooling, generated artifacts, QA, or client safety.',
+    'Rewrite the provided fields into cleaner public-facing conference copy. Never mention internal tooling, generated artifacts, QA, client safety, org mechanics, or deployment process language.',
     'Return only the schema fields.'
   ].join(' ');
 }
@@ -448,7 +464,7 @@ function getDeploymentSystemPrompt(): string {
     'Return a complete standalone HTML document with inline CSS. Do not rely on any pre-existing renderer, component library, or external stylesheet.',
     'The document should be responsive, public-facing, and believable for a real web3 conference site.',
     'The layout should visibly reflect the design worker choices, not collapse back into a safe generic landing page.',
-    'Do not include script tags, external asset dependencies, placeholder lorem ipsum, internal jargon, or comments explaining the generation process.',
+    'Do not include script tags, external asset dependencies, placeholder lorem ipsum, internal jargon, org mechanics, deployment process language, or comments explaining the generation process.',
     'Return only the schema fields.'
   ].join(' ');
 }
@@ -465,12 +481,18 @@ function getFinalDocumentSystemPrompt(stageId: PipelineStageId): string {
     'Return a complete standalone HTML document with inline CSS. Do not rely on any pre-existing renderer, component library, or external stylesheet.',
     'The document should be responsive, public-facing, and believable for a real web3 conference site.',
     'Keep the site faithful to the aesthetic and structural intent already established instead of collapsing it back into a generic landing page.',
-    'Do not include script tags, placeholder lorem ipsum, internal jargon, or comments explaining the generation process.',
+    'Do not include script tags, placeholder lorem ipsum, internal jargon, org mechanics, deployment process language, or comments explaining the generation process.',
     'Return only the schema fields.'
   ].join(' ');
 }
 
-function buildFallbackContent(artifact: ReturnType<typeof buildConferenceSiteArtifact>): ConferenceSiteGeneratedContent {
+function buildFallbackContent(
+  artifact: ReturnType<typeof buildConferenceSiteArtifact>,
+  conferenceBrief: RunArtifactsInput['brief']['conferenceSiteSpec']
+): ConferenceSiteGeneratedContent {
+  const editionLabel = conferenceBrief?.editionLabel ?? 'March 2027';
+  const location = conferenceBrief?.location ?? 'Denver, Colorado';
+
   return {
     layoutVariant: 'balanced-summit',
     designLanguage: 'editorial',
@@ -484,15 +506,18 @@ function buildFallbackContent(artifact: ReturnType<typeof buildConferenceSiteArt
     headlineFont: 'sans',
     sectionOrder: ['featured', 'program', 'attendance', 'experience'],
     heroHeadline: artifact.siteTitle.replace(/ \/\/ .+$/, ''),
-    heroSubhead: artifact.notes[0] ?? 'A high-signal conference week for builders, operators, and onchain culture.',
-    heroAtmosphere: artifact.notes[1] ?? 'Built for the current deployment cycle.',
+    heroSubhead:
+      conferenceBrief?.positioning ??
+      'A high-signal conference week for builders, operators, researchers, and collectors across the onchain ecosystem.',
+    heroAtmosphere: `${editionLabel} in ${location} brings together practical programming, citywide energy, and a credible public-facing summit identity.`,
     attendeePromise:
-      artifact.notes[0] ??
-      'A high-signal summit for the people building autonomous organizations and public onchain systems.',
+      conferenceBrief?.attendeePromise ??
+      'A high-signal summit for the people shaping the next generation of internet-native organizations and onchain culture.',
     attendeeSectionTitle: 'Why attend',
-    summitThemeTitle: 'The next frontier of autonomous organizations',
+    summitThemeTitle: 'The next frontier of onchain culture and coordination',
     summitThemeCopy:
-      'A web3 conference for the people designing autonomous organizations, shipping onchain products, and shaping the culture around them.',
+      conferenceBrief?.positioning ??
+      'A web3 conference for the people designing internet-native products, shaping community culture, and building the public-facing infrastructure around them.',
     featuredDirectionTitle: 'Featured programming',
     featuredDirectionCopy:
       'Sessions, labs, and side events built to help operators, founders, and researchers coordinate more effectively in public.',
@@ -509,7 +534,7 @@ function buildFallbackContent(artifact: ReturnType<typeof buildConferenceSiteArt
       {
         eyebrow: 'Programming',
         title: 'Summit programming to be announced',
-        summary: 'The final public schedule is being assembled from the current deployment cycle.'
+        summary: 'Speaker reveals, workshop sessions, and citywide programming updates will continue to roll out as the summit approaches.'
       },
       {
         eyebrow: 'Operators',
@@ -534,7 +559,7 @@ function buildFallbackContent(artifact: ReturnType<typeof buildConferenceSiteArt
         summary: 'As the summit shifts into the evening, attendees move through launches, installations, and citywide gatherings.'
       }
     ],
-    footerNote: 'Built for the current deployment cycle'
+    footerNote: 'Programming, venue, and ticket updates continue throughout the season.'
   };
 }
 
@@ -620,7 +645,7 @@ export async function generateConferenceSiteArtifactWithWorkers(
 
   const assignments = getStageAssignments(input);
   const baseContext = buildBaseContext(input);
-  const fallback = buildFallbackContent(deterministicFallback);
+  const fallback = buildFallbackContent(deterministicFallback, input.brief.conferenceSiteSpec);
 
   try {
     const designWorker = assignments.get('design');
