@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { ArtifactGenerationRecovery } from '../../contracts/gameState';
 import type { OrgTreeRecord } from '../../contracts/org';
 import { TUTORIAL_BRIEF } from '../../levels/tutorial';
 import type { Agent, ArtifactBundle, ClientReview, HatRole, RunResult } from '../../types';
@@ -32,6 +33,7 @@ type SceneContentArgs = {
   runwayAfterRun: number;
   artifactGenerationProgress?: ArtifactGenerationProgress | null;
   artifactGenerationError?: string | null;
+  artifactGenerationRecovery?: ArtifactGenerationRecovery | null;
   retryArtifactGeneration?: () => Promise<void> | void;
   isRetryingArtifactGeneration?: boolean;
   advanceStory: () => void;
@@ -110,6 +112,7 @@ export function renderSceneContent({
   runwayAfterRun,
   artifactGenerationProgress,
   artifactGenerationError,
+  artifactGenerationRecovery,
   retryArtifactGeneration,
   isRetryingArtifactGeneration = false,
   advanceStory,
@@ -271,6 +274,7 @@ export function renderSceneContent({
           previousRun={undefined}
           artifactGenerationProgress={artifactGenerationProgress}
           artifactGenerationError={runCount >= 1 ? artifactGenerationError : undefined}
+          artifactGenerationRecovery={runCount >= 1 ? artifactGenerationRecovery : undefined}
           onRetryArtifactGeneration={isInteractive ? retryArtifactGeneration : undefined}
           isRetryingArtifactGeneration={isRetryingArtifactGeneration}
           onRun={isInteractive ? runProduction : undefined}
@@ -366,6 +370,7 @@ export function renderSceneContent({
           previousRun={runHistory?.[1]}
           artifactGenerationProgress={artifactGenerationProgress}
           artifactGenerationError={runCount >= 2 ? artifactGenerationError : undefined}
+          artifactGenerationRecovery={runCount >= 2 ? artifactGenerationRecovery : undefined}
           onRetryArtifactGeneration={isInteractive ? retryArtifactGeneration : undefined}
           isRetryingArtifactGeneration={isRetryingArtifactGeneration}
           onRun={isInteractive ? runProduction : undefined}

@@ -276,6 +276,31 @@ describe('gameStore narrative run shaping', () => {
     expect(stored.state.unlockedRoleCount).toBe(4);
   });
 
+  it('persists artifact generation recovery so interrupted builds can be retried after refresh', () => {
+    const state = useGameStore.getState();
+
+    state.setArtifactGenerationRecovery({
+      cycle: 1,
+      status: 'pending',
+      lastKnownPhase: 'worker',
+      lastKnownStageId: 'review',
+      lastKnownWorkerName: 'Sable Quill'
+    });
+
+    const snapshot = buildGameStateSnapshot(useGameStore.getState());
+    const raw = localStorage.getItem('dao-the-game:state:v3');
+    const stored = JSON.parse(raw ?? '{}');
+
+    expect(snapshot.artifactGenerationRecovery).toEqual({
+      cycle: 1,
+      status: 'pending',
+      lastKnownPhase: 'worker',
+      lastKnownStageId: 'review',
+      lastKnownWorkerName: 'Sable Quill'
+    });
+    expect(stored.state.artifactGenerationRecovery).toEqual(snapshot.artifactGenerationRecovery);
+  });
+
   it('migrates older persisted shapes by clamping and normalizing player-scoped state', async () => {
     const migrate = useGameStore.persist.getOptions().migrate;
 

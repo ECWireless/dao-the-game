@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import type { ArtifactGenerationRecovery } from '../../../contracts/gameState';
 import { hasPipelineStage } from '../../../pipeline';
 import type { Agent, ArtifactBundle, Brief, HatRole, RunResult } from '../../../types';
 import type { ArtifactGenerationProgress } from '../types';
@@ -20,6 +21,7 @@ type FactorySceneProps = {
   previousRun?: RunResult;
   artifactGenerationProgress?: ArtifactGenerationProgress | null;
   artifactGenerationError?: string | null;
+  artifactGenerationRecovery?: ArtifactGenerationRecovery | null;
   onRetryArtifactGeneration?: () => void | Promise<void>;
   isRetryingArtifactGeneration?: boolean;
   onRun?: () => void | Promise<void>;
@@ -56,6 +58,7 @@ export function FactoryScene({
   previousRun,
   artifactGenerationProgress = null,
   artifactGenerationError = null,
+  artifactGenerationRecovery = null,
   onRetryArtifactGeneration,
   isRetryingArtifactGeneration = false,
   onRun,
@@ -78,9 +81,16 @@ export function FactoryScene({
   const hasDesigner = hasPipelineStage(roles, 'design');
   const hasReviewer = hasPipelineStage(roles, 'review');
   const hasDeploymentRole = hasPipelineStage(roles, 'deployment');
+  const isRecoveryInterrupted = artifactGenerationRecovery?.status === 'pending';
   const deploymentTone = !hasDesigner || !hasReviewer ? 'rough' : 'polished';
   const isPipelineRunning = isRunning || Boolean(artifactGenerationProgress);
-  const heroTitle = latestArtifacts?.siteTitle ?? (artifactGenerationError ? 'Assembly failed' : 'Pending deployable');
+  const heroTitle =
+    latestArtifacts?.siteTitle ??
+    (isRecoveryInterrupted
+      ? 'Assembly interrupted'
+      : artifactGenerationError
+        ? 'Assembly failed'
+        : 'Pending deployable');
   const heroUrl =
     latestArtifacts?.publicUrl ??
     (latestArtifacts?.cid
@@ -147,8 +157,30 @@ export function FactoryScene({
         : 1;
   const packetPosition = packetStops[safePacketIndex] ?? packetStops[0];
   const packetEnergy = packetStops.length > 1 ? 0.4 + safePacketIndex / (packetStops.length - 1) * 0.8 : 0.7;
+  const isMissingOutput = hasRun && !isPipelineRunning && !latestArtifacts;
   const isOutputReady = hasRun && !isPipelineRunning && Boolean(latestArtifacts);
-  const isOutputErrored = hasRun && !isPipelineRunning && !latestArtifacts && Boolean(artifactGenerationError);
+  const isOutputErrored = isMissingOutput && (Boolean(artifactGenerationError) || !isReadOnly);
+  const hasRecoverableOutput =
+    hasRun &&
+    !isPipelineRunning &&
+    (!latestArtifacts || Boolean(artifactGenerationRecovery)) &&
+    Boolean(onRetryArtifactGeneration) &&
+    !isReadOnly;
+  const recoveryActionLabel =
+    artifactGenerationRecovery?.status === 'pending' ? 'Re-run assembly' : 'Retry assembly';
+  const recoveryHeading =
+    artifactGenerationRecovery?.status === 'pending'
+      ? 'Assembly interrupted'
+      : !latestArtifacts && !artifactGenerationError
+        ? 'Output missing'
+        : 'Assembly failed';
+  const recoveryDetail =
+    artifactGenerationError ??
+    (artifactGenerationRecovery?.status === 'pending'
+      ? 'The build was interrupted before the site reached the output node.'
+      : !latestArtifacts
+        ? 'The output is missing for this completed cycle. Re-run the assembly to restore it.'
+        : 'Assembly failed before a public-facing site could be routed to the output node.');
   const openTrace = openTraceStageId ? workerTraceByStageId.get(openTraceStageId) ?? null : null;
   const packetStyle = {
     left: `${packetPosition.x}px`,
@@ -158,7 +190,7 @@ export function FactoryScene({
   } as CSSProperties;
   const statusLabel = isPipelineRunning
     ? artifactGenerationProgress?.phase === 'worker'
-      ? `${roleNodes[activeGenerationRoleIndex]?.stageLabel ?? roleNodes[activeGenerationRoleIndex]?.roleName ?? 'Worker'} generating`
+      ? `${roleNodes[activeGenerationRoleIndex]?.stageLabel ?? roleNodes[activeGenerationRoleIndex]?.roleName ?? 'Worker'} assembling`
       : artifactGenerationProgress?.phase === 'publishing'
         ? 'Publishing deploy'
         : safePacketIndex === 0
@@ -167,8 +199,10 @@ export function FactoryScene({
             ? 'Root node shaping request'
             : `${roleNodes[safePacketIndex - 2]?.stageLabel ?? roleNodes[safePacketIndex - 2]?.roleName ?? 'Stage'} processing`
     : hasRun
-      ? artifactGenerationError
-        ? 'Assembly failed'
+      ? isRecoveryInterrupted
+        ? 'Assembly interrupted'
+        : artifactGenerationError
+          ? 'Assembly failed'
         : latestPipeline
           ? latestRun?.passed
             ? `${latestPipeline.coveredStageCount}/${latestPipeline.order.length} stages stabilized`
@@ -238,23 +272,23 @@ export function FactoryScene({
   } = usePannableViewport(centerViewport);
 
   useEffect(() => {
-    onLockChange?.(isRunning);
+    onLockChange?.(isPipelineRunning);
 
     return () => {
       onLockChange?.(false);
     };
-  }, [isRunning, onLockChange]);
+  }, [isPipelineRunning, onLockChange]);
 
   useEffect(() => {
-    if (isRunning) {
+    if (isPipelineRunning) {
       return;
     }
 
     setPacketIndex(hasRun ? lastPacketIndex : 0);
-  }, [hasRun, isRunning, lastPacketIndex]);
+  }, [hasRun, isPipelineRunning, lastPacketIndex]);
 
   useEffect(() => {
-    if (!isRunning || isReadOnly) {
+    if (!isPipelineRunning || isReadOnly) {
       return;
     }
 
@@ -271,7 +305,7 @@ export function FactoryScene({
     return () => {
       window.clearInterval(timer);
     };
-  }, [isReadOnly, isRunning, runningTargetPacketIndex]);
+  }, [isPipelineRunning, isReadOnly, runningTargetPacketIndex]);
 
   useEffect(() => {
     if (!isRunning || isReadOnly || !onRun) {
@@ -373,16 +407,71 @@ export function FactoryScene({
     setOpenTraceStageId(null);
   }, [isPipelineRunning]);
 
+  useEffect(() => {
+    if (artifactGenerationProgress?.phase !== 'starting') {
+      return;
+    }
+
+    hasSettledOnOutputRef.current = false;
+    setIsPreviewVisible(false);
+    setIsRequirementsVisible(false);
+    setOpenTraceStageId(null);
+    setPacketIndex(0);
+
+    const frame = window.requestAnimationFrame(() => {
+      focusViewportOnPoint(
+        sourceNode.x + sourceNode.width / 2,
+        sourceNode.y + sourceNode.height / 2,
+        'auto'
+      );
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [
+    artifactGenerationProgress?.phase,
+    focusViewportOnPoint,
+    sourceNode.height,
+    sourceNode.width,
+    sourceNode.x,
+    sourceNode.y
+  ]);
+
+  const handleRetryGeneration = useCallback(async () => {
+    hasSettledOnOutputRef.current = false;
+    setIsPreviewVisible(false);
+    setIsRequirementsVisible(false);
+    setOpenTraceStageId(null);
+    setPacketIndex(0);
+
+    await onRetryArtifactGeneration?.();
+  }, [onRetryArtifactGeneration]);
+
   return (
     <section className="scene-body factory-assembly-scene">
       <section className="factory-assembly-header">
-        <div>
+        {isPreviewVisible ? (
+          <div className="factory-assembly-actions">
+            <button className="factory-assembly-close" type="button" onClick={() => setIsPreviewVisible(false)}>
+              <svg viewBox="0 0 12 12" aria-hidden="true" focusable="false">
+                <path
+                  d="M7.75 2.25 4 6l3.75 3.75"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="1.5"
+                />
+              </svg>
+              <span>Back to Assembly</span>
+            </button>
+          </div>
+        ) : null}
+        <div className="factory-assembly-copy">
           <p className="factory-assembly-kicker">Factory • cycle {cycle}</p>
           <h2 className="factory-assembly-title">{studioName || 'Unnamed Studio'} assembly line</h2>
         </div>
-        <span className={`factory-assembly-pill ${isRunning ? 'is-running' : hasRun ? 'is-ready' : 'is-armed'}`}>
-          {isRunning ? 'Deploying' : hasRun ? 'Creation Ready' : 'Armed'}
-        </span>
       </section>
 
       <section className={`factory-board-shell ${isOutputReady ? 'is-complete' : ''}`}>
@@ -397,7 +486,7 @@ export function FactoryScene({
           <div className="factory-board-canvas" aria-label="Factory assembly tree">
             <svg className="factory-board-pipes" viewBox="0 0 1560 440" aria-hidden="true">
               {pipeSegments.map((segment, index) => {
-                const segmentState = isRunning
+                const segmentState = isPipelineRunning
                   ? safePacketIndex > index + 1
                     ? 'done'
                     : safePacketIndex === index + 1
@@ -444,7 +533,7 @@ export function FactoryScene({
             </div>
 
             {roleNodes.map((node, index) => {
-              const nodeState = isRunning
+              const nodeState = isPipelineRunning
                 ? safePacketIndex > index + 2
                   ? 'is-processed'
                   : safePacketIndex === index + 2
@@ -494,7 +583,9 @@ export function FactoryScene({
                     ? 'Preview Loaded'
                     : 'Preview Ready'
                   : isOutputErrored
-                    ? 'Generation failed'
+                    ? isRecoveryInterrupted
+                      ? 'Assembly interrupted'
+                      : 'Assembly failed'
                   : artifactGenerationProgress?.phase === 'publishing'
                     ? 'Publishing...'
                     : isPipelineRunning
@@ -505,7 +596,9 @@ export function FactoryScene({
                 {isOutputReady
                   ? 'Open the deployed site preview'
                   : isOutputErrored
-                    ? 'Open the error state and retry generation'
+                    ? isRecoveryInterrupted
+                      ? 'Open the interruption state and re-run assembly'
+                      : 'Open the error state and retry assembly'
                     : 'Finished builds land here'}
               </span>
               {isOutputReady || isOutputErrored ? (
@@ -514,7 +607,9 @@ export function FactoryScene({
                     ? isPreviewVisible
                       ? 'Preview open'
                       : 'Open deploy'
-                    : 'Retry'}
+                    : isRecoveryInterrupted
+                      ? 'Recover'
+                      : 'Retry'}
                 </span>
               ) : null}
             </button>
@@ -531,7 +626,7 @@ export function FactoryScene({
         <button
           className="primary-action factory-run-button"
           type="button"
-          disabled={!canRun || isRunning || !onRun}
+          disabled={!canRun || isPipelineRunning || !onRun}
           onClick={() => {
             hasTriggeredRunRef.current = false;
             setIsPreviewVisible(false);
@@ -543,6 +638,23 @@ export function FactoryScene({
         </button>
       ) : null}
 
+      {hasRecoverableOutput && !isPreviewVisible ? (
+        <section className="factory-recovery-banner">
+          <div className="factory-recovery-copy">
+            <p className="factory-recovery-kicker">{recoveryHeading}</p>
+            <p>{recoveryDetail}</p>
+          </div>
+          <button
+            className="primary-action factory-recovery-button"
+            type="button"
+            onClick={() => void handleRetryGeneration()}
+            disabled={isRetryingArtifactGeneration}
+          >
+            {isRetryingArtifactGeneration ? 'Rerouting...' : recoveryActionLabel}
+          </button>
+        </section>
+      ) : null}
+
       {isPreviewVisible && hasRun ? (
         <FactoryPreview
           deploymentTone={deploymentTone}
@@ -552,10 +664,11 @@ export function FactoryScene({
           latestRun={latestRun}
           latestArtifacts={latestArtifacts}
           previousRun={previousRun}
-          generationError={artifactGenerationError}
+          generationError={artifactGenerationError ?? (hasRecoverableOutput ? recoveryDetail : null)}
+          recoveryStatus={artifactGenerationRecovery?.status ?? null}
           capabilityGaps={capabilityGaps}
           isReadOnly={isReadOnly}
-          onRetryGeneration={onRetryArtifactGeneration}
+          onRetryGeneration={handleRetryGeneration}
           isRetryingGeneration={isRetryingArtifactGeneration}
           onContinue={onContinue}
         />

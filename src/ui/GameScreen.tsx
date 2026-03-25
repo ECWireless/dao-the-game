@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ArtifactGenerationRecovery } from '../contracts/gameState';
 import type { OrgTreeRecord } from '../contracts/org';
 import { getScene, type StoryApp } from '../levels/story';
 import { countAssignedRoles, estimateRunwayAfterRun, getActiveRoles, useGameStore } from '../state/gameStore';
@@ -33,6 +34,7 @@ type GameScreenProps = {
   orgTree?: OrgTreeRecord | null;
   artifactGenerationProgress?: ArtifactGenerationProgress | null;
   artifactGenerationError?: string | null;
+  artifactGenerationRecovery?: ArtifactGenerationRecovery | null;
   onRetryArtifactGeneration?: () => Promise<void> | void;
   isRetryingArtifactGeneration?: boolean;
   onSetStudioName?: (name: string) => Promise<void> | void;
@@ -49,6 +51,7 @@ export default function GameScreen({
   orgTree = null,
   artifactGenerationProgress = null,
   artifactGenerationError = null,
+  artifactGenerationRecovery = null,
   onRetryArtifactGeneration,
   isRetryingArtifactGeneration = false,
   onSetStudioName,
@@ -449,6 +452,7 @@ export default function GameScreen({
         runwayAfterRun,
         artifactGenerationProgress,
         artifactGenerationError,
+        artifactGenerationRecovery,
         retryArtifactGeneration: onRetryArtifactGeneration,
         isRetryingArtifactGeneration,
         advanceStory,

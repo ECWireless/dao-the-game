@@ -20,6 +20,7 @@ type FactoryPreviewProps = {
   latestArtifacts?: ArtifactBundle;
   previousRun?: RunResult;
   generationError?: string | null;
+  recoveryStatus?: 'pending' | 'failed' | null;
   capabilityGaps: string[];
   isReadOnly?: boolean;
   onRetryGeneration?: () => void | Promise<void>;
@@ -36,6 +37,7 @@ export function FactoryPreview({
   latestArtifacts,
   previousRun,
   generationError = null,
+  recoveryStatus = null,
   capabilityGaps,
   isReadOnly = false,
   onRetryGeneration,
@@ -63,15 +65,10 @@ export function FactoryPreview({
   return (
     <article className={`deployment-cassette is-ejected is-${deploymentTone}`}>
       <div className="deployment-topline">
-        <div>
+        <div className="deployment-title-block">
           <p className="deployment-kicker">Deployment cassette</p>
           <h3>{heroTitle}</h3>
         </div>
-        {latestRun ? (
-          <span className={`deployment-health ${latestRun.passed ? 'is-pass' : 'is-fail'}`}>
-            {latestRun.passed ? 'Ready to Submit' : 'Needs Internal Fixes'}
-          </span>
-        ) : null}
       </div>
 
       <div className="deployment-preview-shell">
@@ -108,7 +105,7 @@ export function FactoryPreview({
             </>
           ) : generationError ? (
             <div className="deployment-frame deployment-frame-placeholder">
-              <p>Artifact generation failed</p>
+              <p>{recoveryStatus === 'pending' ? 'Assembly interrupted' : 'Assembly failed'}</p>
               <strong>{generationError}</strong>
               {!isReadOnly && onRetryGeneration ? (
                 <button
@@ -117,7 +114,11 @@ export function FactoryPreview({
                   onClick={() => void onRetryGeneration()}
                   disabled={isRetryingGeneration}
                 >
-                  {isRetryingGeneration ? 'Retrying...' : 'Retry generation'}
+                  {isRetryingGeneration
+                    ? 'Retrying...'
+                    : recoveryStatus === 'pending'
+                      ? 'Re-run assembly'
+                      : 'Retry assembly'}
                 </button>
               ) : null}
             </div>
