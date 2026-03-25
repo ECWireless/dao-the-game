@@ -13,24 +13,20 @@ describe('generateStartingAgents', () => {
   it('returns the authored worker roster with stable ids and blueprint data', () => {
     const agents = generateStartingAgents(33);
 
-    expect(agents).toHaveLength(10);
+    expect(agents).toHaveLength(6);
     expect(agents.map((agent) => agent.id).sort()).toEqual([
       'agent-01',
       'agent-02',
       'agent-03',
       'agent-04',
       'agent-05',
-      'agent-06',
-      'agent-07',
-      'agent-08',
-      'agent-09',
-      'agent-10'
+      'agent-06'
     ]);
 
     for (const agent of agents) {
       expect(agent.name.length).toBeGreaterThan(0);
       expect(agent.handle.length).toBeGreaterThan(0);
-      expect(agent.archetype.length).toBeGreaterThan(0);
+      expect(agent.specialty.length).toBeGreaterThan(0);
       expect(agent.traits.length).toBeGreaterThanOrEqual(3);
       expect(agent.contractCost).toBeGreaterThanOrEqual(12);
       expect(agent.capabilityVector.design).toBeGreaterThanOrEqual(0);

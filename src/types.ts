@@ -50,12 +50,18 @@ export type WorkerTemperament = {
   teamwork: number;
 };
 
+export type WorkerPlayerGuidance = {
+  strengthLabel?: string;
+  pairingHint?: string;
+  riskLabel?: string;
+  shortPitch?: string;
+};
+
 export type Agent = {
   id: string;
   name: string;
   handle: string;
-  title: string;
-  archetype: string;
+  specialty: string;
   roleAffinity: string;
   capabilityVector: CapabilityVector;
   styleProfile: WorkerStyleProfile;
@@ -65,6 +71,7 @@ export type Agent = {
   accent: string;
   shadow: string;
   contractCost: number;
+  playerGuidance?: WorkerPlayerGuidance;
 };
 
 export type HatRole = {
@@ -123,7 +130,7 @@ export type ArtifactContributor = {
   roleId?: string;
   roleName?: string;
   stageId?: PipelineStageId;
-  archetype: string;
+  specialty: string;
   traits: string[];
 };
 

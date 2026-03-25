@@ -8,7 +8,7 @@ import { simulateRun } from '../simulateRun';
 const roles: HatRole[] = [
   {
     id: 'hat-01',
-    name: 'Builder Agent',
+    name: 'Frontend Engineer',
     assignedAgentId: 'agent-01',
     pipelineStageId: 'implementation',
     isConfigured: true
@@ -16,21 +16,21 @@ const roles: HatRole[] = [
   {
     id: 'hat-02',
     name: 'Designer Agent',
-    assignedAgentId: 'agent-02',
+    assignedAgentId: 'agent-03',
     pipelineStageId: 'design',
     isConfigured: true
   },
   {
     id: 'hat-03',
     name: 'Reviewer Agent',
-    assignedAgentId: 'agent-04',
+    assignedAgentId: 'agent-05',
     pipelineStageId: 'review',
     isConfigured: true
   },
   {
     id: 'hat-04',
     name: 'Deployment Agent',
-    assignedAgentId: 'agent-05',
+    assignedAgentId: 'agent-06',
     pipelineStageId: 'deployment',
     isConfigured: true
   }
@@ -117,7 +117,7 @@ describe('generateArtifacts', () => {
       roles: [
         {
           id: 'hat-01',
-          name: 'Builder Agent',
+          name: 'Frontend Engineer',
           assignedAgentId: 'agent-01',
           pipelineStageId: 'implementation',
           isConfigured: true
@@ -128,8 +128,8 @@ describe('generateArtifacts', () => {
       roles: [
         {
           id: 'hat-01',
-          name: 'Builder Agent',
-          assignedAgentId: 'agent-06',
+          name: 'Frontend Engineer',
+          assignedAgentId: 'agent-02',
           pipelineStageId: 'implementation',
           isConfigured: true
         }

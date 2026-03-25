@@ -63,7 +63,7 @@ export const PIVOT_THREAD: ChatLine[] = [
   {
     id: 'pivot-c',
     author: 'friend',
-    text: 'of course. your graph is starving. add Designer, Reviewer, and Deployment.'
+    text: 'of course. your graph is starving. add Designer and Reviewer.'
   },
   {
     id: 'pivot-d',

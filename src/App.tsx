@@ -575,7 +575,7 @@ export default function App({
           phase: 'worker',
           stageId: event.stageId,
           workerName: event.workerName,
-          workerTitle: event.workerTitle,
+          workerSpecialty: event.workerSpecialty,
           note: event.note
         });
         return;

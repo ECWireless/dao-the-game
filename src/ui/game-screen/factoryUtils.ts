@@ -24,13 +24,13 @@ function getOperatorLabel(agent: Agent | undefined, agents: Agent[]): Pick<Facto
   if (member) {
     return {
       operatorName: member.name,
-      operatorMeta: member.title
+      operatorMeta: member.roleAffinity ?? agent.roleAffinity
     };
   }
 
   return {
     operatorName: agent.id,
-    operatorMeta: agent.roleAffinity.toLowerCase()
+    operatorMeta: agent.roleAffinity
   };
 }
 

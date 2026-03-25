@@ -75,11 +75,15 @@
 
 .guild-member-card {
   width: 100%;
+  max-height: calc(100% - 1.44rem);
   border: 1px solid rgb(249 247 231 / 8%);
   border-radius: 1rem;
   padding: 0.82rem;
   display: grid;
   gap: 0.42rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   background:
     linear-gradient(180deg, rgb(26 14 10 / 96%), rgb(17 10 8 / 98%)),
     #120a08;
@@ -106,7 +110,7 @@
 
 .guild-member-name,
 .guild-member-handle,
-.guild-member-title,
+.guild-member-focus,
 .guild-member-note {
   margin: 0;
 }
@@ -119,12 +123,16 @@
 }
 
 .guild-member-handle,
-.guild-member-title,
+.guild-member-focus,
 .guild-member-note {
   color: rgb(249 247 231 / 64%);
   font-family: var(--font-raidguild-body);
   font-size: 0.72rem;
   line-height: 1.35;
+}
+
+.guild-member-focus {
+  color: rgb(249 218 167 / 78%);
 }
 
 .guild-member-strategy {
@@ -211,9 +219,7 @@
 
 .guild-stat-row {
   padding: 0.54rem 0.66rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
   gap: 0.5rem;
   border-top: 1px solid rgb(249 247 231 / 5%);
 }
@@ -235,4 +241,5 @@
   color: #f9f7e7;
   font-family: var(--font-raidguild-body);
   font-size: 0.74rem;
+  line-height: 1.4;
 }

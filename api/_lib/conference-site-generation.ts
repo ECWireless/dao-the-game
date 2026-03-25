@@ -222,15 +222,16 @@ function summarizeWorker(agent: Agent, roleName?: string): Record<string, unknow
   return {
     name: agent.name,
     handle: agent.handle,
-    title: agent.title,
-    archetype: agent.archetype,
+    specialty: agent.specialty,
     roleAffinity: agent.roleAffinity,
     assignedRole: roleName ?? null,
     traits: agent.traits,
     styleProfile: agent.styleProfile,
     temperament: agent.temperament,
     capabilityVector: agent.capabilityVector,
-    bio: agent.bio
+    bio: agent.bio,
+    accent: agent.accent,
+    shadow: agent.shadow
   };
 }
 
@@ -340,12 +341,12 @@ async function runStructuredWorker<TSchema extends z.ZodTypeAny>({
   sink?: GenerationEventSink;
 }): Promise<WorkerRunResult<TSchema>> {
   await sink?.({
-    type: 'worker-start',
-    stageId: assignment.stageId,
-    workerName: assignment.agent.name,
-    workerTitle: assignment.agent.title,
-    note: getStageWorkerNote(assignment.stageId, assignment.agent.name)
-  });
+      type: 'worker-start',
+      stageId: assignment.stageId,
+      workerName: assignment.agent.name,
+      workerSpecialty: assignment.agent.specialty,
+      note: getStageWorkerNote(assignment.stageId, assignment.agent.name)
+    });
 
   try {
     const response = await client.responses.parse({
@@ -373,7 +374,7 @@ async function runStructuredWorker<TSchema extends z.ZodTypeAny>({
       type: 'worker-output',
       stageId: assignment.stageId,
       workerName: assignment.agent.name,
-      workerTitle: assignment.agent.title,
+      workerSpecialty: assignment.agent.specialty,
       output: shouldDebugWorkers ? ((output as Record<string, unknown> | null) ?? null) : null,
       rawOutputText: shouldDebugWorkers ? rawOutputText : undefined,
       usedFallback,
@@ -398,7 +399,7 @@ async function runStructuredWorker<TSchema extends z.ZodTypeAny>({
       type: 'worker-output',
       stageId: assignment.stageId,
       workerName: assignment.agent.name,
-      workerTitle: assignment.agent.title,
+      workerSpecialty: assignment.agent.specialty,
       output: null,
       rawOutputText: shouldDebugWorkers ? null : undefined,
       usedFallback: true,

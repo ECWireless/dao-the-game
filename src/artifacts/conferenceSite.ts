@@ -327,7 +327,7 @@ function buildContributors(
       roleId: stage.roleId,
       roleName: stage.roleName,
       stageId: stage.id,
-      archetype: agent.archetype,
+      specialty: agent.specialty,
       traits: agent.traits
     });
   }
@@ -350,7 +350,7 @@ function buildContributors(
       roleId: role.id,
       roleName: role.name,
       stageId: role.pipelineStageId,
-      archetype: agent.archetype,
+      specialty: agent.specialty,
       traits: agent.traits
     });
   }
@@ -470,7 +470,7 @@ function buildWorkerInfluence(leadAgent: Agent | null): WorkerInfluence {
   }
 
   const blueprint = [
-    leadAgent.archetype,
+    leadAgent.specialty,
     leadAgent.roleAffinity,
     ...leadAgent.traits,
     leadAgent.styleProfile.signature,
@@ -479,7 +479,7 @@ function buildWorkerInfluence(leadAgent: Agent | null): WorkerInfluence {
     .join(' ')
     .toLowerCase();
 
-  if (blueprint.includes('minimalist') || blueprint.includes('systems shipwright')) {
+  if (blueprint.includes('minimalist') || blueprint.includes('design-faithful closer')) {
     return {
       variant: 'minimal',
       accent: leadAgent.accent,
@@ -495,7 +495,7 @@ function buildWorkerInfluence(leadAgent: Agent | null): WorkerInfluence {
     };
   }
 
-  if (blueprint.includes('architecture first') || blueprint.includes('systems architect')) {
+  if (blueprint.includes('architecture first') || blueprint.includes('systems-first builder')) {
     return {
       variant: 'systems',
       accent: leadAgent.accent,

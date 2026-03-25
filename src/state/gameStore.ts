@@ -19,7 +19,7 @@ import type {
   ScoreBreakdown
 } from '../types';
 
-const GAME_STATE_STORAGE_KEY = 'dao-the-game:state:v2';
+const GAME_STATE_STORAGE_KEY = 'dao-the-game:state:v3';
 const FIRST_CYCLE_ROLE_COUNT = 1;
 const DEFAULT_STUDIO_NAME = '';
 

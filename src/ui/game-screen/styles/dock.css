@@ -61,6 +61,8 @@
 }
 
 .dock-icon {
+  --dock-glyph-detail: rgb(255 255 255 / 0.9);
+  --dock-glyph-soft: rgb(255 255 255 / 0.2);
   width: 2.34rem;
   height: 2.34rem;
   border-radius: 0.78rem;
@@ -103,11 +105,14 @@
 }
 
 .dock-icon-mail {
+  --dock-glyph-detail: rgb(111 78 35 / 0.96);
   border-radius: 0.72rem 0.92rem 0.72rem 0.92rem;
   background: linear-gradient(160deg, #ffd37b, #ff9e4d 66%, #ff7a3d);
 }
 
 .dock-icon-whiteboard {
+  --dock-glyph-detail: rgb(33 101 70 / 0.94);
+  --dock-glyph-soft: rgb(255 255 255 / 0.92);
   border-radius: 0.92rem 0.72rem 0.92rem 0.72rem;
   background: linear-gradient(160deg, #6fe0a7, #2dbf77 64%, #1f9c60);
 }

@@ -48,7 +48,7 @@ function AppGlyph({ app }: { app: StoryApp }) {
           <rect x="4.5" y="6.5" width="15" height="11" rx="2.2" fill="currentColor" opacity="0.92" />
           <path
             d="m6.4 8.4 5.1 4.1a.8.8 0 0 0 1 0l5.1-4.1"
-            stroke="rgb(255 255 255 / 0.86)"
+            stroke="var(--dock-glyph-detail)"
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeWidth="1.6"
@@ -58,10 +58,10 @@ function AppGlyph({ app }: { app: StoryApp }) {
     case 'whiteboard':
       return (
         <svg viewBox="0 0 24 24" fill="none">
-          <rect x="5" y="5.5" width="14" height="13" rx="2.2" fill="currentColor" opacity="0.18" />
-          <rect x="7" y="8" width="10" height="1.6" rx="0.8" fill="currentColor" />
-          <rect x="7" y="11.2" width="7" height="1.6" rx="0.8" fill="currentColor" />
-          <rect x="7" y="14.4" width="8.4" height="1.6" rx="0.8" fill="currentColor" />
+          <rect x="5" y="5.5" width="14" height="13" rx="2.2" fill="var(--dock-glyph-soft)" />
+          <rect x="7" y="8" width="10" height="1.6" rx="0.8" fill="var(--dock-glyph-detail)" />
+          <rect x="7" y="11.2" width="7" height="1.6" rx="0.8" fill="var(--dock-glyph-detail)" />
+          <rect x="7" y="14.4" width="8.4" height="1.6" rx="0.8" fill="var(--dock-glyph-detail)" />
         </svg>
       );
     case 'guild':

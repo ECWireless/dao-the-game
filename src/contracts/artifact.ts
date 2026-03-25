@@ -20,14 +20,14 @@ export type ArtifactDeployEvent =
       type: 'worker-start';
       stageId: PipelineStageId;
       workerName: string;
-      workerTitle: string;
+      workerSpecialty: string;
       note: string;
     }
   | {
       type: 'worker-output';
       stageId: PipelineStageId;
       workerName: string;
-      workerTitle: string;
+      workerSpecialty: string;
       output: Record<string, unknown> | null;
       rawOutputText?: string | null;
       usedFallback: boolean;
