@@ -1398,7 +1398,7 @@ export async function generateConferenceSiteArtifactWithWorkers(
 
     const artifact = buildConferenceSiteArtifactFromDocument(input, {
       siteTitle: finalDocument.siteTitle,
-      siteDocument: minifyHtmlDocument(finalDocument.siteDocument)
+      siteDocument: finalDocument.siteDocument
     });
     const workerTrace = buildWorkerTrace({
       studioName: input.studioName?.trim() || 'Ghost Studio',
