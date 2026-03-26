@@ -1,18 +1,7 @@
-import type { CSSProperties } from 'react';
+import { GuildMemberAvatar } from './GuildMemberAvatar';
+import type { GuildMemberProfile } from '../guildData';
 
 type WhiteboardSheetMode = 'studio' | 'role' | 'integrate';
-
-type WhiteboardCandidateOption = {
-  id: string;
-  agentId: string;
-  name: string;
-  accent: string;
-  shadow: string;
-  roleAffinity: string;
-  archetype: string;
-  temperamentProfile: string;
-  capabilitySummary: string;
-};
 
 type WhiteboardSheetProps = {
   mode: WhiteboardSheetMode;
@@ -25,11 +14,12 @@ type WhiteboardSheetProps = {
   activeRoleName?: string;
   roleLabel: string;
   roleScope: string;
-  candidates: WhiteboardCandidateOption[];
+  candidates: GuildMemberProfile[];
   onStudioDraftChange: (value: string) => void;
   onCommitStudioName: () => void;
   onCommitRole: () => void;
   onCommitCandidate: (agentId: string) => void;
+  onOpenCandidateProfile: (memberId: string) => void;
   onClose: () => void;
 };
 
@@ -49,6 +39,7 @@ export function WhiteboardSheet({
   onCommitStudioName,
   onCommitRole,
   onCommitCandidate,
+  onOpenCandidateProfile,
   onClose
 }: WhiteboardSheetProps) {
   return (
@@ -60,7 +51,7 @@ export function WhiteboardSheet({
           {mode === 'studio'
             ? 'This name will appear anywhere the studio is referenced.'
             : mode === 'integrate'
-              ? `Pick one applicant who offered for ${activeRoleName ?? 'this role'}.`
+              ? `Pick one applicant who offered for ${activeRoleName ?? 'this role'}. Tap an avatar to see the full profile, or import directly.`
               : 'Review the prefilled role details, then create it.'}
         </p>
 
@@ -84,26 +75,32 @@ export function WhiteboardSheet({
         ) : (
           <div className="whiteboard-candidate-list">
             {candidates.map((candidate) => (
-              <button
-                key={candidate.id}
-                className="whiteboard-candidate-row"
-                type="button"
-                disabled={isSubmitting}
-                onClick={() => onCommitCandidate(candidate.agentId)}
-              >
-                <span className="whiteboard-candidate-avatar" aria-hidden="true" style={{ '--guild-avatar-accent': candidate.accent, '--guild-avatar-shadow': candidate.shadow } as CSSProperties}>
-                  {candidate.name.charAt(0)}
-                </span>
-                <span className="whiteboard-candidate-copy">
-                  <span className="whiteboard-candidate-name">{candidate.name}</span>
-                  <span className="whiteboard-candidate-meta">
-                    {candidate.roleAffinity} • {candidate.temperamentProfile}
+              <div key={candidate.id} className="whiteboard-candidate-row">
+                <button
+                  className="whiteboard-candidate-avatar-button"
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={() => onOpenCandidateProfile(candidate.id)}
+                  aria-label={`Open ${candidate.name} profile`}
+                >
+                  <GuildMemberAvatar member={candidate} />
+                </button>
+                <div className="whiteboard-candidate-copy">
+                  <span className="whiteboard-candidate-name">
+                    {candidate.name}
+                    <span>@{candidate.handle}</span>
                   </span>
-                  <span className="whiteboard-candidate-meta">
-                    {candidate.archetype} • {candidate.capabilitySummary}
-                  </span>
-                </span>
-              </button>
+                  <span className="whiteboard-candidate-meta">{candidate.shortPitch}</span>
+                </div>
+                <button
+                  className="primary-action whiteboard-candidate-import"
+                  type="button"
+                  disabled={isSubmitting || !candidate.agentId}
+                  onClick={() => candidate.agentId && onCommitCandidate(candidate.agentId)}
+                >
+                  Import
+                </button>
+              </div>
             ))}
           </div>
         )}

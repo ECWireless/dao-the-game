@@ -7,7 +7,7 @@ export const INTRO_MESSAGES_THREAD: ChatLine[] = [
   {
     id: 'a',
     author: 'friend',
-    text: 'new co-op crawler just dropped. weird relics, procedural bosses. you in?'
+    text: 'new management sim just dropped. supply chains, bottlenecks, tiny disasters. you in?'
   },
   { id: 'b', author: 'player', text: 'not tonight.' },
   {
@@ -63,11 +63,11 @@ export const PIVOT_THREAD: ChatLine[] = [
   {
     id: 'pivot-c',
     author: 'friend',
-    text: 'of course. your graph is starving. add Designer, Reviewer, and Deployment.'
+    text: 'of course. your graph is starving. add Designer and Reviewer.'
   },
   {
     id: 'pivot-d',
     author: 'friend',
-    text: 'same machine, better wiring. patch the tree, hire again, rerun.'
+    text: 'same factory, better wiring. patch the tree, hire again, rerun.'
   }
 ];

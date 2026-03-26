@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ArtifactBundle, RunResult } from '../../../types';
+import { buildDeploymentReadout } from '../deploymentReadout';
 import { formatCredits } from '../utils';
 
 const DEPLOYMENT_PROFILE_LABELS = {
@@ -10,13 +11,16 @@ const DEPLOYMENT_PROFILE_LABELS = {
   failed: 'Failed launch'
 } as const;
 
-type MachinePreviewProps = {
+type FactoryPreviewProps = {
   deploymentTone: 'rough' | 'polished';
   heroTitle: string;
   heroUrl: string;
+  cycle?: 1 | 2;
   latestRun?: RunResult;
   latestArtifacts?: ArtifactBundle;
+  previousRun?: RunResult;
   generationError?: string | null;
+  recoveryStatus?: 'pending' | 'failed' | null;
   capabilityGaps: string[];
   isReadOnly?: boolean;
   onRetryGeneration?: () => void | Promise<void>;
@@ -24,19 +28,22 @@ type MachinePreviewProps = {
   onContinue?: () => void;
 };
 
-export function MachinePreview({
+export function FactoryPreview({
   deploymentTone,
   heroTitle,
   heroUrl,
+  cycle = 1,
   latestRun,
   latestArtifacts,
+  previousRun,
   generationError = null,
+  recoveryStatus = null,
   capabilityGaps,
   isReadOnly = false,
   onRetryGeneration,
   isRetryingGeneration = false,
   onContinue
-}: MachinePreviewProps) {
+}: FactoryPreviewProps) {
   const [isFrameLoading, setIsFrameLoading] = useState(false);
   const previewUrl = latestArtifacts?.previewUrl;
   const iframeSrc = latestArtifacts?.siteDocument ? undefined : previewUrl;
@@ -45,6 +52,11 @@ export function MachinePreview({
   const latestEvent = latestRun?.events.at(-1);
   const openLabel = latestArtifacts?.previewUrl ? 'Open deployed site' : null;
   const deploymentProfile = latestRun?.evaluation;
+  const deploymentReadout = buildDeploymentReadout({
+    currentRun: latestRun,
+    currentArtifact: latestArtifacts,
+    previousRun: cycle === 2 ? previousRun : undefined
+  });
 
   useEffect(() => {
     setIsFrameLoading(hasDeployPreview);
@@ -53,15 +65,10 @@ export function MachinePreview({
   return (
     <article className={`deployment-cassette is-ejected is-${deploymentTone}`}>
       <div className="deployment-topline">
-        <div>
+        <div className="deployment-title-block">
           <p className="deployment-kicker">Deployment cassette</p>
           <h3>{heroTitle}</h3>
         </div>
-        {latestRun ? (
-          <span className={`deployment-health ${latestRun.passed ? 'is-pass' : 'is-fail'}`}>
-            {latestRun.passed ? 'Ready to Submit' : 'Needs Internal Fixes'}
-          </span>
-        ) : null}
       </div>
 
       <div className="deployment-preview-shell">
@@ -98,16 +105,20 @@ export function MachinePreview({
             </>
           ) : generationError ? (
             <div className="deployment-frame deployment-frame-placeholder">
-              <p>Artifact generation failed</p>
+              <p>{recoveryStatus === 'pending' ? 'Assembly interrupted' : 'Assembly failed'}</p>
               <strong>{generationError}</strong>
               {!isReadOnly && onRetryGeneration ? (
                 <button
-                  className="secondary-action machine-submit-button"
+                  className="secondary-action factory-submit-button"
                   type="button"
                   onClick={() => void onRetryGeneration()}
                   disabled={isRetryingGeneration}
                 >
-                  {isRetryingGeneration ? 'Retrying...' : 'Retry generation'}
+                  {isRetryingGeneration
+                    ? 'Retrying...'
+                    : recoveryStatus === 'pending'
+                      ? 'Re-run assembly'
+                      : 'Retry assembly'}
                 </button>
               ) : null}
             </div>
@@ -159,6 +170,21 @@ export function MachinePreview({
         </div>
       ) : null}
 
+      {deploymentReadout ? (
+        <div className="deployment-report">
+          <p className="deployment-report-kicker">Assembly report</p>
+          <p>{deploymentReadout.leadLine}</p>
+          <p>{deploymentReadout.cautionLine}</p>
+          {deploymentReadout.comparison ? (
+            <div className="deployment-comparison">
+              <p>{deploymentReadout.comparison.headline}</p>
+              <p>{deploymentReadout.comparison.deltaLine}</p>
+              <p>{deploymentReadout.comparison.coverageLine}</p>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       {latestArtifacts?.notes?.length ? (
         <div className="deployment-notes">
           {latestArtifacts.notes.map((note) => (
@@ -167,8 +193,8 @@ export function MachinePreview({
         </div>
       ) : null}
 
-      {!isReadOnly && onContinue ? (
-        <button className="primary-action machine-submit-button" type="button" onClick={onContinue}>
+      {!isReadOnly && onContinue && latestArtifacts ? (
+        <button className="primary-action factory-submit-button" type="button" onClick={onContinue}>
           Submit to Client
         </button>
       ) : null}

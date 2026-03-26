@@ -1,0 +1,55 @@
+@media (max-width: 460px) {
+  .deployment-cassette {
+    padding: 0.72rem;
+    gap: 0.68rem;
+  }
+
+  .deployment-topline {
+    gap: 0.44rem;
+  }
+
+  .deployment-topline h3 {
+    font-size: 0.9rem;
+    line-height: 1.1;
+    text-wrap: pretty;
+  }
+
+  .deployment-browser {
+    min-height: 1.9rem;
+    padding: 0 0.5rem;
+    grid-template-columns: auto auto auto minmax(0, 1fr);
+  }
+
+  .deployment-browser-address {
+    margin-left: 0.28rem;
+    font-size: 0.58rem;
+  }
+
+  .deployment-browser-link {
+    grid-column: 1 / -1;
+    justify-self: start;
+    min-height: 1.28rem;
+    margin-bottom: 0.2rem;
+    font-size: 0.54rem;
+  }
+
+  .deployment-frame-shell {
+    padding: 0.58rem;
+  }
+
+  .deployment-frame {
+    height: 22rem;
+  }
+
+  .deployment-artifact-card {
+    padding: 0.54rem;
+  }
+
+  .deployment-report {
+    padding: 0.68rem;
+  }
+
+  .deployment-artifact-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

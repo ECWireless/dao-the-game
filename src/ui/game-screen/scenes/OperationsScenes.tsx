@@ -17,7 +17,7 @@ const DORMANT_TITLES: Record<StoryApp, string> = {
   mail: 'Inbox is waiting for the next update.',
   whiteboard: 'Blueprint remains pinned.',
   guild: 'Guild chat is idling between hires.',
-  machine: 'Machine controls are on standby.'
+  factory: 'Factory controls are on standby.'
 };
 
 export function DormantAppPanel({

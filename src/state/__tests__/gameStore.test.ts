@@ -19,19 +19,28 @@ beforeEach(() => {
 function assignAllVisibleRoles() {
   const state = useGameStore.getState();
   const activeRoles = getActiveRoles(state.roles, state.unlockedRoleCount);
+  const recommendedAssignments: Record<string, string> = {
+    'hat-01': 'agent-01',
+    'hat-02': 'agent-03',
+    'hat-03': 'agent-05',
+    'hat-04': 'agent-06'
+  };
 
   activeRoles.forEach((role, index) => {
-    state.assignRole(role.id, `agent-${String(index + 1).padStart(2, '0')}`);
+    state.assignRole(
+      role.id,
+      recommendedAssignments[role.id] ?? `agent-${String(index + 1).padStart(2, '0')}`
+    );
   });
 }
 
 function configureExpandedCycleTwoRoles() {
   const state = useGameStore.getState();
-  state.configureRole('hat-01', 'Web Developer');
+  state.configureRole('hat-01', 'Frontend Engineer');
   state.configureRole('hat-02', 'Designer');
   state.configureRole('hat-03', 'QA Reviewer');
-  state.assignRole('hat-02', 'agent-02');
-  state.assignRole('hat-03', 'agent-03');
+  state.assignRole('hat-02', 'agent-03');
+  state.assignRole('hat-03', 'agent-05');
 }
 
 describe('gameStore role visibility', () => {
@@ -148,12 +157,12 @@ describe('gameStore role visibility', () => {
     const state = useGameStore.getState();
     state.unlockExpandedRoles();
     state.configureRole('hat-02', 'Designer');
-    state.assignRole('hat-02', 'agent-02');
+    state.assignRole('hat-02', 'agent-03');
 
-    const assignedAgent = useGameStore.getState().agents.find((agent) => agent.id === 'agent-02');
+    const assignedAgent = useGameStore.getState().agents.find((agent) => agent.id === 'agent-03');
 
     expect(assignedAgent?.name).toBe('Kestrel Vale');
-    expect(assignedAgent?.roleAffinity).toBe('Flow and interaction design');
+    expect(assignedAgent?.roleAffinity).toBe('Skeuomorphic interaction and product design');
   });
 });
 
@@ -259,12 +268,37 @@ describe('gameStore narrative run shaping', () => {
     state.setStorySceneIndex(4);
     state.unlockExpandedRoles();
 
-    const raw = localStorage.getItem('dao-the-game:state:v2');
+    const raw = localStorage.getItem('dao-the-game:state:v3');
     expect(raw).toBeTruthy();
 
     const stored = JSON.parse(raw ?? '{}');
     expect(stored.state.storySceneIndex).toBe(4);
     expect(stored.state.unlockedRoleCount).toBe(4);
+  });
+
+  it('persists artifact generation recovery so interrupted builds can be retried after refresh', () => {
+    const state = useGameStore.getState();
+
+    state.setArtifactGenerationRecovery({
+      cycle: 1,
+      status: 'pending',
+      lastKnownPhase: 'worker',
+      lastKnownStageId: 'review',
+      lastKnownWorkerName: 'Sable Quill'
+    });
+
+    const snapshot = buildGameStateSnapshot(useGameStore.getState());
+    const raw = localStorage.getItem('dao-the-game:state:v3');
+    const stored = JSON.parse(raw ?? '{}');
+
+    expect(snapshot.artifactGenerationRecovery).toEqual({
+      cycle: 1,
+      status: 'pending',
+      lastKnownPhase: 'worker',
+      lastKnownStageId: 'review',
+      lastKnownWorkerName: 'Sable Quill'
+    });
+    expect(stored.state.artifactGenerationRecovery).toEqual(snapshot.artifactGenerationRecovery);
   });
 
   it('migrates older persisted shapes by clamping and normalizing player-scoped state', async () => {

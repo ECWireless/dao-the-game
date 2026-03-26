@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent } from 'react';
 import { hatIdToTreeId } from '@hatsprotocol/sdk-v1-core';
-import { sepolia } from 'viem/chains';
 import type { OrgTreeRecord } from '../../../contracts/org';
 import type { Agent, HatRole } from '../../../types';
-import { getWorkerCapabilitySummary } from '../../../workers/catalog';
+import { getChainLabel, HATS_CHAIN } from '../../../lib/chains';
 import { findRaidGuildMember, getRaidGuildCandidatesForRole } from '../guildData';
 import {
   WhiteboardEdgeCue,
   WhiteboardHud,
   WhiteboardIntegrateCard
 } from '../components/WhiteboardChrome';
+import { GuildMemberCard } from '../components/GuildMemberCard';
 import { WhiteboardSheet } from '../components/WhiteboardSheet';
 import {
   buildWhiteboardLinks,
@@ -44,18 +44,6 @@ const DRAG_START_THRESHOLD = 6;
 
 function clamp(value: number, min: number, max: number) { return Math.max(min, Math.min(value, max)); }
 
-function formatOrgChainLabel(chainId?: number | null): string | null {
-  if (!chainId) {
-    return null;
-  }
-
-  if (chainId === sepolia.id) {
-    return sepolia.name;
-  }
-
-  return `Chain ${chainId}`;
-}
-
 export function WhiteboardScene({
   roles,
   agents = [],
@@ -83,6 +71,7 @@ export function WhiteboardScene({
   const [cueState, setCueState] = useState<CueState>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isImportSelecting, setIsImportSelecting] = useState(false);
+  const [openMemberId, setOpenMemberId] = useState<string | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const branchTriggerRef = useRef<HTMLButtonElement | null>(null);
   const nodeRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -123,19 +112,7 @@ export function WhiteboardScene({
   const activeRoleIndex = activeRole ? roles.findIndex((role) => role.id === activeRole.id) : -1;
   const activeRoleBlueprint = activeRoleIndex >= 0 ? WHITEBOARD_ROLE_BLUEPRINTS[activeRoleIndex] ?? WHITEBOARD_ROLE_BLUEPRINTS[WHITEBOARD_ROLE_BLUEPRINTS.length - 1] : null;
   const guildCandidates = activeRole ? getRaidGuildCandidatesForRole(agents, activeRole.id, 2) : [];
-  const candidateOptions = guildCandidates.flatMap((candidate) => {
-    const agent = candidate.agentId ? agents.find((item) => item.id === candidate.agentId) : undefined;
-    return agent && candidate.agentId
-      ? [{
-          ...candidate,
-          agentId: candidate.agentId,
-          roleAffinity: candidate.roleAffinity ?? agent.roleAffinity,
-          archetype: agent.archetype,
-          temperamentProfile: agent.temperament.profile,
-          capabilitySummary: getWorkerCapabilitySummary(agent)
-        }]
-      : [];
-  });
+  const candidateOptions = guildCandidates.filter((candidate) => Boolean(candidate.agentId));
   const boardLinks = buildWhiteboardLinks(visibleRoles, isExpanded);
   const addBranchPosition = getWhiteboardBranchTriggerPosition(isExpanded ? nextRole?.id : firstRole?.id, isExpanded);
   const boardOffsetClampX = isExpanded ? 320 : 220;
@@ -152,9 +129,15 @@ export function WhiteboardScene({
     }
   }, [orgTree?.topHatId]);
   const orgChainLabel = useMemo(
-    () => formatOrgChainLabel(orgTree?.chainId ?? sepolia.id),
+    () => getChainLabel(orgTree?.chainId ?? HATS_CHAIN.id),
     [orgTree?.chainId]
   );
+  const openMember =
+    findRaidGuildMember(agents, openMemberId ?? undefined) ??
+    candidateOptions.find((candidate) => candidate.id === openMemberId);
+  const openAgent = openMember?.agentId
+    ? agents.find((agent) => agent.id === openMember.agentId)
+    : undefined;
   useEffect(() => { if (shouldAutoAdvanceExpanded) onComplete?.(); }, [onComplete, shouldAutoAdvanceExpanded]);
   useEffect(() => {
     if (!isInteractive) {
@@ -269,11 +252,12 @@ export function WhiteboardScene({
 
   const commitCandidate = (agentId: string) => {
     if (!activeRole || !onAssignCandidateToRole) return;
+    const wasUnassigned = !activeRole.assignedAgentId;
     const remainingCount = importableRoles.filter((role) => role.id !== activeRole.id).length;
     onAssignCandidateToRole(activeRole.id, agentId);
     setSheetMode(null);
     setActiveRoleId(null);
-    if (remainingCount === 0) {
+    if (wasUnassigned && remainingCount === 0) {
       setIsImportSelecting(false);
       onComplete?.();
     }
@@ -354,7 +338,7 @@ export function WhiteboardScene({
               <span className="tree-node-meta">
                 {studioName
                   ? orgTreeId
-                    ? `${orgChainLabel ?? 'Sepolia'} | Tree ${orgTreeId}`
+                    ? `${orgChainLabel ?? HATS_CHAIN.name} | Tree ${orgTreeId}`
                     : 'Studio active'
                   : 'Tap to name studio'}
               </span>
@@ -377,10 +361,10 @@ export function WhiteboardScene({
               const isConfigured = Boolean(role.isConfigured);
               const isImportTarget = currentImportTargetRole?.id === role.id;
               const canOpenRole = isInteractive && !isConfigured && Boolean(onConfigureRole);
-              const canOpenImportRole = isInteractive && isImportTarget && Boolean(onAssignCandidateToRole);
+              const canOpenImportRole = isInteractive && isConfigured && Boolean(onAssignCandidateToRole);
               const isNodeActionable = canOpenRole || canOpenImportRole;
               const nodeMeta = role.assignedAgentId
-                ? `Linked: ${assignedMember?.name ?? role.assignedAgentId}`
+                ? `Tap to change contractor${assignedMember ? ` • ${assignedMember.name}` : ''}`
                 : isConfigured
                   ? isImportTarget ? 'Tap to import contractor' : 'Configured'
                   : 'Open role form';
@@ -443,12 +427,21 @@ export function WhiteboardScene({
           onCommitStudioName={commitStudioName}
           onCommitRole={commitRole}
           onCommitCandidate={commitCandidate}
+          onOpenCandidateProfile={setOpenMemberId}
           onClose={() => {
             if (isSubmitting) {
               return;
             }
             setSheetMode(null);
           }}
+        />
+      ) : null}
+
+      {openMember ? (
+        <GuildMemberCard
+          member={openMember}
+          agent={openAgent}
+          onClose={() => setOpenMemberId(null)}
         />
       ) : null}
     </section>

@@ -4,7 +4,6 @@ import fullLogo from '../../../assets/raidguild-full.svg';
 import { GuildMemberAvatar } from '../components/GuildMemberAvatar';
 import { GuildMemberCard } from '../components/GuildMemberCard';
 import { getRaidGuildCandidates, getRaidGuildRoster, RAIDGUILD_CHANNELS, RAIDGUILD_HISTORY } from '../guildData';
-import { formatCredits } from '../utils';
 import { GuildSecondCycleScene } from './GuildSecondCycleScene';
 
 type AssignmentLogEntry = {
@@ -25,6 +24,7 @@ export type GuildSceneProps = {
 
 function FirstCycleGuildScene({ studioName, roles, agents, onContinue, isReadOnly = false }: GuildSceneProps) {
   const role = roles[0];
+  const roleDisplayName = role?.name ?? 'Frontend Engineer';
   const roster = useMemo(() => getRaidGuildRoster(agents), [agents]);
   const candidates = useMemo(() => getRaidGuildCandidates(agents, 2), [agents]);
   const [postStage, setPostStage] = useState(isReadOnly ? 3 : 0);
@@ -160,7 +160,7 @@ function FirstCycleGuildScene({ studioName, roles, agents, onContinue, isReadOnl
                 </p>
                 <div className="guild-brief-embed">
                   <p className="guild-brief-kicker">Role Brief</p>
-                  <h2>{role.name}</h2>
+                  <h2>{roleDisplayName}</h2>
                   <p>Need someone to rebuild a conference site fast, clean, and production-safe.</p>
                   <ul>
                     <li>Responsive front-end build</li>
@@ -172,20 +172,9 @@ function FirstCycleGuildScene({ studioName, roles, agents, onContinue, isReadOnl
             </article>
 
             {candidates.map((candidate, index) => {
-              const agent = candidate.agentId ? agents.find((item) => item.id === candidate.agentId) : undefined;
-
-              if (!agent) {
-                return null;
-              }
-
               if ((index === 0 && !firstReplyVisible) || (index === 1 && !secondReplyVisible)) {
                 return null;
               }
-
-              const replyText =
-                index === 0
-                  ? 'I can handle the site build. Fast pass, clean UI, no drama.'
-                  : 'I can take this too. Frontend polish, deploy handoff, done.';
 
               return (
                 <article
@@ -200,11 +189,7 @@ function FirstCycleGuildScene({ studioName, roles, agents, onContinue, isReadOnl
                       {candidate.name}
                       <span>@{candidate.handle}</span>
                     </p>
-                    <p className="guild-feed-submeta">
-                      {candidate.title} • {agent.temperament.profile.toLowerCase()} • contract{' '}
-                      {formatCredits(agent.contractCost)}
-                    </p>
-                    <p className="guild-feed-text">{replyText}</p>
+                    <p className="guild-feed-text">{candidate.shortPitch}</p>
                   </div>
                 </article>
               );
@@ -212,7 +197,7 @@ function FirstCycleGuildScene({ studioName, roles, agents, onContinue, isReadOnl
           </>
         ) : (
           <article className="guild-draft-hint">
-            <p>Your `Web Developer` brief is queued in the composer.</p>
+            <p>Your `Frontend Engineer` brief is queued in the composer.</p>
           </article>
         )}
       </div>
@@ -224,7 +209,7 @@ function FirstCycleGuildScene({ studioName, roles, agents, onContinue, isReadOnl
         <div className={`guild-compose-field ${!hasPosted || isSequencePending ? 'is-filled' : ''}`}>
           <span>
             {!hasPosted && !isSequencePending
-              ? 'Web Developer brief ready to post'
+              ? 'Frontend Engineer brief ready to post'
               : isSequencePending
                 ? 'Posting to #hiring-board...'
                 : 'Message #hiring-board'}

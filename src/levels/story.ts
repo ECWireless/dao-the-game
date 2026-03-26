@@ -1,4 +1,4 @@
-export type StoryApp = 'messages' | 'mail' | 'whiteboard' | 'guild' | 'machine';
+export type StoryApp = 'messages' | 'mail' | 'whiteboard' | 'guild' | 'factory';
 
 export type StoryScene = {
   id: string;
@@ -93,9 +93,9 @@ export const STORY_SCENES: StoryScene[] = [
     subtitle: 'Import contractors'
   },
   {
-    id: 'machine-first',
-    app: 'machine',
-    title: 'Autonomous Machine',
+    id: 'factory-first',
+    app: 'factory',
+    title: 'Factory',
     subtitle: 'Cycle one'
   },
   {
@@ -135,9 +135,9 @@ export const STORY_SCENES: StoryScene[] = [
     subtitle: 'Import applicants'
   },
   {
-    id: 'machine-second',
-    app: 'machine',
-    title: 'Autonomous Machine',
+    id: 'factory-second',
+    app: 'factory',
+    title: 'Factory',
     subtitle: 'Cycle two'
   },
   {

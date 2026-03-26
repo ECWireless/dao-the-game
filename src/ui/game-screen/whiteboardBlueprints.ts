@@ -9,7 +9,7 @@ const WHITEBOARD_EXPANDED_ROLE_POSITIONS: Record<string, { x: number; y: number 
 };
 
 export const WHITEBOARD_ROLE_BLUEPRINTS = [
-  { label: 'Web Developer', scope: 'Build the site' },
+  { label: 'Frontend Engineer', scope: 'Build the site' },
   { label: 'Designer', scope: 'Shape the visual pass' },
   { label: 'QA Reviewer', scope: 'Catch breakage before launch' },
   { label: 'Deployment', scope: 'Harden release and handoff' }

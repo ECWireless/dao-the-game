@@ -50,12 +50,18 @@ export type WorkerTemperament = {
   teamwork: number;
 };
 
+export type WorkerPlayerGuidance = {
+  strengthLabel?: string;
+  pairingHint?: string;
+  riskLabel?: string;
+  shortPitch?: string;
+};
+
 export type Agent = {
   id: string;
   name: string;
   handle: string;
-  title: string;
-  archetype: string;
+  specialty: string;
   roleAffinity: string;
   capabilityVector: CapabilityVector;
   styleProfile: WorkerStyleProfile;
@@ -65,6 +71,7 @@ export type Agent = {
   accent: string;
   shadow: string;
   contractCost: number;
+  playerGuidance?: WorkerPlayerGuidance;
 };
 
 export type HatRole = {
@@ -123,8 +130,25 @@ export type ArtifactContributor = {
   roleId?: string;
   roleName?: string;
   stageId?: PipelineStageId;
-  archetype: string;
+  specialty: string;
   traits: string[];
+};
+
+export type ArtifactWorkerHighlight = {
+  label: string;
+  value: string;
+};
+
+export type ArtifactWorkerTrace = {
+  stageId: PipelineStageId;
+  roleName?: string;
+  workerName: string;
+  workerSpecialty: string;
+  reportTo: string;
+  reportBody: string;
+  summary: string;
+  highlights: ArtifactWorkerHighlight[];
+  finalizedDocument?: boolean;
 };
 
 export type ArtifactProvenance = {
@@ -151,6 +175,19 @@ export type ArtifactBundle = {
   notes: string[];
   siteDocument: string;
   provenance: ArtifactProvenance;
+  workerTrace?: ArtifactWorkerTrace[];
+};
+
+export type ClientReview = {
+  cycle: 1 | 2;
+  outcome: 'rejected' | 'approved';
+  tone: 'fail' | 'success';
+  sender: string;
+  subject: string;
+  notificationTitle: string;
+  notificationPreview: string;
+  inboxPreview: string;
+  body: string[];
 };
 
 export type CostBreakdown = {

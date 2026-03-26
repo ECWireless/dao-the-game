@@ -177,7 +177,7 @@ function buildStageNote(
   const passName = shortLabel.toLowerCase();
 
   if (!roleName) {
-    return `No ${passName} owner was routed through the machine.`;
+    return `No ${passName} owner was routed through the factory.`;
   }
 
   switch (status) {
@@ -409,7 +409,7 @@ export function simulateRun(state: RunState): RunResult {
   );
   const duplicateStageEvent =
     duplicateStageLabels.length > 0
-      ? `Machine rejected duplicate stage ownership: ${duplicateStageLabels.join(', ')}`
+      ? `Factory rejected duplicate stage ownership: ${duplicateStageLabels.join(', ')}`
       : undefined;
 
   const cid = buildPseudoCid(

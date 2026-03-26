@@ -45,12 +45,12 @@ const CROSS_APP_HANDOFFS: Record<string, CrossAppHandoff> = {
     preview: 'RaidGuild applicants are waiting on the board.',
     icon: 'whiteboard'
   },
-  'machine-first': {
-    targetApp: 'machine',
-    appName: 'Machine',
-    title: 'Machine Companion',
-    preview: 'Deployment rig is installed. Open Machine to deploy.',
-    icon: 'machine'
+  'factory-first': {
+    targetApp: 'factory',
+    appName: 'Factory',
+    title: 'Factory',
+    preview: 'Deployment rig is installed. Open Factory to deploy.',
+    icon: 'factory'
   },
   'mail-fail': {
     targetApp: 'mail',
@@ -87,12 +87,12 @@ const CROSS_APP_HANDOFFS: Record<string, CrossAppHandoff> = {
     preview: 'RaidGuild applicants are queued on the board.',
     icon: 'whiteboard'
   },
-  'machine-second': {
-    targetApp: 'machine',
-    appName: 'Machine',
-    title: 'Machine Companion',
-    preview: 'Updated crew loaded. Open Machine to deploy again.',
-    icon: 'machine'
+  'factory-second': {
+    targetApp: 'factory',
+    appName: 'Factory',
+    title: 'Factory',
+    preview: 'Updated crew loaded. Open Factory to deploy again.',
+    icon: 'factory'
   },
   'mail-success': {
     targetApp: 'mail',

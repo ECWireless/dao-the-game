@@ -15,16 +15,15 @@ import {
   type PublicClient,
   type WalletClient
 } from 'viem';
-import { sepolia } from 'viem/chains';
-import { clientEnv } from '../config';
+import { HATS_CHAIN, HATS_CHAIN_ID } from './chains';
 
-export const HATS_CHAIN = sepolia;
-export const HATS_CHAIN_ID = sepolia.id;
+export { HATS_CHAIN, HATS_CHAIN_ID } from './chains';
+
 export const HATS_CONTRACT_ADDRESS = HATS_V1 as Address;
 
 const hatsPublicClient = createPublicClient({
   chain: HATS_CHAIN,
-  transport: http(clientEnv.sepoliaRpcUrl ?? undefined)
+  transport: http()
 });
 
 const hatsCallDataClient = new HatsClient({

@@ -106,8 +106,7 @@ function average(values: number[]): number {
 function getBlueprintText(agent: Agent): string {
   return [
     agent.name,
-    agent.title,
-    agent.archetype,
+    agent.specialty,
     agent.roleAffinity,
     ...agent.traits,
     agent.styleProfile.signature,
@@ -266,7 +265,7 @@ function getMetricReason(agent: Agent, metricId: DeploymentMetricId): string {
       return agent.styleProfile.collaboration.toLowerCase();
     case 'trust':
     default:
-      return agent.traits[0]?.toLowerCase() ?? agent.archetype.toLowerCase();
+      return agent.traits[0]?.toLowerCase() ?? agent.specialty.toLowerCase();
   }
 }
 

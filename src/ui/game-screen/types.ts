@@ -12,7 +12,7 @@ export type ArtifactGenerationProgress =
       phase: 'worker';
       stageId: PipelineStageId;
       workerName: string;
-      workerTitle: string;
+      workerSpecialty: string;
       note: string;
     }
   | {

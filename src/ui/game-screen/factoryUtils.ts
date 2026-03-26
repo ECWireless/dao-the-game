@@ -2,19 +2,35 @@ import type { Agent, HatRole, PipelineStageId } from '../../types';
 import { getPipelineStageDefinition, inferPipelineStageId, sortRolesByPipelineStage } from '../../pipeline';
 import { findRaidGuildMember } from './guildData';
 
-export type MachineRoleLane = {
+export type FactoryRoleLane = {
   id: string;
   roleName: string;
   stageId?: PipelineStageId;
   stageLabel?: string;
   operatorName: string;
   operatorMeta: string;
+  durationHint?: string;
 };
 
-function getOperatorLabel(agent: Agent | undefined, agents: Agent[]): Pick<MachineRoleLane, 'operatorName' | 'operatorMeta'> {
+function getStageDurationHint(stageId?: PipelineStageId): string | undefined {
+  switch (stageId) {
+    case 'design':
+      return 'Usually 25-40s';
+    case 'implementation':
+      return 'Usually 45-65s';
+    case 'review':
+      return 'Usually 15-25s';
+    case 'deployment':
+      return 'Usually under 10s';
+    default:
+      return undefined;
+  }
+}
+
+function getOperatorLabel(agent: Agent | undefined, agents: Agent[]): Pick<FactoryRoleLane, 'operatorName' | 'operatorMeta'> {
   if (!agent) {
     return {
-      operatorName: 'Machine core',
+      operatorName: 'Factory core',
       operatorMeta: 'awaiting contractor'
     };
   }
@@ -24,17 +40,17 @@ function getOperatorLabel(agent: Agent | undefined, agents: Agent[]): Pick<Machi
   if (member) {
     return {
       operatorName: member.name,
-      operatorMeta: member.title
+      operatorMeta: member.roleAffinity ?? agent.roleAffinity
     };
   }
 
   return {
     operatorName: agent.id,
-    operatorMeta: agent.roleAffinity.toLowerCase()
+    operatorMeta: agent.roleAffinity
   };
 }
 
-export function buildMachineRoleLanes(roles: HatRole[], agents: Agent[]): MachineRoleLane[] {
+export function buildFactoryRoleLanes(roles: HatRole[], agents: Agent[]): FactoryRoleLane[] {
   const agentById = new Map(agents.map((agent) => [agent.id, agent]));
 
   return sortRolesByPipelineStage(roles)
@@ -50,7 +66,8 @@ export function buildMachineRoleLanes(roles: HatRole[], agents: Agent[]): Machin
         stageId,
         stageLabel,
         operatorName: operator.operatorName,
-        operatorMeta: operator.operatorMeta
+        operatorMeta: operator.operatorMeta,
+        durationHint: getStageDurationHint(stageId)
       };
     });
 }

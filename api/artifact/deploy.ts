@@ -3,7 +3,6 @@ import { generateConferenceSiteArtifactWithWorkers } from '../_lib/conference-si
 import { deployArtifactToPinata, canUsePinataDeploys } from '../_lib/pinata.js';
 import { handleRouteError, HttpError, options, parseOptionalJsonBody, withCors } from '../_lib/http.js';
 import { requirePrivyUser } from '../_lib/privy.js';
-import { getOpenAiArtifactModel } from '../_lib/env.js';
 
 export const runtime = 'nodejs';
 
@@ -55,6 +54,7 @@ export async function POST(request: Request): Promise<Response> {
         const writeEvent = (event: ArtifactDeployEvent) => {
           controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
         };
+        const requestStartedAt = Date.now();
 
         void (async () => {
           try {
@@ -62,12 +62,16 @@ export async function POST(request: Request): Promise<Response> {
               type: 'generation-start',
               cycle: body.generationInput?.cycle,
               mode: body.generationInput ? 'workers' : 'deterministic',
-              model: body.generationInput ? getOpenAiArtifactModel() : null
+              model: body.generationInput ? 'stage-routed' : null
             });
 
             const generationResult = body.generationInput
               ? await generateConferenceSiteArtifactWithWorkers(body.generationInput, body.artifact, writeEvent)
               : { artifact: body.artifact, usedFallback: false };
+
+            console.info(
+              `[artifact timing] generation finished in ${Date.now() - requestStartedAt}ms`
+            );
 
             writeEvent({
               type: 'artifact-generated',
@@ -80,12 +84,18 @@ export async function POST(request: Request): Promise<Response> {
 
             const artifact = shouldDeployToPinata
               ? await (async () => {
+                  const publishStartedAt = Date.now();
+
                   writeEvent({
                     type: 'publishing-start',
                     destination: 'pinata'
                   });
 
-                  return deployArtifactToPinata(generationResult.artifact);
+                  const deployedArtifact = await deployArtifactToPinata(generationResult.artifact);
+                  console.info(
+                    `[artifact timing] publishing finished in ${Date.now() - publishStartedAt}ms`
+                  );
+                  return deployedArtifact;
                 })()
               : generationResult.artifact;
 
@@ -93,6 +103,10 @@ export async function POST(request: Request): Promise<Response> {
               type: 'artifact-deployed',
               artifact
             });
+
+            console.info(
+              `[artifact timing] full deploy route finished in ${Date.now() - requestStartedAt}ms`
+            );
           } catch (error) {
             console.error(error);
             writeEvent({

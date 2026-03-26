@@ -38,39 +38,40 @@ type InboxItem = {
 
 const INBOX_ITEMS: InboxItem[] = [
   {
-    id: 'coupon',
-    sender: 'Snack Orbit',
-    subject: 'You left artisanal gummies in your cart',
-    preview: 'The algorithm is worried about you and has escalated to coupons.',
-    timestamp: '8:12'
+    id: 'rent',
+    sender: 'North Marion Lofts',
+    subject: 'Second reminder: rent still outstanding',
+    preview: 'Please pay the remaining balance or contact the office before more fees post.',
+    timestamp: '8:12',
+    unread: true
   },
   {
-    id: 'landlord',
-    sender: 'Building Portal',
-    subject: 'Laundry room closed for mysterious foam event',
-    preview: 'Please do not investigate. Maintenance already regrets everything.',
+    id: 'internet',
+    sender: 'PeakFiber',
+    subject: 'Autopay failed for your internet bill',
+    preview: 'We could not process your payment method. Service interruption starts Friday.',
     timestamp: '7:48'
   },
   {
-    id: 'guild',
-    sender: 'RaidGuild Weekly',
-    subject: 'Five invoices, one goblin, zero context',
-    preview: 'This week in the server: contracts, memes, and a suspicious spreadsheet.',
+    id: 'subscription',
+    sender: 'FocusForge Pro',
+    subject: 'Come back for 90% off your abandoned productivity stack',
+    preview: 'Three premium habit systems are waiting for you, somehow still charging monthly.',
     timestamp: 'Thu'
   },
   {
     id: 'game',
     sender: 'Patch Notes',
-    subject: 'Balance update: raccoon class nerfed again',
-    preview: 'Developers insist the trash-can build was "warping the meta."',
+    subject: 'Your weekly game recap is ready',
+    preview: 'You logged 0 hours, but the launcher still thinks you are a valued returning champion.',
     timestamp: 'Wed',
     starred: true
   },
   {
     id: 'bank',
     sender: 'Copperline Credit',
-    subject: 'Your account survived another week',
-    preview: 'No action required. We simply wanted to make this sound dramatic.',
+    subject: 'Low balance alert',
+    preview: 'Your checking account slipped under the minimum cushion again.',
     timestamp: 'Tue'
   }
 ];

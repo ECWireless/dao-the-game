@@ -1,6 +1,10 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import type { AssignmentLogEntry, GameStateSnapshot } from '../contracts/gameState';
+import type {
+  ArtifactGenerationRecovery,
+  AssignmentLogEntry,
+  GameStateSnapshot
+} from '../contracts/gameState';
 import { FINAL_SCENE_INDEX } from '../levels/story';
 import {
   TUTORIAL_BRIEF,
@@ -9,9 +13,17 @@ import {
   TUTORIAL_TREASURY
 } from '../levels/tutorial';
 import { generateStartingAgents, simulateRun } from '../sim';
-import type { Agent, ArtifactBundle, HatRole, RunResult, RunState, ScoreBreakdown } from '../types';
+import type {
+  Agent,
+  ArtifactBundle,
+  ClientReview,
+  HatRole,
+  RunResult,
+  RunState,
+  ScoreBreakdown
+} from '../types';
 
-const GAME_STATE_STORAGE_KEY = 'dao-the-game:state:v2';
+const GAME_STATE_STORAGE_KEY = 'dao-the-game:state:v3';
 const FIRST_CYCLE_ROLE_COUNT = 1;
 const DEFAULT_STUDIO_NAME = '';
 
@@ -27,6 +39,10 @@ type GameStore = {
   agents: Agent[];
   latestRun?: RunResult;
   latestArtifacts?: ArtifactBundle;
+  runHistory: Partial<Record<1 | 2, RunResult>>;
+  artifactHistory: Partial<Record<1 | 2, ArtifactBundle>>;
+  clientReviews: Partial<Record<1 | 2, ClientReview>>;
+  artifactGenerationRecovery?: ArtifactGenerationRecovery;
   runCount: number;
   assignmentLog: AssignmentLogEntry[];
   hydrateForPlayer: (playerId: string, snapshot?: Partial<GameStateSnapshot> | null) => void;
@@ -42,10 +58,19 @@ type GameStore = {
   unassignRole: (roleId: string) => void;
   runProduction: () => RunResult | undefined;
   setLatestArtifacts: (artifacts?: ArtifactBundle) => void;
+  setClientReview: (cycle: 1 | 2, review: ClientReview) => void;
+  setArtifactGenerationRecovery: (
+    recovery?:
+      | ArtifactGenerationRecovery
+      | ((current?: ArtifactGenerationRecovery) => ArtifactGenerationRecovery | undefined)
+  ) => void;
   resetTutorial: () => void;
 };
 
-type PersistedGameState = GameStateSnapshot & {
+type PersistedGameState = Omit<GameStateSnapshot, 'clientReviews'> & {
+  runHistory: Partial<Record<1 | 2, RunResult>>;
+  artifactHistory: Partial<Record<1 | 2, ArtifactBundle>>;
+  clientReviews: Partial<Record<1 | 2, ClientReview>>;
   ownerPlayerId: string | null;
 };
 
@@ -73,6 +98,10 @@ function getInitialState(ownerPlayerId: string | null = null): PersistedGameStat
     agents: generateStartingAgents(TUTORIAL_SEED),
     latestRun: undefined,
     latestArtifacts: undefined,
+    runHistory: {},
+    artifactHistory: {},
+    clientReviews: {},
+    artifactGenerationRecovery: undefined,
     runCount: 0,
     assignmentLog: []
   };
@@ -112,26 +141,57 @@ function normalizeGameStateSnapshot(
         ? candidate.hasSeenIntroDialog
         : initial.hasSeenIntroDialog,
     roles: Array.isArray(candidate.roles)
-      ? initial.roles.map((role, index) => {
+        ? initial.roles.map((role, index) => {
           const persistedRole = candidate.roles?.[index];
 
           if (!persistedRole) {
             return role;
           }
 
+          const isConfigured =
+            typeof persistedRole.isConfigured === 'boolean'
+              ? persistedRole.isConfigured
+              : Boolean(persistedRole.assignedAgentId) || persistedRole.name !== role.name;
+
           return {
             ...role,
             ...persistedRole,
+            name:
+              typeof persistedRole.name === 'string' && isConfigured
+                ? persistedRole.name
+                : role.name,
             isConfigured:
-              typeof persistedRole.isConfigured === 'boolean'
-                ? persistedRole.isConfigured
-                : Boolean(persistedRole.assignedAgentId) || persistedRole.name !== role.name
+              isConfigured
           };
         })
       : initial.roles,
     agents: Array.isArray(candidate.agents) ? candidate.agents : initial.agents,
     latestRun: candidate.latestRun,
     latestArtifacts: candidate.latestArtifacts,
+    runHistory:
+      candidate.runHistory && typeof candidate.runHistory === 'object'
+        ? (candidate.runHistory as Partial<Record<1 | 2, RunResult>>)
+        : initial.runHistory,
+    artifactHistory:
+      candidate.artifactHistory && typeof candidate.artifactHistory === 'object'
+        ? (candidate.artifactHistory as Partial<Record<1 | 2, ArtifactBundle>>)
+        : initial.artifactHistory,
+    clientReviews:
+      candidate.clientReviews && typeof candidate.clientReviews === 'object'
+        ? (candidate.clientReviews as Partial<Record<1 | 2, ClientReview>>)
+        : initial.clientReviews,
+    artifactGenerationRecovery:
+      candidate.artifactGenerationRecovery &&
+      typeof candidate.artifactGenerationRecovery === 'object' &&
+      (candidate.artifactGenerationRecovery.cycle === 1 ||
+        candidate.artifactGenerationRecovery.cycle === 2) &&
+      (candidate.artifactGenerationRecovery.status === 'pending' ||
+        candidate.artifactGenerationRecovery.status === 'failed') &&
+      (candidate.artifactGenerationRecovery.lastKnownPhase === 'starting' ||
+        candidate.artifactGenerationRecovery.lastKnownPhase === 'worker' ||
+        candidate.artifactGenerationRecovery.lastKnownPhase === 'publishing')
+        ? (candidate.artifactGenerationRecovery as ArtifactGenerationRecovery)
+        : initial.artifactGenerationRecovery,
     runCount: typeof candidate.runCount === 'number' ? candidate.runCount : initial.runCount,
     assignmentLog: Array.isArray(candidate.assignmentLog)
       ? candidate.assignmentLog
@@ -152,6 +212,10 @@ export function buildGameStateSnapshot(
     | 'agents'
     | 'latestRun'
     | 'latestArtifacts'
+    | 'runHistory'
+    | 'artifactHistory'
+    | 'clientReviews'
+    | 'artifactGenerationRecovery'
     | 'runCount'
     | 'assignmentLog'
   >
@@ -167,6 +231,10 @@ export function buildGameStateSnapshot(
     agents: state.agents,
     latestRun: state.latestRun,
     latestArtifacts: state.latestArtifacts,
+    runHistory: state.runHistory,
+    artifactHistory: state.artifactHistory,
+    clientReviews: state.clientReviews,
+    artifactGenerationRecovery: state.artifactGenerationRecovery,
     runCount: state.runCount,
     assignmentLog: state.assignmentLog
   };
@@ -420,6 +488,10 @@ export const useGameStore = create<GameStore>()(
         }
 
         set({
+          runHistory: {
+            ...state.runHistory,
+            [Math.min(state.runCount + 1, 2) as 1 | 2]: result
+          },
           runCount: state.runCount + 1,
           latestRun: result,
           latestArtifacts: undefined,
@@ -437,7 +509,30 @@ export const useGameStore = create<GameStore>()(
         return result;
       },
       setLatestArtifacts: (artifacts) => {
-        set({ latestArtifacts: artifacts });
+        set((state) => ({
+          latestArtifacts: artifacts,
+          artifactHistory:
+            artifacts && (state.runCount === 1 || state.runCount === 2)
+              ? {
+                  ...state.artifactHistory,
+                  [state.runCount]: artifacts
+                }
+              : state.artifactHistory
+        }));
+      },
+      setClientReview: (cycle, review) => {
+        set((state) => ({
+          clientReviews: {
+            ...state.clientReviews,
+            [cycle]: review
+          }
+        }));
+      },
+      setArtifactGenerationRecovery: (recovery) => {
+        set((state) => ({
+          artifactGenerationRecovery:
+            typeof recovery === 'function' ? recovery(state.artifactGenerationRecovery) : recovery
+        }));
       },
       resetTutorial: () => {
         set(getInitialState(get().ownerPlayerId));
@@ -445,11 +540,15 @@ export const useGameStore = create<GameStore>()(
     }),
     {
       name: GAME_STATE_STORAGE_KEY,
-      version: 5,
+      version: 7,
       storage: createJSONStorage(() => localStorage),
       partialize: (state): PersistedGameState => ({
         ownerPlayerId: state.ownerPlayerId,
-        ...buildGameStateSnapshot(state)
+        ...buildGameStateSnapshot(state),
+        runHistory: state.runHistory,
+        artifactHistory: state.artifactHistory,
+        clientReviews: state.clientReviews,
+        artifactGenerationRecovery: state.artifactGenerationRecovery
       }),
       migrate: (persistedState) => {
         if (!persistedState || typeof persistedState !== 'object') {

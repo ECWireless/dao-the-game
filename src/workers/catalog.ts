@@ -6,9 +6,8 @@ export const WORKER_CATALOG: Agent[] = [
     id: 'agent-01',
     name: 'Rune Mercer',
     handle: 'rune-mercer',
-    title: 'frontend delver',
-    archetype: 'Systems Shipwright',
-    roleAffinity: 'Interface systems',
+    specialty: 'Design-Faithful Closer',
+    roleAffinity: 'Design-faithful frontend systems',
     capabilityVector: {
       design: 62,
       implementation: 90,
@@ -16,9 +15,9 @@ export const WORKER_CATALOG: Agent[] = [
       deployment: 76
     },
     styleProfile: {
-      signature: 'Hard-edged control surfaces with brutalist restraint and zero decorative mercy.',
-      execution: 'Turns design direction into rigid, reusable front-end rails under pressure.',
-      collaboration: 'Prefers tight handoffs, short feedback loops, and a crisp design contract.'
+      signature: 'Hard-edged brutalist control surfaces that keep the original concept intact.',
+      execution: 'Ships approved design direction fast without sanding down its edge.',
+      collaboration: 'Works best with explicit design rules and a strong reviewer catching brittle edges.'
     },
     temperament: {
       profile: 'Decisive closer',
@@ -27,18 +26,60 @@ export const WORKER_CATALOG: Agent[] = [
       teamwork: 57
     },
     traits: ['Build-first', 'Brutalist rails', 'Deadline magnet'],
-    bio: 'Turns vague product asks into working surfaces before the room has finished panicking.',
+    bio: 'Best when the concept is already right and the team needs it built fast without losing its edge.',
     accent: '#BD482D',
     shadow: '#6A2818',
-    contractCost: 27
+    contractCost: 27,
+    playerGuidance: {
+      strengthLabel: 'Best when the concept is right and needs a fast build',
+      pairingHint: 'Pair with a ruthless reviewer',
+      riskLabel: 'Needs a reviewer to catch brittle edges',
+      shortPitch:
+        "I've got this. If the concept already feels right, I can build it fast without sanding off the edge."
+    }
   },
   {
     id: 'agent-02',
+    name: 'Dorian Ash',
+    handle: 'dorian-ash',
+    specialty: 'Systems-First Builder',
+    roleAffinity: 'Frontend structure and information architecture',
+    capabilityVector: {
+      design: 71,
+      implementation: 92,
+      review: 78,
+      deployment: 74
+    },
+    styleProfile: {
+      signature: 'Grid-first interface systems with disciplined hierarchy and control-room calm.',
+      execution: 'Builds the scaffolding first so ambitious concepts stay legible, stable, and shippable.',
+      collaboration: 'Asks for constraints early and turns fuzzy ideas into explicit structure the team can follow.'
+    },
+    temperament: {
+      profile: 'Measured builder',
+      pace: 64,
+      resilience: 82,
+      teamwork: 70
+    },
+    traits: ['Information hierarchy', 'Control-room grids', 'Constraint-friendly'],
+    bio: 'Best when a project needs stronger hierarchy, cleaner structure, and a calmer path to launch.',
+    accent: '#6C4C89',
+    shadow: '#332244',
+    contractCost: 31,
+    playerGuidance: {
+      strengthLabel: 'Best when the site needs stronger structure and trust',
+      pairingHint: 'Pair with a bold designer who needs a steady builder',
+      riskLabel: 'Can make a concept feel too controlled without a strong visual lead',
+      shortPitch:
+        "I'm not the strongest design lead, but I am a good fit when the site needs stronger structure, hierarchy, and trust. Tap my avatar for the full profile."
+    }
+  },
+  {
+    id: 'agent-03',
     name: 'Kestrel Vale',
     handle: 'kestrel-vale',
-    title: 'interface ranger',
-    archetype: 'Experience Cartographer',
-    roleAffinity: 'Flow and interaction design',
+    specialty: 'Skeuomorphic Product Designer',
+    roleAffinity: 'Skeuomorphic interaction and product design',
     capabilityVector: {
       design: 88,
       implementation: 68,
@@ -46,9 +87,9 @@ export const WORKER_CATALOG: Agent[] = [
       deployment: 54
     },
     styleProfile: {
-      signature: 'Tactile skeuomorphic control rooms, luminous glass, and surfaces that beg to be touched.',
-      execution: 'Turns navigation, buttons, and panels into layered product machinery.',
-      collaboration: 'Leaves handoff notes like a product blueprint, down to the bezel and button state.'
+      signature: 'Tactile skeuomorphic interfaces with luminous glass, deep controls, and surfaces that feel built to be touched.',
+      execution: 'Turns navigation, buttons, and panels into layered product machinery with clear interaction cues and physical logic.',
+      collaboration: 'Leaves detailed handoff notes like a product blueprint, down to the bezel, state change, and control weight.'
     },
     temperament: {
       profile: 'Calm systems thinker',
@@ -56,19 +97,25 @@ export const WORKER_CATALOG: Agent[] = [
       resilience: 79,
       teamwork: 82
     },
-    traits: ['Skeuomorphic control rooms', 'Player empathy', 'Strong handoffs'],
-    bio: 'Makes products feel tactile and navigable even when the underlying system is trying to fight back.',
+    traits: ['Skeuomorphic control rooms', 'Interaction-first', 'Strong handoffs'],
+    bio: 'Best when the site needs to feel tactile, navigable, and unmistakably like a real product surface.',
     accent: '#8B6C20',
     shadow: '#534A13',
-    contractCost: 25
+    contractCost: 25,
+    playerGuidance: {
+      strengthLabel: 'Best when the site needs tactile product feel and intuitive navigation',
+      pairingHint: 'Pair with a builder who preserves detail under pressure',
+      riskLabel: 'Needs a stronger finisher for launch polish',
+      shortPitch:
+        "This is right up my alley. I can make the site feel tactile, intuitive, and much more like a real product."
+    }
   },
   {
-    id: 'agent-03',
+    id: 'agent-04',
     name: 'Hexa Thorn',
     handle: 'hexa-thorn',
-    title: 'brand scavenger',
-    archetype: 'Identity Scavenger',
-    roleAffinity: 'Identity and mood systems',
+    specialty: 'Brutalist Identity Designer',
+    roleAffinity: 'Brutalist identity and visual systems',
     capabilityVector: {
       design: 93,
       implementation: 44,
@@ -77,8 +124,8 @@ export const WORKER_CATALOG: Agent[] = [
     },
     styleProfile: {
       signature: 'Brutalist poster systems, oversized type, and hard-edged blocks that read like public signage.',
-      execution: 'Delivers a ruthless first-pass visual language fast and expects the rest of the team to commit.',
-      collaboration: 'Throws down a visual thesis early and leaves little room for timid revisions.'
+      execution: 'Delivers a ruthless first-pass visual language fast and expects the team to commit to it.',
+      collaboration: 'Plants a visual thesis early and leaves little room for timid revisions or soft compromise.'
     },
     temperament: {
       profile: 'Instinctive stylist',
@@ -86,19 +133,25 @@ export const WORKER_CATALOG: Agent[] = [
       resilience: 61,
       teamwork: 66
     },
-    traits: ['Brutalist posters', 'Fast concepting', 'Can overreach'],
-    bio: 'Great at making something feel loud, inevitable, and publicly legible before anyone has fully decided what it is.',
+    traits: ['Brutalist posters', 'Fast concepting', 'Public-facing punch'],
+    bio: 'Best when the site needs a bold public identity that feels immediate, loud, and impossible to ignore.',
     accent: '#8B3A2E',
     shadow: '#4D1A14',
-    contractCost: 22
+    contractCost: 22,
+    playerGuidance: {
+      strengthLabel: 'Best when the site needs a bold identity and unmistakable public presence',
+      pairingHint: 'Pair with a builder who can stabilize a strong visual thesis',
+      riskLabel: 'Can overpower weaker structure if no one reins the concept in',
+      shortPitch:
+        "Yeah, I can take this. If you want a bolder identity and more public-facing punch, I'll push it there fast."
+    }
   },
   {
-    id: 'agent-04',
+    id: 'agent-05',
     name: 'Sable Quill',
     handle: 'sable-quill',
-    title: 'review sentinel',
-    archetype: 'Failure Hunter',
-    roleAffinity: 'QA and edge-case detection',
+    specialty: 'Launch QA Specialist',
+    roleAffinity: 'QA review, trust hardening, and edge-case detection',
     capabilityVector: {
       design: 48,
       implementation: 55,
@@ -106,9 +159,9 @@ export const WORKER_CATALOG: Agent[] = [
       deployment: 69
     },
     styleProfile: {
-      signature: 'Finds the crack in every glossy surface.',
-      execution: 'Builds tidy repro steps and redline notes.',
-      collaboration: 'Blunt but precise when the work needs correction.'
+      signature: 'Finds brittle edges, broken assumptions, and trust-killing cracks hiding inside polished surfaces.',
+      execution: 'Builds repro steps, redline notes, and pre-launch corrections before problems go public.',
+      collaboration: 'Blunt but exacting when risky work needs a final truth pass.'
     },
     temperament: {
       profile: 'Meticulous skeptic',
@@ -117,28 +170,34 @@ export const WORKER_CATALOG: Agent[] = [
       teamwork: 74
     },
     traits: ['Edge-case radar', 'Noisy diffs', 'Launch brake'],
-    bio: 'The person you want in the room right before launch and nowhere near your mood board.',
+    bio: 'Best when a promising build needs trust, correction, and one honest pass before launch.',
     accent: '#6F5C18',
     shadow: '#3A300B',
-    contractCost: 24
+    contractCost: 24,
+    playerGuidance: {
+      strengthLabel: 'Best when the team needs trust and edge-case QA before launch',
+      pairingHint: 'Pair with a bold designer or fast builder who needs a final truth pass',
+      riskLabel: 'Can sand down risky ideas if no one protects the concept',
+      shortPitch:
+        "I can do the QA pass. If this build is risky, I'll find the brittle parts before the client does."
+    }
   },
   {
-    id: 'agent-05',
+    id: 'agent-06',
     name: 'Mint Halberd',
     handle: 'mint-halberd',
-    title: 'deploy courier',
-    archetype: 'Release Operator',
-    roleAffinity: 'Launch hardening and rollout',
+    specialty: 'Responsive Release Reviewer',
+    roleAffinity: 'Responsive QA, release hardening, and rollout',
     capabilityVector: {
       design: 36,
       implementation: 61,
-      review: 72,
-      deployment: 96
+      review: 84,
+      deployment: 94
     },
     styleProfile: {
-      signature: 'Quiet launches with boring dashboards.',
-      execution: 'Runs checklists like ritual.',
-      collaboration: 'Keeps comms terse when the clock is hot.'
+      signature: 'Quiet launch surfaces, narrow-screen rigor, and operational calm under pressure.',
+      execution: 'Runs responsive QA and release checklists like ritual until the site holds together on every screen.',
+      collaboration: 'Turns launch nerves into actionable checklists and clean rollback-ready communication.'
     },
     temperament: {
       profile: 'Methodical closer',
@@ -146,166 +205,39 @@ export const WORKER_CATALOG: Agent[] = [
       resilience: 95,
       teamwork: 63
     },
-    traits: ['Checklist brain', 'Incident calm', 'Rollback ready'],
-    bio: 'Turns “we think it should work” into “we know what happens if it does not.”',
+    traits: ['Responsive QA', 'Incident calm', 'Rollback ready'],
+    bio: 'Best when the team needs confidence that the site will survive launch conditions and tiny screens alike.',
     accent: '#5D6E2F',
     shadow: '#2E3A18',
-    contractCost: 29
+    contractCost: 29,
+    playerGuidance: {
+      strengthLabel: 'Best when the launch needs responsive QA and release hardening',
+      pairingHint: 'Pair with a risky designer or fast builder before launch',
+      riskLabel: 'Can push the work toward safety if no one protects the concept',
+      shortPitch:
+        "Happy to take release. I'll harden the launch, check the tiny screens, and make sure this thing survives the rollout."
+    }
   },
-  {
-    id: 'agent-06',
-    name: 'Dorian Ash',
-    handle: 'dorian-ash',
-    title: 'stack architect',
-    archetype: 'Systems Architect',
-    roleAffinity: 'Technical framing and build systems',
-    capabilityVector: {
-      design: 71,
-      implementation: 92,
-      review: 78,
-      deployment: 74
-    },
-    styleProfile: {
-      signature: 'Grid-first system architecture with disciplined hierarchy and control-room calm.',
-      execution: 'Builds foundations before polish and turns aesthetics into coherent scaffolds.',
-      collaboration: 'Likes early constraints, direct questions, and explicit design rules.'
-    },
-    temperament: {
-      profile: 'Measured builder',
-      pace: 64,
-      resilience: 82,
-      teamwork: 70
-    },
-    traits: ['Architecture first', 'Control-room grids', 'Constraint-friendly'],
-    bio: 'Rarely the loudest person on a project, but usually the one who made it shippable.',
-    accent: '#6C4C89',
-    shadow: '#332244',
-    contractCost: 31
-  },
-  {
-    id: 'agent-07',
-    name: 'Ione Vector',
-    handle: 'ione-vector',
-    title: 'protocol illustrator',
-    archetype: 'Generative Visualist',
-    roleAffinity: 'Visual systems and generative art',
-    capabilityVector: {
-      design: 91,
-      implementation: 57,
-      review: 49,
-      deployment: 42
-    },
-    styleProfile: {
-      signature: 'Festival-scale gradients, liquid chrome, and generative spectacle with exhibition energy.',
-      execution: 'Builds visual worlds that feel like a launch event swallowed the city.',
-      collaboration: 'Needs a stronger finisher once the spectacle lands.'
-    },
-    temperament: {
-      profile: 'Mercurial visionary',
-      pace: 71,
-      resilience: 48,
-      teamwork: 58
-    },
-    traits: ['Festival spectacle', 'High ceiling', 'Can drift'],
-    bio: 'Makes things that people remember, then dares the rest of the team to stabilize the afterimage.',
-    accent: '#4A6FB1',
-    shadow: '#243860',
-    contractCost: 23
-  },
-  {
-    id: 'agent-08',
-    name: 'Calder Pike',
-    handle: 'calder-pike',
-    title: 'ops signaler',
-    archetype: 'Operator-Analyst',
-    roleAffinity: 'Monitoring and release telemetry',
-    capabilityVector: {
-      design: 44,
-      implementation: 63,
-      review: 81,
-      deployment: 88
-    },
-    styleProfile: {
-      signature: 'Operational clarity over theatrics.',
-      execution: 'Likes instrumentation before launch.',
-      collaboration: 'Translates chaos into checklists.'
-    },
-    temperament: {
-      profile: 'Steady operator',
-      pace: 66,
-      resilience: 89,
-      teamwork: 76
-    },
-    traits: ['Metrics-minded', 'Postmortem memory', 'Quiet under fire'],
-    bio: 'Not glamorous, but the sort of operator who makes the rest of the team look disciplined.',
-    accent: '#4F7A74',
-    shadow: '#27403C',
-    contractCost: 28
-  },
-  {
-    id: 'agent-09',
-    name: 'Nera Coil',
-    handle: 'nera-coil',
-    title: 'token mechanic',
-    archetype: 'Economic Systems Tinkerer',
-    roleAffinity: 'Incentive design and token logic',
-    capabilityVector: {
-      design: 68,
-      implementation: 74,
-      review: 66,
-      deployment: 59
-    },
-    styleProfile: {
-      signature: 'Utility-first systems with a taste for risk.',
-      execution: 'Good at weird constraints and parameter tuning.',
-      collaboration: 'Likes debating tradeoffs in the open.'
-    },
-    temperament: {
-      profile: 'Restless optimizer',
-      pace: 74,
-      resilience: 62,
-      teamwork: 69
-    },
-    traits: ['Systems tuning', 'Tradeoff fluent', 'Can overcomplicate'],
-    bio: 'The kind of systems thinker who can rescue a launch or talk everyone into one more layer.',
-    accent: '#7A4C88',
-    shadow: '#3D2546',
-    contractCost: 26
-  },
-  {
-    id: 'agent-10',
-    name: 'Omen Wren',
-    handle: 'omen-wren',
-    title: 'community operator',
-    archetype: 'Narrative Signal Amplifier',
-    roleAffinity: 'Launch narrative and community ops',
-    capabilityVector: {
-      design: 77,
-      implementation: 49,
-      review: 54,
-      deployment: 83
-    },
-    styleProfile: {
-      signature: 'Turns cold launches into scenes people want to join.',
-      execution: 'Excellent at launch framing and cadence.',
-      collaboration: 'Pulls momentum out of thin air.'
-    },
-    temperament: {
-      profile: 'Electric orchestrator',
-      pace: 86,
-      resilience: 64,
-      teamwork: 91
-    },
-    traits: ['Hype engine', 'Rapid coordination', 'Needs guardrails'],
-    bio: 'Can make a launch feel alive fast, provided someone else keeps the floor from catching fire.',
-    accent: '#C06B2E',
-    shadow: '#643513',
-    contractCost: 24
-  }
 ];
 
 function getStageEntries(agent: Agent): Array<[PipelineStageId, number]> {
   return PIPELINE_STAGE_ORDER.map((stageId) => [stageId, agent.capabilityVector[stageId]]);
+}
+
+export function getWorkerStageScoreEntries(
+  agent: Agent
+): Array<{ stageId: PipelineStageId; label: string; value: number }> {
+  return getStageEntries(agent).map(([stageId, value]) => ({
+    stageId,
+    label: getPipelineStageDefinition(stageId).shortLabel,
+    value
+  }));
+}
+
+export function getWorkerStageScoreSummary(agent: Agent): string {
+  return getWorkerStageScoreEntries(agent)
+    .map(({ label, value }) => `${label} ${value}`)
+    .join(' • ');
 }
 
 export function getWorkerCapabilitySummary(agent: Agent, count = 2): string {
@@ -323,4 +255,84 @@ export function getWorkerPrimaryStageId(agent: Agent): PipelineStageId {
 export function getWorkerAverageCapability(agent: Agent): number {
   const values = getStageEntries(agent).map((entry) => entry[1]);
   return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+export function getWorkerWeakestStageId(agent: Agent): PipelineStageId {
+  return getStageEntries(agent).sort((left, right) => left[1] - right[1])[0]?.[0] ?? 'implementation';
+}
+
+export function getWorkerStrengthLabel(agent: Agent): string {
+  if (agent.playerGuidance?.strengthLabel) {
+    return agent.playerGuidance.strengthLabel;
+  }
+
+  const stageId = getWorkerPrimaryStageId(agent);
+  const score = agent.capabilityVector[stageId];
+  return `Best for ${getPipelineStageDefinition(stageId).shortLabel.toLowerCase()} (${score})`;
+}
+
+export function getWorkerRiskLabel(agent: Agent): string {
+  if (agent.playerGuidance?.riskLabel) {
+    return agent.playerGuidance.riskLabel;
+  }
+
+  const explicitRisk = [...agent.traits].reverse().find((trait) => /^can |^needs /i.test(trait));
+
+  if (explicitRisk) {
+    return explicitRisk;
+  }
+
+  if (agent.temperament.resilience < 55) {
+    return 'Can wobble under pressure';
+  }
+
+  if (agent.temperament.teamwork < 60) {
+    return 'Needs tighter handoffs';
+  }
+
+  const weakestStageId = getWorkerWeakestStageId(agent);
+  return `Needs support on ${getPipelineStageDefinition(weakestStageId).shortLabel.toLowerCase()}`;
+}
+
+export function getWorkerPairingHint(agent: Agent): string {
+  if (agent.playerGuidance?.pairingHint) {
+    return agent.playerGuidance.pairingHint;
+  }
+
+  const strongestStageId = getWorkerPrimaryStageId(agent);
+  const weakestStageId = getWorkerWeakestStageId(agent);
+
+  if (strongestStageId === 'design' && weakestStageId === 'implementation') {
+    return 'Pair with a disciplined builder';
+  }
+
+  if (strongestStageId === 'implementation' && weakestStageId === 'review') {
+    return 'Pair with a ruthless reviewer';
+  }
+
+  if (strongestStageId === 'deployment' && weakestStageId === 'design') {
+    return 'Pair with a sharper designer';
+  }
+
+  if (strongestStageId === 'review' && weakestStageId === 'design') {
+    return 'Pair with a stronger visual lead';
+  }
+
+  if (agent.temperament.teamwork >= 80) {
+    return 'Elevates messy lineups';
+  }
+
+  if (agent.temperament.resilience >= 85) {
+    return 'Stabilizes risky teams';
+  }
+
+  return 'Works best with complementary coverage';
+}
+
+export function getWorkerShortPitch(agent: Agent): string {
+  if (agent.playerGuidance?.shortPitch) {
+    return agent.playerGuidance.shortPitch;
+  }
+
+  return `${getWorkerStrengthLabel(agent)}. Tap my avatar for the full profile.`;
 }

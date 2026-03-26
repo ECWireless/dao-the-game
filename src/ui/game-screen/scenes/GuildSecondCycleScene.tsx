@@ -11,7 +11,6 @@ import {
   RAIDGUILD_HISTORY,
   type GuildMemberProfile
 } from '../guildData';
-import { formatCredits } from '../utils';
 type GuildSecondCycleSceneProps = {
   studioName?: string;
   roles: HatRole[];
@@ -24,7 +23,6 @@ type RoleSequence = {
   role: HatRole;
   brief: string;
   bullets: string[];
-  replies: string[];
   candidates: GuildMemberProfile[];
 };
 function buildRoleBrief(roleName: string) {
@@ -32,40 +30,24 @@ function buildRoleBrief(roleName: string) {
     return {
       brief:
         'Need a fast design pass that makes the conference feel intentional instead of barely surviving.',
-      bullets: ['Visual hierarchy', 'Clear event branding', 'Still works under deadline'],
-      replies: [
-        'I can fix the visual pass. Better hierarchy, cleaner hero, less panic showing through.',
-        'I can sharpen the brand layer and keep the dev handoff sane.'
-      ]
+      bullets: ['Visual hierarchy', 'Clear event branding', 'Still works under deadline']
     };
   }
   if (roleName.includes('Review')) {
     return {
       brief: 'Need a ruthless QA sweep before this goes back in front of the client.',
-      bullets: ['Phone checks', 'Broken state sweep', 'Embarrassment prevention'],
-      replies: [
-        'I can sweep the whole build and find the weird breakage before it reaches the client.',
-        'I do launch triage. I can smoke-test this fast and leave clean notes.'
-      ]
+      bullets: ['Phone checks', 'Broken state sweep', 'Embarrassment prevention']
     };
   }
   if (roleName.includes('Deploy')) {
     return {
       brief: 'Need a release closer who can harden the handoff and keep the rollout calm.',
-      bullets: ['Launch checklist', 'Stable rollout', 'Clean handoff'],
-      replies: [
-        'I can take release hardening and keep the handoff clean.',
-        'I can own the deploy edge-cases and get it over the line.'
-      ]
+      bullets: ['Launch checklist', 'Stable rollout', 'Clean handoff']
     };
   }
   return {
     brief: 'Need another fast specialist to tighten the next branch before the resubmission.',
-    bullets: ['Fast turnaround', 'Clean handoff', 'Client-safe revision'],
-    replies: [
-      `I can take ${roleName.toLowerCase()}.`,
-      `I can cover ${roleName.toLowerCase()} and keep it moving.`
-    ]
+    bullets: ['Fast turnaround', 'Clean handoff', 'Client-safe revision']
   };
 }
 export function GuildSecondCycleScene({
@@ -86,7 +68,6 @@ export function GuildSecondCycleScene({
           role,
           brief: details.brief,
           bullets: details.bullets,
-          replies: details.replies,
           candidates: getRaidGuildCandidatesForRole(agents, role.id, 2)
         };
       }),
@@ -238,7 +219,7 @@ export function GuildSecondCycleScene({
             </p>
             <div className="guild-brief-embed">
               <p className="guild-brief-kicker">Role Brief</p>
-              <h2>Web Developer</h2>
+              <h2>Frontend Engineer</h2>
               <p>Need someone to rebuild a conference site fast, clean, and production-safe.</p>
               <ul>
                 <li>Responsive front-end build</li>
@@ -248,17 +229,7 @@ export function GuildSecondCycleScene({
             </div>
           </div>
         </article>
-        {firstCycleCandidates.map((candidate, index) => {
-          const agent = candidate.agentId
-            ? agents.find((item) => item.id === candidate.agentId)
-            : undefined;
-          if (!agent) {
-            return null;
-          }
-          const replyText =
-            index === 0
-              ? 'I can handle the site build. Fast pass, clean UI, no drama.'
-              : 'I can take this too. Frontend polish, deploy handoff, done.';
+        {firstCycleCandidates.map((candidate) => {
           return (
             <article key={`first-cycle-${candidate.id}`} className="guild-feed-entry is-candidate">
               <button
@@ -273,11 +244,7 @@ export function GuildSecondCycleScene({
                   {candidate.name}
                   <span>@{candidate.handle}</span>
                 </p>
-                <p className="guild-feed-submeta">
-                  {candidate.title} • {agent.temperament.profile.toLowerCase()} • contract{' '}
-                  {formatCredits(agent.contractCost)}
-                </p>
-                <p className="guild-feed-text">{replyText}</p>
+                <p className="guild-feed-text">{candidate.shortPitch}</p>
               </div>
             </article>
           );
@@ -342,12 +309,6 @@ export function GuildSecondCycleScene({
                 </div>
               </article>
               {sequence.candidates.map((candidate, candidateIndex) => {
-                const agent = candidate.agentId
-                  ? agents.find((item) => item.id === candidate.agentId)
-                  : undefined;
-                if (!agent) {
-                  return null;
-                }
                 if (
                   (candidateIndex === 0 && !showFirstReply) ||
                   (candidateIndex === 1 && !showSecondReply)
@@ -373,13 +334,7 @@ export function GuildSecondCycleScene({
                         {candidate.name}
                         <span>@{candidate.handle}</span>
                       </p>
-                      <p className="guild-feed-submeta">
-                        {candidate.title} • {agent.temperament.profile.toLowerCase()} • contract{' '}
-                        {formatCredits(agent.contractCost)}
-                      </p>
-                      <p className="guild-feed-text">
-                        {sequence.replies[candidateIndex] ?? sequence.replies[0]}
-                      </p>
+                      <p className="guild-feed-text">{candidate.shortPitch}</p>
                     </div>
                   </article>
                 );

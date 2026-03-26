@@ -1,7 +1,11 @@
 import type { Agent } from '../../types';
 import {
   getWorkerAverageCapability,
-  getWorkerCapabilitySummary
+  getWorkerPairingHint,
+  getWorkerRiskLabel,
+  getWorkerShortPitch,
+  getWorkerStageScoreSummary,
+  getWorkerStrengthLabel
 } from '../../workers/catalog';
 
 export type GuildMemberProfile = {
@@ -9,13 +13,17 @@ export type GuildMemberProfile = {
   agentId?: string;
   name: string;
   handle: string;
-  title: string;
   accent: string;
   shadow: string;
   roleAffinity?: string;
-  archetype?: string;
-  temperamentProfile?: string;
-  capabilitySummary?: string;
+  shortPitch?: string;
+  stageScoreSummary?: string;
+  strengthLabel?: string;
+  pairingHint?: string;
+  riskLabel?: string;
+  styleSignature?: string;
+  styleExecution?: string;
+  styleCollaboration?: string;
 };
 
 export type GuildFeedEntry = {
@@ -29,7 +37,6 @@ const DECOR_PROFILES: GuildMemberProfile[] = [
     id: 'quartermaster-nyx',
     name: 'Quartermaster Nyx',
     handle: 'quartermaster-nyx',
-    title: 'ops wrangler',
     accent: '#7A3A2C',
     shadow: '#3C1710'
   },
@@ -37,7 +44,6 @@ const DECOR_PROFILES: GuildMemberProfile[] = [
     id: 'glint-archive',
     name: 'Glint Archive',
     handle: 'glint-archive',
-    title: 'bounty curator',
     accent: '#534A13',
     shadow: '#2F2A0B'
   },
@@ -45,7 +51,6 @@ const DECOR_PROFILES: GuildMemberProfile[] = [
     id: 'moss-scrip',
     name: 'Moss Scrip',
     handle: 'moss-scrip',
-    title: 'quest poster',
     accent: '#986749',
     shadow: '#4E271A'
   }
@@ -82,13 +87,17 @@ function createGuildProfile(agent: Agent, id: string): GuildMemberProfile {
     agentId: agent.id,
     name: agent.name,
     handle: agent.handle,
-    title: agent.title,
     accent: agent.accent,
     shadow: agent.shadow,
     roleAffinity: agent.roleAffinity,
-    archetype: agent.archetype,
-    temperamentProfile: agent.temperament.profile,
-    capabilitySummary: getWorkerCapabilitySummary(agent)
+    shortPitch: getWorkerShortPitch(agent),
+    stageScoreSummary: getWorkerStageScoreSummary(agent),
+    strengthLabel: getWorkerStrengthLabel(agent),
+    pairingHint: getWorkerPairingHint(agent),
+    riskLabel: getWorkerRiskLabel(agent),
+    styleSignature: agent.styleProfile.signature,
+    styleExecution: agent.styleProfile.execution,
+    styleCollaboration: agent.styleProfile.collaboration
   };
 }
 

@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ArtifactGenerationRecovery } from '../contracts/gameState';
 import type { OrgTreeRecord } from '../contracts/org';
 import { getScene, type StoryApp } from '../levels/story';
 import { countAssignedRoles, estimateRunwayAfterRun, getActiveRoles, useGameStore } from '../state/gameStore';
@@ -7,6 +8,7 @@ import { APP_META } from './game-screen/constants';
 import { AppDock } from './game-screen/components/AppDock';
 import { IntroDialog } from './game-screen/components/IntroDialog';
 import { getCrossAppHandoff } from './game-screen/handoffs';
+import { buildClientReview } from './game-screen/clientReview';
 import { NotificationBanner, type MessageNotification } from './game-screen/scenes/CommunicationScenes';
 import { MailInboxScene } from './game-screen/scenes/MailScenes';
 import { StatusBar } from './game-screen/components/StatusBar';
@@ -32,6 +34,7 @@ type GameScreenProps = {
   orgTree?: OrgTreeRecord | null;
   artifactGenerationProgress?: ArtifactGenerationProgress | null;
   artifactGenerationError?: string | null;
+  artifactGenerationRecovery?: ArtifactGenerationRecovery | null;
   onRetryArtifactGeneration?: () => Promise<void> | void;
   isRetryingArtifactGeneration?: boolean;
   onSetStudioName?: (name: string) => Promise<void> | void;
@@ -48,6 +51,7 @@ export default function GameScreen({
   orgTree = null,
   artifactGenerationProgress = null,
   artifactGenerationError = null,
+  artifactGenerationRecovery = null,
   onRetryArtifactGeneration,
   isRetryingArtifactGeneration = false,
   onSetStudioName,
@@ -66,6 +70,8 @@ export default function GameScreen({
   const runCount = useGameStore((state) => state.runCount);
   const latestRun = useGameStore((state) => state.latestRun);
   const latestArtifacts = useGameStore((state) => state.latestArtifacts);
+  const runHistory = useGameStore((state) => state.runHistory);
+  const clientReviews = useGameStore((state) => state.clientReviews);
 
   const advanceStory = useGameStore((state) => state.advanceStory);
   const retreatStory = useGameStore((state) => state.retreatStory);
@@ -76,10 +82,10 @@ export default function GameScreen({
   const assignRole = useGameStore((state) => state.assignRole);
   const runProduction = useGameStore((state) => state.runProduction);
   const resetTutorial = useGameStore((state) => state.resetTutorial);
+  const setClientReview = useGameStore((state) => state.setClientReview);
 
   const scene = getScene(storySceneIndex);
   const nextScene = getScene(storySceneIndex + 1);
-  const nextHandoff = getCrossAppHandoff(nextScene.id);
   const unlockedApps = useMemo(() => getUnlockedApps(storySceneIndex), [storySceneIndex]);
   const previousUnlockedAppsRef = useRef<StoryApp[]>(storySceneIndex === 0 && unlockedApps.includes('mail') ? unlockedApps.filter((app) => app !== 'mail') : unlockedApps);
 
@@ -89,16 +95,17 @@ export default function GameScreen({
   const [launchOriginX, setLaunchOriginX] = useState<number>(getAppLaunchOrigin(scene.app, unlockedApps));
   const [pulseApp, setPulseApp] = useState<StoryApp | null>(null);
   const [installingApp, setInstallingApp] = useState<StoryApp | null>(null);
-  const [isMachineLocked, setIsMachineLocked] = useState(false);
+  const [isFactoryLocked, setIsFactoryLocked] = useState(false);
   const [isEmailNotificationVisible, setIsEmailNotificationVisible] = useState(false);
   const [pendingHandoffSceneId, setPendingHandoffSceneId] = useState<string | null>(null);
+  const [openedStoryMailSceneIds, setOpenedStoryMailSceneIds] = useState<string[]>([]);
 
   const activeRoles = getActiveRoles(roles, unlockedRoleCount);
   const assignedActiveRoles = countAssignedRoles(activeRoles);
   const runwayAfterRun = estimateRunwayAfterRun(treasury, activeRoles, agents);
   const showIntroDialog =
     forceIntroDialog || (!suppressIntroDialog && storySceneIndex === 0 && !hasSeenIntroDialog);
-  const canSwitchApps = !isMachineLocked && !showIntroDialog;
+  const canSwitchApps = !isFactoryLocked && !showIntroDialog;
 
   const requestAppSwitch = useCallback(
     (targetApp: StoryApp) => {
@@ -132,9 +139,10 @@ export default function GameScreen({
       setSwitchPhase('idle');
       setPulseApp(null);
       setInstallingApp(resetApps.includes('mail') ? 'mail' : null);
-      setIsMachineLocked(false);
+      setIsFactoryLocked(false);
       setIsEmailNotificationVisible(false);
       setPendingHandoffSceneId(null);
+      setOpenedStoryMailSceneIds([]);
       setLaunchOriginX(getAppLaunchOrigin('messages', resetApps));
       previousUnlockedAppsRef.current = resetApps;
     })();
@@ -227,6 +235,7 @@ export default function GameScreen({
     if (storySceneIndex === 0) {
       setIsEmailNotificationVisible(false);
       setPendingHandoffSceneId(null);
+      setOpenedStoryMailSceneIds([]);
     }
   }, [storySceneIndex]);
 
@@ -236,16 +245,74 @@ export default function GameScreen({
     setIsEmailNotificationVisible(false);
     advanceStoryAndOpenApp('mail');
   }, [advanceStoryAndOpenApp]);
+  const getClientReviewForSceneId = useCallback(
+    (sceneId: string) => {
+      if (sceneId === 'mail-fail') {
+        return clientReviews[1] ?? null;
+      }
+
+      if (sceneId === 'mail-success') {
+        return clientReviews[2] ?? null;
+      }
+
+      return null;
+    },
+    [clientReviews]
+  );
+  const buildMailHandoff = useCallback(
+    (sceneId: string) => {
+      const review = getClientReviewForSceneId(sceneId);
+
+      if (!review) {
+        return getCrossAppHandoff(sceneId);
+      }
+
+      return {
+        targetApp: 'mail' as const,
+        appName: 'Mail',
+        title: review.notificationTitle,
+        preview: review.notificationPreview,
+        icon: 'mail' as const
+      };
+    },
+    [getClientReviewForSceneId]
+  );
+  const nextHandoff = buildMailHandoff(nextScene.id);
+  const pendingHandoff = pendingHandoffSceneId ? buildMailHandoff(pendingHandoffSceneId) : undefined;
   const queueCrossAppAdvance = useCallback(() => {
     if (nextHandoff) setPendingHandoffSceneId(nextScene.id);
     advanceStory();
   }, [advanceStory, nextHandoff, nextScene.id]);
-  const pendingHandoff = pendingHandoffSceneId ? getCrossAppHandoff(pendingHandoffSceneId) : undefined;
+  const handleSubmitToClient = useCallback(
+    (cycle: 1 | 2) => {
+      if (!latestRun || !latestArtifacts) {
+        return;
+      }
+
+      const review = buildClientReview({
+        cycle,
+        studioName,
+        run: latestRun,
+        artifact: latestArtifacts
+      });
+
+      setClientReview(cycle, review);
+      queueCrossAppAdvance();
+    },
+    [latestArtifacts, latestRun, queueCrossAppAdvance, setClientReview, studioName]
+  );
   const handleHandoffNotificationOpen = useCallback(() => {
     if (!pendingHandoff) return;
+
+    if (pendingHandoff.targetApp === 'mail' && pendingHandoffSceneId) {
+      setOpenedStoryMailSceneIds((current) =>
+        current.includes(pendingHandoffSceneId) ? current : [...current, pendingHandoffSceneId]
+      );
+    }
+
     setPendingHandoffSceneId(null);
     requestAppSwitch(pendingHandoff.targetApp);
-  }, [pendingHandoff, requestAppSwitch]);
+  }, [pendingHandoff, pendingHandoffSceneId, requestAppSwitch]);
 
   const hasEmailNotification = scene.id === 'messages-notification';
   const activePhoneNotification: MessageNotification | null = showIntroDialog
@@ -276,6 +343,7 @@ export default function GameScreen({
         onOpen: handleMailNotificationOpen
       }
     : undefined;
+  const isCurrentStoryMailOpened = openedStoryMailSceneIds.includes(scene.id);
   const dockTargetApp = pendingHandoff?.targetApp ?? (hasEmailNotification && isEmailNotificationVisible ? 'mail' : scene.app);
   const resolvedIntroDialogConfig: Required<
     Pick<IntroDialogConfig, 'onPrimaryAction' | 'primaryActionLabel' | 'primaryActionDisabled'>
@@ -319,7 +387,10 @@ export default function GameScreen({
               ? 2900
               : null;
     } else if (currentApp === 'mail') {
-      autoAdvanceDelayMs = scene.id === 'mail-offer' || scene.id === 'mail-fail' ? 3600 : null;
+      autoAdvanceDelayMs =
+        scene.id === 'mail-offer' || (scene.id === 'mail-fail' && isCurrentStoryMailOpened)
+          ? 3600
+          : null;
     }
 
     if (autoAdvanceDelayMs === null) {
@@ -328,7 +399,14 @@ export default function GameScreen({
 
     const timer = window.setTimeout(() => queueCrossAppAdvance(), autoAdvanceDelayMs);
     return () => window.clearTimeout(timer);
-  }, [currentApp, pendingHandoffSceneId, queueCrossAppAdvance, scene.id, showIntroDialog]);
+  }, [
+    currentApp,
+    isCurrentStoryMailOpened,
+    pendingHandoffSceneId,
+    queueCrossAppAdvance,
+    scene.id,
+    showIntroDialog
+  ]);
 
   useEffect(() => {
     if (pendingHandoffSceneId && (pendingHandoffSceneId !== scene.id || currentApp === scene.app)) {
@@ -338,6 +416,24 @@ export default function GameScreen({
 
   const displayedScene = currentApp === scene.app ? scene : getLatestReachedSceneForApp(storySceneIndex, currentApp);
   const isSceneInteractive = currentApp === scene.app;
+  const displayedClientReview = displayedScene ? getClientReviewForSceneId(displayedScene.id) : null;
+  const storyMailInboxItem =
+    displayedScene && displayedClientReview
+      ? {
+          sender: displayedClientReview.sender,
+          subject: displayedClientReview.subject,
+          preview: displayedClientReview.inboxPreview,
+          timestamp: 'now',
+          onOpen: () =>
+            setOpenedStoryMailSceneIds((current) =>
+              current.includes(displayedScene.id) ? current : [...current, displayedScene.id]
+            )
+        }
+      : undefined;
+  const shouldShowStoryMailInbox =
+    currentApp === 'mail' &&
+    Boolean(displayedScene && displayedClientReview) &&
+    !openedStoryMailSceneIds.includes(displayedScene?.id ?? '');
   const sceneContent = displayedScene
     ? renderSceneContent({
         sceneId: displayedScene.id,
@@ -350,10 +446,13 @@ export default function GameScreen({
         assignedActiveRoles,
         latestRun,
         latestArtifacts,
+        runHistory,
+        clientReviews,
         runCount,
         runwayAfterRun,
         artifactGenerationProgress,
         artifactGenerationError,
+        artifactGenerationRecovery,
         retryArtifactGeneration: onRetryArtifactGeneration,
         isRetryingArtifactGeneration,
         advanceStory,
@@ -363,12 +462,15 @@ export default function GameScreen({
         unlockExpandedRoles,
         assignRole,
         runProduction: handleRunProduction,
+        submitClientReview: handleSubmitToClient,
         resetDemo: handleReplayDemo,
-        setIsMachineLocked
+        setIsFactoryLocked
       })
     : null;
   const appContent = showIntroDialog
     ? <div className="intro-app-placeholder" aria-hidden="true" />
+    : shouldShowStoryMailInbox && storyMailInboxItem
+      ? <MailInboxScene storyItem={storyMailInboxItem} />
     : sceneContent
       ? sceneContent
       : currentApp === 'mail'

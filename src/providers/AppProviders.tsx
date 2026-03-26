@@ -2,7 +2,7 @@ import { PrivyProvider } from '@privy-io/react-auth';
 import { SmartWalletsProvider } from '@privy-io/react-auth/smart-wallets';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
-import { sepolia } from 'viem/chains';
+import { HATS_CHAIN } from '../lib/chains';
 
 type AppProvidersProps = {
   children: ReactNode;
@@ -31,8 +31,8 @@ export function AppProviders({ children, privyAppId }: AppProvidersProps) {
         appId={privyAppId}
         config={{
           loginMethods: ['email', 'wallet'],
-          supportedChains: [sepolia],
-          defaultChain: sepolia,
+          supportedChains: [HATS_CHAIN],
+          defaultChain: HATS_CHAIN,
           appearance: {
             walletChainType: 'ethereum-only'
           },

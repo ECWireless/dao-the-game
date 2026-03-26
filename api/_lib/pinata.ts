@@ -27,7 +27,8 @@ function buildArtifactManifest(artifact: ArtifactBundle): string {
       siteTitle: artifact.siteTitle,
       ensName: artifact.ensName,
       notes: artifact.notes,
-      provenance: artifact.provenance
+      provenance: artifact.provenance,
+      workerTrace: artifact.workerTrace
     },
     null,
     2

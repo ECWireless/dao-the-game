@@ -4,7 +4,7 @@ import { clientEnv } from './config';
 import type { IntroDialogConfig } from './ui/GameScreen';
 import GameScreen from './ui/GameScreen';
 
-const GAME_STATE_STORAGE_HINT_KEY = 'dao-the-game:state:v2';
+const GAME_STATE_STORAGE_HINT_KEY = 'dao-the-game:state:v3';
 
 type AppRuntimeComponent = typeof import('./AppRuntime').default;
 

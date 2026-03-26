@@ -9,7 +9,6 @@ export const TUTORIAL_BRIEF: Brief = {
   clientName: 'Regen Frontier Global Conference',
   mission: 'Rescue a failing Web3 conference brand by rebuilding its website with autonomous operations.',
   requirements: [
-    'No human labor allowed',
     'All authority flows through a Hats role tree',
     'Ship an IPFS deployment mapped to ENS',
     'Pass client review before treasury depletion'
@@ -94,7 +93,7 @@ export const TUTORIAL_BRIEF: Brief = {
 };
 
 export const TUTORIAL_ROLES: HatRole[] = [
-  { id: 'hat-01', name: 'Builder Agent', pipelineStageId: 'implementation' },
+  { id: 'hat-01', name: 'Frontend Engineer', pipelineStageId: 'implementation' },
   { id: 'hat-02', name: 'Designer Agent', pipelineStageId: 'design' },
   { id: 'hat-03', name: 'Reviewer Agent', pipelineStageId: 'review' },
   { id: 'hat-04', name: 'Deployment Agent', pipelineStageId: 'deployment' }
