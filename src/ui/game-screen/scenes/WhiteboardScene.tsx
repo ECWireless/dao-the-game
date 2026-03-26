@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent } from 'react';
 import { hatIdToTreeId } from '@hatsprotocol/sdk-v1-core';
-import { sepolia } from 'viem/chains';
 import type { OrgTreeRecord } from '../../../contracts/org';
 import type { Agent, HatRole } from '../../../types';
+import { getChainLabel, HATS_CHAIN } from '../../../lib/chains';
 import { findRaidGuildMember, getRaidGuildCandidatesForRole } from '../guildData';
 import {
   WhiteboardEdgeCue,
@@ -43,18 +43,6 @@ const CUE_MARGIN = 9;
 const DRAG_START_THRESHOLD = 6;
 
 function clamp(value: number, min: number, max: number) { return Math.max(min, Math.min(value, max)); }
-
-function formatOrgChainLabel(chainId?: number | null): string | null {
-  if (!chainId) {
-    return null;
-  }
-
-  if (chainId === sepolia.id) {
-    return sepolia.name;
-  }
-
-  return `Chain ${chainId}`;
-}
 
 export function WhiteboardScene({
   roles,
@@ -141,7 +129,7 @@ export function WhiteboardScene({
     }
   }, [orgTree?.topHatId]);
   const orgChainLabel = useMemo(
-    () => formatOrgChainLabel(orgTree?.chainId ?? sepolia.id),
+    () => getChainLabel(orgTree?.chainId ?? HATS_CHAIN.id),
     [orgTree?.chainId]
   );
   const openMember =
@@ -350,7 +338,7 @@ export function WhiteboardScene({
               <span className="tree-node-meta">
                 {studioName
                   ? orgTreeId
-                    ? `${orgChainLabel ?? 'Sepolia'} | Tree ${orgTreeId}`
+                    ? `${orgChainLabel ?? HATS_CHAIN.name} | Tree ${orgTreeId}`
                     : 'Studio active'
                   : 'Tap to name studio'}
               </span>

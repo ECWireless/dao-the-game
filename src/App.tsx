@@ -34,6 +34,7 @@ import { clientEnv } from './config';
 import { TUTORIAL_BRIEF } from './levels/tutorial';
 import { getScene } from './levels/story';
 import {
+  HATS_CHAIN,
   HATS_CHAIN_ID,
   changeHatDetails,
   createEmbeddedWalletExecutionClient,
@@ -382,7 +383,7 @@ export default function App({
 
       if (requireSmartWallet) {
         throw new Error(
-          'Smart-wallet execution is enabled, but this org is not linked to an available Sepolia smart wallet.'
+          `Smart-wallet execution is enabled, but this org is not linked to an available ${HATS_CHAIN.name} smart wallet.`
         );
       }
 
