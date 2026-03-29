@@ -2,6 +2,52 @@ export type PipelineStageId = 'design' | 'implementation' | 'review' | 'deployme
 
 export type ArtifactType = 'conference-site';
 
+export type RoleTagId =
+  | 'ui-designer'
+  | 'brand-designer'
+  | 'frontend-engineer'
+  | 'code-reviewer';
+
+export type RoleTagDefinition = {
+  id: RoleTagId;
+  label: string;
+  description: string;
+};
+
+export type WorkerManifest = {
+  specVersion: 'dao-the-game.worker.v1';
+  identity: {
+    name: string;
+    handle: string;
+    roleTag: RoleTagId;
+    bio: string;
+    shortPitch: string;
+  };
+  execution: {
+    publicEndpoint: string;
+    paymentProtocol?: 'x402';
+  };
+  pricing: {
+    asset: 'USDC';
+    amount: string;
+    chargeModel: 'per_request_attempt';
+  };
+};
+
+export type WorkerRegistration = {
+  erc8004Id?: string | null;
+  ownerAddress?: string | null;
+  engineerEmail?: string | null;
+  status: 'pending' | 'registered';
+  submittedAt?: string | null;
+  updatedAt?: string | null;
+};
+
+export type WorkerPresentation = {
+  accent: string;
+  shadow: string;
+};
+
 export type DeploymentMetricId = 'visualIdentity' | 'launchStability' | 'communityHype' | 'trust';
 
 export type DeploymentMetrics = Record<DeploymentMetricId, number>;
@@ -9,8 +55,8 @@ export type DeploymentMetrics = Record<DeploymentMetricId, number>;
 export type DeploymentProfileTag = 'premium' | 'flashy' | 'stable' | 'messy' | 'failed';
 
 export type DeploymentContribution = {
-  agentId: string;
-  agentName: string;
+  workerId: string;
+  workerName: string;
   metricId: DeploymentMetricId;
   impact: number;
   summary: string;
@@ -20,7 +66,7 @@ export type DeploymentSynergyNote = {
   type: 'synergy' | 'tension';
   metricId?: DeploymentMetricId;
   impact: number;
-  relatedAgentIds: string[];
+  relatedWorkerIds: string[];
   summary: string;
 };
 
@@ -57,29 +103,66 @@ export type WorkerPlayerGuidance = {
   shortPitch?: string;
 };
 
-export type Agent = {
-  id: string;
-  name: string;
-  handle: string;
-  specialty: string;
+export type WorkerGameplayProfile = {
   roleAffinity: string;
   capabilityVector: CapabilityVector;
   styleProfile: WorkerStyleProfile;
   temperament: WorkerTemperament;
   traits: string[];
+  playerGuidance?: WorkerPlayerGuidance;
+};
+
+export type WorkerRegistryRecord = {
+  registryRecordId: string;
+  manifest: WorkerManifest;
+  registration: WorkerRegistration;
+  availability: 'active' | 'paused';
+  presentation?: WorkerPresentation;
+};
+
+export type Worker = WorkerRegistryRecord & {
+  id: string;
+  name: string;
+  handle: string;
+  roleTag: RoleTagId;
+  specialty: string;
   bio: string;
+  shortPitch: string;
   accent: string;
   shadow: string;
-  contractCost: number;
-  playerGuidance?: WorkerPlayerGuidance;
+  roleAffinity: string;
+  capabilityVector: CapabilityVector;
+  styleProfile: WorkerStyleProfile;
+  temperament: WorkerTemperament;
+  traits: string[];
+  gameplay: WorkerGameplayProfile;
+};
+
+export type EngineerIntake = {
+  name: string;
+  roleTag: RoleTagId;
+  description: string;
+  priceUsdc: string;
+  referenceUrls?: string[];
+  styleNotes?: string;
+  engineerEmail?: string;
+};
+
+export type HatExecutionMode = 'worker' | 'squad';
+
+export type HatMetadata = {
+  allowedRoleTagIds: RoleTagId[];
+  pipelinePath: number[];
+  executionMode: HatExecutionMode;
 };
 
 export type HatRole = {
   id: string;
   name: string;
   isConfigured?: boolean;
-  assignedAgentId?: string;
+  assignedWorkerId?: string;
   pipelineStageId?: PipelineStageId;
+  metadata?: HatMetadata;
 };
 
 export type ConferenceSiteProgramPillar = {
@@ -124,13 +207,14 @@ export type Brief = {
 };
 
 export type ArtifactContributor = {
-  agentId: string;
-  agentName: string;
-  agentHandle: string;
+  workerId: string;
+  workerName: string;
+  workerHandle: string;
   roleId?: string;
   roleName?: string;
   stageId?: PipelineStageId;
-  specialty: string;
+  roleTag: RoleTagId;
+  specialty?: string;
   traits: string[];
 };
 
@@ -192,7 +276,7 @@ export type ClientReview = {
 
 export type CostBreakdown = {
   base: number;
-  agents: number;
+  licenses: number;
   events: number;
   total: number;
 };
@@ -238,7 +322,7 @@ export type PipelineStageResult = {
   label: string;
   roleId?: string;
   roleName?: string;
-  assignedAgentId?: string;
+  assignedWorkerId?: string;
   operatorAffinity?: string;
   score: number;
   qualityDelta: number;
@@ -273,7 +357,7 @@ export type RunState = {
   treasury: number;
   brief: Brief;
   roles: HatRole[];
-  agents: Agent[];
+  workers: Worker[];
 };
 
 export type RunArtifactsInput = {
@@ -282,5 +366,5 @@ export type RunArtifactsInput = {
   cycle: 1 | 2;
   studioName?: string;
   roles: HatRole[];
-  agents: Agent[];
+  workers: Worker[];
 };

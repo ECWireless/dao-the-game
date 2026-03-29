@@ -1,4 +1,4 @@
-export { generateStartingAgents } from './generateStartingAgents';
+export { generateStartingWorkers } from './generateStartingWorkers';
 export { generateArtifacts } from './generateArtifacts';
 export {
   DEPLOYMENT_METRIC_LABELS,

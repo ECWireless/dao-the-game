@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent } from 'react';
 import { hatIdToTreeId } from '@hatsprotocol/sdk-v1-core';
 import type { OrgTreeRecord } from '../../../contracts/org';
-import type { Agent, HatRole } from '../../../types';
+import type { Worker, HatRole } from '../../../types';
 import { getChainLabel, HATS_CHAIN } from '../../../lib/chains';
 import { findRaidGuildMember, getRaidGuildCandidatesForRole } from '../guildData';
 import {
@@ -21,14 +21,14 @@ import {
 
 type WhiteboardSceneProps = {
   roles: HatRole[];
-  agents?: Agent[];
+  workers?: Worker[];
   studioName: string;
   isExpanded: boolean;
   orgTree?: OrgTreeRecord | null;
   isReadOnly?: boolean;
   onSetStudioName?: (name: string) => Promise<void> | void;
   onConfigureRole?: (roleId: string, name: string) => Promise<void> | void;
-  onAssignCandidateToRole?: (roleId: string, agentId: string) => void;
+  onAssignCandidateToRole?: (roleId: string, workerId: string) => void;
   onComplete?: () => void;
   autoAdvanceOnReady?: boolean;
 };
@@ -46,7 +46,7 @@ function clamp(value: number, min: number, max: number) { return Math.max(min, M
 
 export function WhiteboardScene({
   roles,
-  agents = [],
+  workers = [],
   studioName,
   isExpanded,
   orgTree = null,
@@ -102,7 +102,7 @@ export function WhiteboardScene({
   const nextRole = roles[visibleRoleCount];
   const canAddBranch = Boolean(studioName) && isInteractive && (isExpanded ? Boolean(nextRole) : visibleRoleCount === 0 && Boolean(firstRole));
   const importableRoles = useMemo(
-    () => sortWhiteboardRoles(roles.filter((role) => role.isConfigured && !role.assignedAgentId), isExpanded),
+    () => sortWhiteboardRoles(roles.filter((role) => role.isConfigured && !role.assignedWorkerId), isExpanded),
     [isExpanded, roles]
   );
   const canIntegrateGuild = isInteractive && Boolean(onAssignCandidateToRole) && importableRoles.length > 0;
@@ -111,8 +111,8 @@ export function WhiteboardScene({
   const activeRole = roles.find((role) => role.id === activeRoleId) ?? null;
   const activeRoleIndex = activeRole ? roles.findIndex((role) => role.id === activeRole.id) : -1;
   const activeRoleBlueprint = activeRoleIndex >= 0 ? WHITEBOARD_ROLE_BLUEPRINTS[activeRoleIndex] ?? WHITEBOARD_ROLE_BLUEPRINTS[WHITEBOARD_ROLE_BLUEPRINTS.length - 1] : null;
-  const guildCandidates = activeRole ? getRaidGuildCandidatesForRole(agents, activeRole.id, 2) : [];
-  const candidateOptions = guildCandidates.filter((candidate) => Boolean(candidate.agentId));
+  const guildCandidates = activeRole ? getRaidGuildCandidatesForRole(workers, activeRole, 2) : [];
+  const candidateOptions = guildCandidates.filter((candidate) => Boolean(candidate.workerId));
   const boardLinks = buildWhiteboardLinks(visibleRoles, isExpanded);
   const addBranchPosition = getWhiteboardBranchTriggerPosition(isExpanded ? nextRole?.id : firstRole?.id, isExpanded);
   const boardOffsetClampX = isExpanded ? 320 : 220;
@@ -133,10 +133,10 @@ export function WhiteboardScene({
     [orgTree?.chainId]
   );
   const openMember =
-    findRaidGuildMember(agents, openMemberId ?? undefined) ??
+    findRaidGuildMember(workers, openMemberId ?? undefined) ??
     candidateOptions.find((candidate) => candidate.id === openMemberId);
-  const openAgent = openMember?.agentId
-    ? agents.find((agent) => agent.id === openMember.agentId)
+  const openWorker = openMember?.workerId
+    ? workers.find((worker) => worker.id === openMember.workerId)
     : undefined;
   useEffect(() => { if (shouldAutoAdvanceExpanded) onComplete?.(); }, [onComplete, shouldAutoAdvanceExpanded]);
   useEffect(() => {
@@ -250,11 +250,11 @@ export function WhiteboardScene({
     }
   };
 
-  const commitCandidate = (agentId: string) => {
+  const commitCandidate = (workerId: string) => {
     if (!activeRole || !onAssignCandidateToRole) return;
-    const wasUnassigned = !activeRole.assignedAgentId;
+    const wasUnassigned = !activeRole.assignedWorkerId;
     const remainingCount = importableRoles.filter((role) => role.id !== activeRole.id).length;
-    onAssignCandidateToRole(activeRole.id, agentId);
+    onAssignCandidateToRole(activeRole.id, workerId);
     setSheetMode(null);
     setActiveRoleId(null);
     if (wasUnassigned && remainingCount === 0) {
@@ -357,13 +357,13 @@ export function WhiteboardScene({
             ) : null}
             {visibleRoles.map((role, index) => {
               const position = getWhiteboardRolePosition(role.id, isExpanded);
-              const assignedMember = findRaidGuildMember(agents, role.assignedAgentId);
+              const assignedMember = findRaidGuildMember(workers, role.assignedWorkerId);
               const isConfigured = Boolean(role.isConfigured);
               const isImportTarget = currentImportTargetRole?.id === role.id;
               const canOpenRole = isInteractive && !isConfigured && Boolean(onConfigureRole);
               const canOpenImportRole = isInteractive && isConfigured && Boolean(onAssignCandidateToRole);
               const isNodeActionable = canOpenRole || canOpenImportRole;
-              const nodeMeta = role.assignedAgentId
+              const nodeMeta = role.assignedWorkerId
                 ? `Tap to change contractor${assignedMember ? ` • ${assignedMember.name}` : ''}`
                 : isConfigured
                   ? isImportTarget ? 'Tap to import contractor' : 'Configured'
@@ -440,7 +440,7 @@ export function WhiteboardScene({
       {openMember ? (
         <GuildMemberCard
           member={openMember}
-          agent={openAgent}
+          worker={openWorker}
           onClose={() => setOpenMemberId(null)}
         />
       ) : null}

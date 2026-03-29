@@ -18,7 +18,7 @@ import {
 } from '../../src/artifacts/conferenceSite.js';
 import type { ArtifactDeployEvent } from '../../src/contracts/artifact.js';
 import type {
-  Agent,
+  Worker,
   ArtifactBundle,
   ArtifactWorkerTrace,
   PipelineStageId,
@@ -169,7 +169,7 @@ type ReviewJudgeOutput = z.infer<typeof ReviewJudgeSchema>;
 type DeploymentWorkerOutput = z.infer<typeof DeploymentWorkerSchema>;
 
 type StageAssignment = {
-  agent: Agent;
+  agent: Worker;
   roleName?: string;
   stageId: PipelineStageId;
 };
@@ -215,15 +215,15 @@ export function canUseConferenceSiteGeneration(): boolean {
 }
 
 function getStageAssignments(input: RunArtifactsInput): Map<PipelineStageId, StageAssignment> {
-  const agentById = new Map(input.agents.map((agent) => [agent.id, agent]));
+  const agentById = new Map(input.workers.map((agent) => [agent.id, agent]));
   const assignments = new Map<PipelineStageId, StageAssignment>();
 
   for (const stage of input.result.pipeline?.stages ?? []) {
-    if (!stage.assignedAgentId) {
+    if (!stage.assignedWorkerId) {
       continue;
     }
 
-    const agent = agentById.get(stage.assignedAgentId);
+    const agent = agentById.get(stage.assignedWorkerId);
 
     if (!agent) {
       continue;
@@ -239,7 +239,7 @@ function getStageAssignments(input: RunArtifactsInput): Map<PipelineStageId, Sta
   return assignments;
 }
 
-function summarizeWorker(agent: Agent, roleName?: string): Record<string, unknown> {
+function summarizeWorker(agent: Worker, roleName?: string): Record<string, unknown> {
   return {
     name: agent.name,
     handle: agent.handle,
@@ -402,7 +402,7 @@ function buildDeploymentStageContext({
   };
 }
 
-function getWorkerGenerationDirective(agent: Agent): WorkerGenerationDirective {
+function getWorkerGenerationDirective(agent: Worker): WorkerGenerationDirective {
   switch (agent.handle) {
     case 'rune-mercer':
       return {

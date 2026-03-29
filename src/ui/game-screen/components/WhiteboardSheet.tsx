@@ -18,7 +18,7 @@ type WhiteboardSheetProps = {
   onStudioDraftChange: (value: string) => void;
   onCommitStudioName: () => void;
   onCommitRole: () => void;
-  onCommitCandidate: (agentId: string) => void;
+  onCommitCandidate: (workerId: string) => void;
   onOpenCandidateProfile: (memberId: string) => void;
   onClose: () => void;
 };
@@ -95,8 +95,8 @@ export function WhiteboardSheet({
                 <button
                   className="primary-action whiteboard-candidate-import"
                   type="button"
-                  disabled={isSubmitting || !candidate.agentId}
-                  onClick={() => candidate.agentId && onCommitCandidate(candidate.agentId)}
+                  disabled={isSubmitting || !candidate.workerId}
+                  onClick={() => candidate.workerId && onCommitCandidate(candidate.workerId)}
                 >
                   Import
                 </button>

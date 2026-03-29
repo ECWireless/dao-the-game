@@ -17,7 +17,7 @@ const runResult: RunResult = {
     totalRoleCount: 4,
     costBreakdown: {
       base: 44,
-      agents: 96,
+      licenses: 96,
       events: 0,
       total: 140
     },

@@ -1,5 +1,5 @@
 import type {
-  Agent,
+  Worker,
   ArtifactBundle,
   ClientReview,
   HatRole,
@@ -29,7 +29,7 @@ export type GameStateSnapshot = {
   studioName: string;
   hasSeenIntroDialog: boolean;
   roles: HatRole[];
-  agents: Agent[];
+  workers: Worker[];
   latestRun?: RunResult;
   latestArtifacts?: ArtifactBundle;
   runHistory?: Partial<Record<1 | 2, RunResult>>;

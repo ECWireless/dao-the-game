@@ -1,6 +1,6 @@
 import { PIPELINE_STAGE_ORDER, getPipelineStageDefinition, inferPipelineStageId } from '../pipeline';
 import type {
-  Agent,
+  Worker,
   PipelineStageId,
   PipelineStageResult,
   PipelineStageStatus,
@@ -8,6 +8,7 @@ import type {
   RunResult,
   RunState
 } from '../types';
+import { getWorkerLicenseCost } from '../workers/catalog';
 import { evaluateDeployment } from './evaluateDeployment';
 import { clamp, createRng, hashSeedParts } from './rng';
 
@@ -60,8 +61,6 @@ const EVENT_TABLE: EventTemplate[] = [
     stageId: 'deployment'
   }
 ];
-
-const BASE_OPERATIONAL_COST = 36;
 
 const STAGE_OPERATION_COST: Record<PipelineStageId, number> = {
   design: 8,
@@ -129,12 +128,12 @@ function buildPseudoCid(seed: number): string {
   return cid;
 }
 
-function getAssignedAgents(state: RunState): Agent[] {
-  const byId = new Map(state.agents.map((agent) => [agent.id, agent]));
+function getAssignedWorkers(state: RunState): Worker[] {
+  const workersById = new Map(state.workers.map((worker) => [worker.id, worker]));
 
   return state.roles
-    .map((role) => (role.assignedAgentId ? byId.get(role.assignedAgentId) : undefined))
-    .filter((agent): agent is Agent => Boolean(agent));
+    .map((role) => (role.assignedWorkerId ? workersById.get(role.assignedWorkerId) : undefined))
+    .filter((worker): worker is Worker => Boolean(worker));
 }
 
 function rollRunEvent(rng: ReturnType<typeof createRng>, resilience: number) {
@@ -214,7 +213,7 @@ function compareStagesByWeakness(left: PipelineStageResult, right: PipelineStage
     return severityDelta;
   }
 
-  const coverageDelta = Number(Boolean(left.assignedAgentId)) - Number(Boolean(right.assignedAgentId));
+  const coverageDelta = Number(Boolean(left.assignedWorkerId)) - Number(Boolean(right.assignedWorkerId));
 
   if (coverageDelta !== 0) {
     return coverageDelta;
@@ -265,8 +264,8 @@ function getDuplicateStageIds(state: RunState): PipelineStageId[] {
   return [...duplicates];
 }
 
-function matchesStageAffinity(agent: Agent, stageId: PipelineStageId): boolean {
-  const affinity = agent.roleAffinity.toLowerCase();
+function matchesStageAffinity(worker: Worker, stageId: PipelineStageId): boolean {
+  const affinity = worker.roleAffinity.toLowerCase();
 
   return STAGE_WEIGHTS[stageId].affinityKeywords.some((keyword) => affinity.includes(keyword));
 }
@@ -274,7 +273,7 @@ function matchesStageAffinity(agent: Agent, stageId: PipelineStageId): boolean {
 function buildStageResult(
   stageId: PipelineStageId,
   role: RunState['roles'][number] | undefined,
-  agent: Agent | undefined,
+  worker: Worker | undefined,
   event: ReturnType<typeof rollRunEvent>
 ): PipelineStageResult {
   const definition = getPipelineStageDefinition(stageId);
@@ -282,7 +281,7 @@ function buildStageResult(
   const eventLabel = event.stageId === stageId ? event.label : undefined;
   const eventScoreAdjustment = eventLabel ? event.qualityDelta * 2 : 0;
 
-  if (!role || !agent) {
+  if (!role || !worker) {
     const score = clamp(18 + eventScoreAdjustment, 0, 100);
 
     return {
@@ -290,7 +289,7 @@ function buildStageResult(
       label: definition.label,
       roleId: role?.id,
       roleName: role?.name,
-      assignedAgentId: role?.assignedAgentId,
+      assignedWorkerId: role?.assignedWorkerId,
       score,
       qualityDelta: tuning.missingDelta,
       cost: STAGE_OPERATION_COST[stageId] + (role ? 2 : 0) + (eventLabel ? event.costDelta : 0),
@@ -301,14 +300,14 @@ function buildStageResult(
   }
 
   const composite =
-    agent.capabilityVector[stageId] * tuning.capability +
-    agent.temperament.pace * tuning.pace +
-    agent.temperament.resilience * tuning.resilience +
-    agent.temperament.teamwork * tuning.teamwork;
-  const affinityBonus = matchesStageAffinity(agent, stageId) ? 6 : 0;
+    worker.capabilityVector[stageId] * tuning.capability +
+    worker.temperament.pace * tuning.pace +
+    worker.temperament.resilience * tuning.resilience +
+    worker.temperament.teamwork * tuning.teamwork;
+  const affinityBonus = matchesStageAffinity(worker, stageId) ? 6 : 0;
   const resilienceDrag =
-    agent.temperament.resilience < 50
-      ? Math.round((50 - agent.temperament.resilience) * 0.16)
+    worker.temperament.resilience < 50
+      ? Math.round((50 - worker.temperament.resilience) * 0.16)
       : 0;
   const rawScore = clamp(Math.round(composite + affinityBonus - resilienceDrag), 0, 100);
   const displayScore = clamp(rawScore + eventScoreAdjustment, 0, 100);
@@ -319,12 +318,12 @@ function buildStageResult(
     label: definition.label,
     roleId: role.id,
     roleName: role.name,
-    assignedAgentId: role.assignedAgentId,
-    operatorAffinity: agent.roleAffinity,
+    assignedWorkerId: role.assignedWorkerId,
+    operatorAffinity: worker.roleAffinity,
     score: displayScore,
     qualityDelta: Math.round((rawScore - 58) * tuning.qualityMultiplier),
     cost:
-      STAGE_OPERATION_COST[stageId] + 2 + agent.contractCost + (eventLabel ? event.costDelta : 0),
+      STAGE_OPERATION_COST[stageId] + 2 + getWorkerLicenseCost(worker) + (eventLabel ? event.costDelta : 0),
     status,
     note: buildStageNote(stageId, status, role.name),
     eventLabel
@@ -333,13 +332,13 @@ function buildStageResult(
 
 function buildRunPipeline(state: RunState, event: ReturnType<typeof rollRunEvent>): RunPipeline {
   const roleByStage = getRoleByStage(state);
-  const agentById = new Map(state.agents.map((agent) => [agent.id, agent]));
+  const workersById = new Map(state.workers.map((worker) => [worker.id, worker]));
   const stages = PIPELINE_STAGE_ORDER.map((stageId) => {
     const role = roleByStage.get(stageId);
-    const agent = role?.assignedAgentId ? agentById.get(role.assignedAgentId) : undefined;
-    return buildStageResult(stageId, role, agent, event);
+    const worker = role?.assignedWorkerId ? workersById.get(role.assignedWorkerId) : undefined;
+    return buildStageResult(stageId, role, worker, event);
   });
-  const coveredStages = stages.filter((stage) => Boolean(stage.assignedAgentId));
+  const coveredStages = stages.filter((stage) => Boolean(stage.assignedWorkerId));
   const coveredStageCount = coveredStages.length;
   const missingStageCount = stages.length - coveredStageCount;
   const strongestStage = [...stages].sort(compareStagesByStrength)[0];
@@ -355,12 +354,47 @@ function buildRunPipeline(state: RunState, event: ReturnType<typeof rollRunEvent
   };
 }
 
+function buildCostBreakdown(
+  pipeline: RunPipeline,
+  workers: Worker[],
+  event: ReturnType<typeof rollRunEvent>
+): {
+  base: number;
+  licenses: number;
+  events: number;
+  total: number;
+} {
+  const workersById = new Map(workers.map((worker) => [worker.id, worker]));
+
+  return pipeline.stages.reduce(
+    (totals, stage) => {
+      const worker = stage.assignedWorkerId ? workersById.get(stage.assignedWorkerId) : undefined;
+      const stageBaseCost = STAGE_OPERATION_COST[stage.id] + (stage.roleId ? 2 : 0);
+      const stageLicenseCost = worker ? getWorkerLicenseCost(worker) : 0;
+      const stageEventCost = stage.eventLabel ? event.costDelta : 0;
+
+      return {
+        base: totals.base + stageBaseCost,
+        licenses: totals.licenses + stageLicenseCost,
+        events: totals.events + stageEventCost,
+        total: totals.total + stage.cost
+      };
+    },
+    {
+      base: 0,
+      licenses: 0,
+      events: 0,
+      total: 0
+    }
+  );
+}
+
 export function simulateRun(state: RunState): RunResult {
   const duplicateStageIds = getDuplicateStageIds(state);
-  const assignedAgents = getAssignedAgents(state);
-  const avgResilience = average(assignedAgents.map((agent) => agent.temperament.resilience));
+  const assignedWorkers = getAssignedWorkers(state);
+  const avgResilience = average(assignedWorkers.map((worker) => worker.temperament.resilience));
 
-  const seed = hashSeedParts(state.seed, assignedAgents.length, Math.round(avgResilience));
+  const seed = hashSeedParts(state.seed, assignedWorkers.length, Math.round(avgResilience));
   const rng = createRng(seed);
   const event = rollRunEvent(rng, avgResilience);
   const pipeline = buildRunPipeline(state, event);
@@ -377,10 +411,8 @@ export function simulateRun(state: RunState): RunResult {
       ? 10
       : -pipeline.missingStageCount * 8;
 
-  const baseCost = BASE_OPERATIONAL_COST + state.roles.length * 2;
-  const agentCost = assignedAgents.reduce((sum, agent) => sum + agent.contractCost, 0);
-  const eventCost = event.costDelta;
-  const totalCost = pipeline.stages.reduce((sum, stage) => sum + stage.cost, 0);
+  const costBreakdown = buildCostBreakdown(pipeline, state.workers, event);
+  const totalCost = costBreakdown.total;
 
   const runwayAfterRun = state.treasury - totalCost;
   const budgetPenalty = runwayAfterRun < 0 ? Math.min(35, Math.abs(runwayAfterRun)) : 0;
@@ -437,17 +469,12 @@ export function simulateRun(state: RunState): RunResult {
       variance: event.variance,
       passThreshold,
       runwayAfterRun,
-      assignedRoleCount: assignedAgents.length,
+      assignedRoleCount: assignedWorkers.length,
       totalRoleCount: state.roles.length,
       coveredStageCount: pipeline.coveredStageCount,
       totalStageCount: PIPELINE_STAGE_ORDER.length,
       duplicateStageIds,
-      costBreakdown: {
-        base: baseCost,
-        agents: agentCost,
-        events: eventCost,
-        total: totalCost
-      },
+      costBreakdown,
       scoreBreakdown: {
         base: baseScore,
         stageInfluence,

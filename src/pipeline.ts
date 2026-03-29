@@ -102,6 +102,22 @@ export function getPipelineStageIndex(stageId: PipelineStageId | undefined): num
 }
 
 export function comparePipelineStages(left: HatRole, right: HatRole): number {
+  const leftPath = left.metadata?.pipelinePath;
+  const rightPath = right.metadata?.pipelinePath;
+
+  if (leftPath?.length || rightPath?.length) {
+    const maxDepth = Math.max(leftPath?.length ?? 0, rightPath?.length ?? 0);
+
+    for (let index = 0; index < maxDepth; index += 1) {
+      const leftValue = leftPath?.[index] ?? Number.MAX_SAFE_INTEGER;
+      const rightValue = rightPath?.[index] ?? Number.MAX_SAFE_INTEGER;
+
+      if (leftValue !== rightValue) {
+        return leftValue - rightValue;
+      }
+    }
+  }
+
   const leftStageIndex = getPipelineStageIndex(inferPipelineStageId(left));
   const rightStageIndex = getPipelineStageIndex(inferPipelineStageId(right));
   const safeLeft = leftStageIndex === -1 ? Number.MAX_SAFE_INTEGER : leftStageIndex;

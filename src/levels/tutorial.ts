@@ -18,7 +18,7 @@ export const TUTORIAL_BRIEF: Brief = {
   conferenceSiteSpec: {
     editionLabel: 'March 2027',
     location: 'Denver, Colorado',
-    audience: ['DAO operators', 'Onchain founders', 'Agent builders', 'Collectors'],
+    audience: ['DAO operators', 'Onchain founders', 'Worker builders', 'Collectors'],
     positioning:
       'A web3 conference for the people designing autonomous organizations, shipping onchain products, and shaping the culture around them.',
     attendeePromise:
@@ -93,10 +93,46 @@ export const TUTORIAL_BRIEF: Brief = {
 };
 
 export const TUTORIAL_ROLES: HatRole[] = [
-  { id: 'hat-01', name: 'Frontend Engineer', pipelineStageId: 'implementation' },
-  { id: 'hat-02', name: 'Designer Agent', pipelineStageId: 'design' },
-  { id: 'hat-03', name: 'Reviewer Agent', pipelineStageId: 'review' },
-  { id: 'hat-04', name: 'Deployment Agent', pipelineStageId: 'deployment' }
+  {
+    id: 'hat-01',
+    name: 'Frontend Engineer',
+    pipelineStageId: 'implementation',
+    metadata: {
+      allowedRoleTagIds: ['frontend-engineer'],
+      pipelinePath: [2],
+      executionMode: 'worker'
+    }
+  },
+  {
+    id: 'hat-02',
+    name: 'Design',
+    pipelineStageId: 'design',
+    metadata: {
+      allowedRoleTagIds: ['ui-designer', 'brand-designer'],
+      pipelinePath: [1],
+      executionMode: 'worker'
+    }
+  },
+  {
+    id: 'hat-03',
+    name: 'Code Review',
+    pipelineStageId: 'review',
+    metadata: {
+      allowedRoleTagIds: ['code-reviewer'],
+      pipelinePath: [3],
+      executionMode: 'worker'
+    }
+  },
+  {
+    id: 'hat-04',
+    name: 'Launch Handoff',
+    pipelineStageId: 'deployment',
+    metadata: {
+      allowedRoleTagIds: ['code-reviewer'],
+      pipelinePath: [4],
+      executionMode: 'worker'
+    }
+  }
 ];
 
-export const TUTORIAL_STEPS = ['mission', 'roles', 'agents', 'run', 'result'] as const;
+export const TUTORIAL_STEPS = ['mission', 'roles', 'workers', 'run', 'result'] as const;

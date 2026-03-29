@@ -1,4 +1,4 @@
-import type { Agent, HatRole, PipelineStageId } from '../../types';
+import type { Worker, HatRole, PipelineStageId } from '../../types';
 import { getPipelineStageDefinition, inferPipelineStageId, sortRolesByPipelineStage } from '../../pipeline';
 import { findRaidGuildMember } from './guildData';
 
@@ -27,36 +27,36 @@ function getStageDurationHint(stageId?: PipelineStageId): string | undefined {
   }
 }
 
-function getOperatorLabel(agent: Agent | undefined, agents: Agent[]): Pick<FactoryRoleLane, 'operatorName' | 'operatorMeta'> {
-  if (!agent) {
+function getOperatorLabel(worker: Worker | undefined, workers: Worker[]): Pick<FactoryRoleLane, 'operatorName' | 'operatorMeta'> {
+  if (!worker) {
     return {
       operatorName: 'Factory core',
       operatorMeta: 'awaiting contractor'
     };
   }
 
-  const member = findRaidGuildMember(agents, agent.id);
+  const member = findRaidGuildMember(workers, worker.id);
 
   if (member) {
     return {
       operatorName: member.name,
-      operatorMeta: member.roleAffinity ?? agent.roleAffinity
+      operatorMeta: member.roleAffinity ?? worker.roleAffinity
     };
   }
 
   return {
-    operatorName: agent.id,
-    operatorMeta: agent.roleAffinity
+    operatorName: worker.id,
+    operatorMeta: worker.roleAffinity
   };
 }
 
-export function buildFactoryRoleLanes(roles: HatRole[], agents: Agent[]): FactoryRoleLane[] {
-  const agentById = new Map(agents.map((agent) => [agent.id, agent]));
+export function buildFactoryRoleLanes(roles: HatRole[], workers: Worker[]): FactoryRoleLane[] {
+  const workersById = new Map(workers.map((worker) => [worker.id, worker]));
 
   return sortRolesByPipelineStage(roles)
     .map((role) => {
-      const agent = role.assignedAgentId ? agentById.get(role.assignedAgentId) : undefined;
-      const operator = getOperatorLabel(agent, agents);
+      const worker = role.assignedWorkerId ? workersById.get(role.assignedWorkerId) : undefined;
+      const operator = getOperatorLabel(worker, workers);
       const stageId = inferPipelineStageId(role);
       const stageLabel = stageId ? getPipelineStageDefinition(stageId).shortLabel : undefined;
 

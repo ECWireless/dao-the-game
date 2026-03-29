@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Brief, HatRole, RunState } from '../../types';
-import { generateStartingAgents } from '../generateStartingAgents';
+import { generateStartingWorkers } from '../generateStartingWorkers';
 import { inferPipelineStageId } from '../../pipeline';
 import { simulateRun } from '../simulateRun';
 
@@ -18,25 +18,25 @@ const fullRoles: HatRole[] = [
   {
     id: 'role-01',
     name: 'Mission Coordinator',
-    assignedAgentId: 'agent-03',
+    assignedWorkerId: 'worker-03',
     pipelineStageId: 'design'
   },
   {
     id: 'role-02',
     name: 'Frontend Architect',
-    assignedAgentId: 'agent-01',
+    assignedWorkerId: 'worker-01',
     pipelineStageId: 'implementation'
   },
   {
     id: 'role-03',
     name: 'Quality Relay',
-    assignedAgentId: 'agent-05',
+    assignedWorkerId: 'worker-05',
     pipelineStageId: 'review'
   },
   {
     id: 'role-04',
     name: 'Deployment Operator',
-    assignedAgentId: 'agent-06',
+    assignedWorkerId: 'worker-06',
     pipelineStageId: 'deployment'
   }
 ];
@@ -47,37 +47,37 @@ function buildState(overrides: Partial<RunState> = {}): RunState {
     treasury: 420,
     brief,
     roles: fullRoles,
-    agents: generateStartingAgents(777),
+    workers: generateStartingWorkers(777),
     ...overrides
   };
 }
 
 function buildRoles(
-  assignedAgentIds: readonly [string, string, string, string]
+  assignedWorkerIds: readonly [string, string, string, string]
 ): HatRole[] {
   return [
     {
       id: 'role-01',
       name: 'Mission Coordinator',
-      assignedAgentId: assignedAgentIds[0],
+      assignedWorkerId: assignedWorkerIds[0],
       pipelineStageId: 'design'
     },
     {
       id: 'role-02',
       name: 'Frontend Architect',
-      assignedAgentId: assignedAgentIds[1],
+      assignedWorkerId: assignedWorkerIds[1],
       pipelineStageId: 'implementation'
     },
     {
       id: 'role-03',
       name: 'Quality Relay',
-      assignedAgentId: assignedAgentIds[2],
+      assignedWorkerId: assignedWorkerIds[2],
       pipelineStageId: 'review'
     },
     {
       id: 'role-04',
       name: 'Deployment Operator',
-      assignedAgentId: assignedAgentIds[3],
+      assignedWorkerId: assignedWorkerIds[3],
       pipelineStageId: 'deployment'
     }
   ];
@@ -88,7 +88,7 @@ describe('simulateRun', () => {
     expect(
       inferPipelineStageId({
         id: 'hat-04',
-        name: 'Deployment Agent',
+        name: 'Deployment Worker',
         pipelineStageId: 'totally-invalid' as never
       })
     ).toBe('deployment');
@@ -122,6 +122,11 @@ describe('simulateRun', () => {
     expect(result.cid.startsWith('bafy')).toBe(true);
     expect(result.events.length).toBeGreaterThan(0);
     expect(result.diagnostics.costBreakdown.total).toBe(result.cost);
+    expect(
+      result.diagnostics.costBreakdown.base +
+        result.diagnostics.costBreakdown.licenses +
+        result.diagnostics.costBreakdown.events
+    ).toBe(result.cost);
     expect(result.diagnostics.scoreBreakdown.total).toBe(result.qualityScore);
   });
 
@@ -146,7 +151,7 @@ describe('simulateRun', () => {
           {
             id: 'role-02',
             name: 'Frontend Architect',
-            assignedAgentId: 'agent-02',
+            assignedWorkerId: 'worker-02',
             pipelineStageId: 'implementation'
           }
         ]
@@ -169,31 +174,31 @@ describe('simulateRun', () => {
           {
             id: 'role-01',
             name: 'Mission Coordinator',
-            assignedAgentId: 'agent-03',
+            assignedWorkerId: 'worker-03',
             pipelineStageId: 'design'
           },
           {
             id: 'role-01b',
             name: 'Brand Strategist',
-            assignedAgentId: 'agent-04',
+            assignedWorkerId: 'worker-04',
             pipelineStageId: 'design'
           },
           {
             id: 'role-02',
             name: 'Frontend Architect',
-            assignedAgentId: 'agent-01',
+            assignedWorkerId: 'worker-01',
             pipelineStageId: 'implementation'
           },
           {
             id: 'role-03',
             name: 'Quality Relay',
-            assignedAgentId: 'agent-05',
+            assignedWorkerId: 'worker-05',
             pipelineStageId: 'review'
           },
           {
             id: 'role-04',
             name: 'Deployment Operator',
-            assignedAgentId: 'agent-06',
+            assignedWorkerId: 'worker-06',
             pipelineStageId: 'deployment'
           }
         ]
@@ -203,6 +208,11 @@ describe('simulateRun', () => {
     expect(result.passed).toBe(false);
     expect(result.diagnostics.duplicateStageIds).toEqual(['design']);
     expect(result.events[result.events.length - 1]).toContain('duplicate stage ownership');
+    expect(
+      result.diagnostics.costBreakdown.base +
+        result.diagnostics.costBreakdown.licenses +
+        result.diagnostics.costBreakdown.events
+    ).toBe(result.cost);
   });
 
   it('treats uncovered blocked stages as weaker than covered blocked stages', () => {
@@ -212,17 +222,20 @@ describe('simulateRun', () => {
           {
             id: 'role-02',
             name: 'Frontend Architect',
-            assignedAgentId: 'agent-low',
+            assignedWorkerId: 'worker-low',
             pipelineStageId: 'implementation'
           }
         ],
-        agents: [
+        workers: [
           {
-            id: 'agent-low',
-            name: 'Agent Low',
-            handle: 'agent-low',
-            specialty: 'Stress Case',
+            id: 'worker-low',
+            registryRecordId: 'fixture-worker-low',
+            name: 'Worker Low',
+            handle: 'worker-low',
+            roleTag: 'frontend-engineer',
+            specialty: 'Frontend Engineer',
             roleAffinity: 'Frontend Builder',
+            shortPitch: 'I can take the build, but this fixture is deliberately underpowered.',
             capabilityVector: {
               design: 0,
               implementation: 0,
@@ -244,7 +257,53 @@ describe('simulateRun', () => {
             bio: 'A deliberately weak fixture for blocked-stage regression tests.',
             accent: '#222222',
             shadow: '#111111',
-            contractCost: 12
+            manifest: {
+              specVersion: 'dao-the-game.worker.v1',
+              identity: {
+                name: 'Worker Low',
+                handle: 'worker-low',
+                roleTag: 'frontend-engineer',
+                bio: 'A deliberately weak fixture for blocked-stage regression tests.',
+                shortPitch: 'I can take the build, but this fixture is deliberately underpowered.'
+              },
+              execution: {
+                publicEndpoint: 'https://daothegame.com/workers/fixtures/worker-low'
+              },
+              pricing: {
+                asset: 'USDC',
+                amount: '0.01',
+                chargeModel: 'per_request_attempt'
+              }
+            },
+            registration: {
+              status: 'registered'
+            },
+            availability: 'active',
+            presentation: {
+              accent: '#222222',
+              shadow: '#111111'
+            },
+            gameplay: {
+              roleAffinity: 'Frontend Builder',
+              capabilityVector: {
+                design: 0,
+                implementation: 0,
+                review: 0,
+                deployment: 0
+              },
+              styleProfile: {
+                signature: 'Unformed and inconsistent.',
+                execution: 'Struggles to complete basic work.',
+                collaboration: 'Creates drag across the line.'
+              },
+              temperament: {
+                profile: 'Frayed under pressure',
+                pace: 0,
+                resilience: 0,
+                teamwork: 0
+              },
+              traits: ['Unreliable']
+            }
           }
         ]
       })
@@ -256,19 +315,19 @@ describe('simulateRun', () => {
     expect(result.pipeline?.weakestStageId).not.toBe('implementation');
     expect(
       result.pipeline?.stages.find((stage) => stage.id === result.pipeline?.weakestStageId)
-        ?.assignedAgentId
+        ?.assignedWorkerId
     ).toBeUndefined();
   });
 
   it('produces meaningfully different deployment profiles for different lineups', () => {
     const stableRun = simulateRun(
       buildState({
-        roles: buildRoles(['agent-03', 'agent-02', 'agent-05', 'agent-06'])
+        roles: buildRoles(['worker-03', 'worker-02', 'worker-05', 'worker-06'])
       })
     );
     const flashyRun = simulateRun(
       buildState({
-        roles: buildRoles(['agent-04', 'agent-01', 'agent-03', 'agent-05'])
+        roles: buildRoles(['worker-04', 'worker-01', 'worker-03', 'worker-05'])
       })
     );
     expect(stableRun.evaluation?.profileTag).toBe('premium');

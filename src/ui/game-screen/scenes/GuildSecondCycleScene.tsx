@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Agent, HatRole } from '../../../types';
+import type { Worker, HatRole } from '../../../types';
 import fullLogo from '../../../assets/raidguild-full.svg';
 import { GuildMemberAvatar } from '../components/GuildMemberAvatar';
 import { GuildMemberCard } from '../components/GuildMemberCard';
@@ -14,7 +14,7 @@ import {
 type GuildSecondCycleSceneProps = {
   studioName?: string;
   roles: HatRole[];
-  agents: Agent[];
+  workers: Worker[];
   onContinue?: () => void;
   continueDisabled?: boolean;
   isReadOnly?: boolean;
@@ -53,13 +53,13 @@ function buildRoleBrief(roleName: string) {
 export function GuildSecondCycleScene({
   studioName,
   roles,
-  agents,
+  workers,
   onContinue,
   continueDisabled = false,
   isReadOnly = false
 }: GuildSecondCycleSceneProps) {
-  const roster = useMemo(() => getRaidGuildRoster(agents), [agents]);
-  const firstCycleCandidates = useMemo(() => getRaidGuildCandidates(agents, 2), [agents]);
+  const roster = useMemo(() => getRaidGuildRoster(workers), [workers]);
+  const firstCycleCandidates = useMemo(() => getRaidGuildCandidates(workers, 2), [workers]);
   const roleSequences = useMemo<RoleSequence[]>(
     () =>
       roles.map((role) => {
@@ -68,10 +68,10 @@ export function GuildSecondCycleScene({
           role,
           brief: details.brief,
           bullets: details.bullets,
-          candidates: getRaidGuildCandidatesForRole(agents, role.id, 2)
+          candidates: getRaidGuildCandidatesForRole(workers, role, 2)
         };
       }),
-    [agents, roles]
+    [workers, roles]
   );
   const totalSequenceEvents = roleSequences.length * 3;
   const [visibleEventCount, setVisibleEventCount] = useState(isReadOnly ? totalSequenceEvents : 0);
@@ -142,8 +142,8 @@ export function GuildSecondCycleScene({
     roleSequences
       .flatMap((sequence) => sequence.candidates)
       .find((member) => member.id === openMemberId);
-  const openAgent = openMember?.agentId
-    ? agents.find((agent) => agent.id === openMember.agentId)
+  const openWorker = openMember?.workerId
+    ? workers.find((worker) => worker.id === openMember.workerId)
     : undefined;
   const handleStartPosting = () => {
     if (!canPostNextRole || nextRoleIndex < 0) {
@@ -387,7 +387,7 @@ export function GuildSecondCycleScene({
       {openMember ? (
         <GuildMemberCard
           member={openMember}
-          agent={openAgent}
+          worker={openWorker}
           onClose={() => setOpenMemberId(null)}
         />
       ) : null}

@@ -65,7 +65,7 @@ export default function GameScreen({
   const studioName = useGameStore((state) => state.studioName);
   const hasSeenIntroDialog = useGameStore((state) => state.hasSeenIntroDialog);
   const roles = useGameStore((state) => state.roles);
-  const agents = useGameStore((state) => state.agents);
+  const workers = useGameStore((state) => state.workers);
   const assignmentLog = useGameStore((state) => state.assignmentLog);
   const runCount = useGameStore((state) => state.runCount);
   const latestRun = useGameStore((state) => state.latestRun);
@@ -102,7 +102,7 @@ export default function GameScreen({
 
   const activeRoles = getActiveRoles(roles, unlockedRoleCount);
   const assignedActiveRoles = countAssignedRoles(activeRoles);
-  const runwayAfterRun = estimateRunwayAfterRun(treasury, activeRoles, agents);
+  const runwayAfterRun = estimateRunwayAfterRun(treasury, activeRoles, workers);
   const showIntroDialog =
     forceIntroDialog || (!suppressIntroDialog && storySceneIndex === 0 && !hasSeenIntroDialog);
   const canSwitchApps = !isFactoryLocked && !showIntroDialog;
@@ -441,7 +441,7 @@ export default function GameScreen({
         studioName,
         orgTree,
         activeRoles,
-        agents,
+        workers,
         assignmentLog,
         assignedActiveRoles,
         latestRun,
