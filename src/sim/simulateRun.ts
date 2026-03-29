@@ -62,8 +62,6 @@ const EVENT_TABLE: EventTemplate[] = [
   }
 ];
 
-const BASE_OPERATIONAL_COST = 36;
-
 const STAGE_OPERATION_COST: Record<PipelineStageId, number> = {
   design: 8,
   implementation: 12,
@@ -356,6 +354,41 @@ function buildRunPipeline(state: RunState, event: ReturnType<typeof rollRunEvent
   };
 }
 
+function buildCostBreakdown(
+  pipeline: RunPipeline,
+  workers: Worker[],
+  event: ReturnType<typeof rollRunEvent>
+): {
+  base: number;
+  licenses: number;
+  events: number;
+  total: number;
+} {
+  const workersById = new Map(workers.map((worker) => [worker.id, worker]));
+
+  return pipeline.stages.reduce(
+    (totals, stage) => {
+      const worker = stage.assignedWorkerId ? workersById.get(stage.assignedWorkerId) : undefined;
+      const stageBaseCost = STAGE_OPERATION_COST[stage.id] + (stage.roleId ? 2 : 0);
+      const stageLicenseCost = worker ? getWorkerLicenseCost(worker) : 0;
+      const stageEventCost = stage.eventLabel ? event.costDelta : 0;
+
+      return {
+        base: totals.base + stageBaseCost,
+        licenses: totals.licenses + stageLicenseCost,
+        events: totals.events + stageEventCost,
+        total: totals.total + stage.cost
+      };
+    },
+    {
+      base: 0,
+      licenses: 0,
+      events: 0,
+      total: 0
+    }
+  );
+}
+
 export function simulateRun(state: RunState): RunResult {
   const duplicateStageIds = getDuplicateStageIds(state);
   const assignedWorkers = getAssignedWorkers(state);
@@ -378,10 +411,8 @@ export function simulateRun(state: RunState): RunResult {
       ? 10
       : -pipeline.missingStageCount * 8;
 
-  const baseCost = BASE_OPERATIONAL_COST + state.roles.length * 2;
-  const licenseCost = assignedWorkers.reduce((sum, worker) => sum + getWorkerLicenseCost(worker), 0);
-  const eventCost = event.costDelta;
-  const totalCost = pipeline.stages.reduce((sum, stage) => sum + stage.cost, 0);
+  const costBreakdown = buildCostBreakdown(pipeline, state.workers, event);
+  const totalCost = costBreakdown.total;
 
   const runwayAfterRun = state.treasury - totalCost;
   const budgetPenalty = runwayAfterRun < 0 ? Math.min(35, Math.abs(runwayAfterRun)) : 0;
@@ -443,12 +474,7 @@ export function simulateRun(state: RunState): RunResult {
       coveredStageCount: pipeline.coveredStageCount,
       totalStageCount: PIPELINE_STAGE_ORDER.length,
       duplicateStageIds,
-      costBreakdown: {
-        base: baseCost,
-        licenses: licenseCost,
-        events: eventCost,
-        total: totalCost
-      },
+      costBreakdown,
       scoreBreakdown: {
         base: baseScore,
         stageInfluence,

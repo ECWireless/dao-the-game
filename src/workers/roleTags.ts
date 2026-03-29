@@ -26,7 +26,10 @@ export const ROLE_TAG_DEFINITIONS: Record<RoleTagId, RoleTagDefinition> = {
 export const ROLE_TAG_IDS = Object.keys(ROLE_TAG_DEFINITIONS) as RoleTagId[];
 
 export function isRoleTagId(value: unknown): value is RoleTagId {
-  return typeof value === 'string' && value in ROLE_TAG_DEFINITIONS;
+  return (
+    typeof value === 'string' &&
+    Object.prototype.hasOwnProperty.call(ROLE_TAG_DEFINITIONS, value)
+  );
 }
 
 export function getRoleTagDefinition(roleTagId: RoleTagId): RoleTagDefinition {

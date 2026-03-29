@@ -122,6 +122,11 @@ describe('simulateRun', () => {
     expect(result.cid.startsWith('bafy')).toBe(true);
     expect(result.events.length).toBeGreaterThan(0);
     expect(result.diagnostics.costBreakdown.total).toBe(result.cost);
+    expect(
+      result.diagnostics.costBreakdown.base +
+        result.diagnostics.costBreakdown.licenses +
+        result.diagnostics.costBreakdown.events
+    ).toBe(result.cost);
     expect(result.diagnostics.scoreBreakdown.total).toBe(result.qualityScore);
   });
 
@@ -203,6 +208,11 @@ describe('simulateRun', () => {
     expect(result.passed).toBe(false);
     expect(result.diagnostics.duplicateStageIds).toEqual(['design']);
     expect(result.events[result.events.length - 1]).toContain('duplicate stage ownership');
+    expect(
+      result.diagnostics.costBreakdown.base +
+        result.diagnostics.costBreakdown.licenses +
+        result.diagnostics.costBreakdown.events
+    ).toBe(result.cost);
   });
 
   it('treats uncovered blocked stages as weaker than covered blocked stages', () => {
