@@ -1,5 +1,5 @@
 import type {
-  Agent,
+  Worker,
   ArtifactType,
   DeploymentContribution,
   DeploymentEvaluation,
@@ -17,7 +17,7 @@ type TeamAssignment = {
   stageId: PipelineStageId;
   roleId?: string;
   roleName?: string;
-  agent: Agent;
+  agent: Worker;
   stageScore: number;
 };
 
@@ -103,7 +103,7 @@ function average(values: number[]): number {
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
-function getBlueprintText(agent: Agent): string {
+function getBlueprintText(agent: Worker): string {
   return [
     agent.name,
     agent.specialty,
@@ -118,14 +118,14 @@ function getBlueprintText(agent: Agent): string {
     .toLowerCase();
 }
 
-function getKeywordSignal(agent: Agent, keywords: string[]): number {
+function getKeywordSignal(agent: Worker, keywords: string[]): number {
   const text = getBlueprintText(agent);
   const matches = keywords.filter((keyword) => text.includes(keyword)).length;
 
   return clamp(18 + matches * 12, 0, 100);
 }
 
-function getAgentMetricScore(agent: Agent, metricId: DeploymentMetricId): number {
+function getAgentMetricScore(agent: Worker, metricId: DeploymentMetricId): number {
   const visualSignal = getKeywordSignal(agent, VISUAL_KEYWORDS);
   const operationsSignal = getKeywordSignal(agent, OPERATIONS_KEYWORDS);
   const communitySignal = getKeywordSignal(agent, COMMUNITY_KEYWORDS);
@@ -203,12 +203,12 @@ function buildStageMap(pipeline: RunPipeline): Record<PipelineStageId, number> {
 }
 
 function getAssignments(state: RunState, pipeline: RunPipeline): TeamAssignment[] {
-  const agentById = new Map(state.agents.map((agent) => [agent.id, agent]));
+  const agentById = new Map(state.workers.map((agent) => [agent.id, agent]));
 
   const assignments: TeamAssignment[] = [];
 
   for (const stage of pipeline.stages) {
-    const agent = stage.assignedAgentId ? agentById.get(stage.assignedAgentId) : undefined;
+    const agent = stage.assignedWorkerId ? agentById.get(stage.assignedWorkerId) : undefined;
 
     if (!agent) {
       continue;
@@ -255,7 +255,7 @@ function getStageWeightedMetricBase(
   }
 }
 
-function getMetricReason(agent: Agent, metricId: DeploymentMetricId): string {
+function getMetricReason(agent: Worker, metricId: DeploymentMetricId): string {
   switch (metricId) {
     case 'visualIdentity':
       return agent.styleProfile.signature.toLowerCase();
@@ -375,7 +375,7 @@ function applySynergyRules(
       type: 'synergy',
       metricId: 'trust',
       impact: 8,
-      relatedAgentIds: [reviewLead.agent.id, deploymentLead.agent.id],
+      relatedWorkerIds: [reviewLead.agent.id, deploymentLead.agent.id],
       summary: `${reviewLead.agent.name} and ${deploymentLead.agent.name} hardened the release edge-to-edge.`
     });
   }
@@ -393,7 +393,7 @@ function applySynergyRules(
       type: 'synergy',
       metricId: 'visualIdentity',
       impact: 7,
-      relatedAgentIds: [designLead.agent.id, implementationLead.agent.id],
+      relatedWorkerIds: [designLead.agent.id, implementationLead.agent.id],
       summary: `${designLead.agent.name} and ${implementationLead.agent.name} kept the concept-to-build handoff unusually clean.`
     });
   }
@@ -417,7 +417,7 @@ function applySynergyRules(
         type: 'synergy',
         metricId: 'communityHype',
         impact: 6,
-        relatedAgentIds: [hypeLead.agent.id, deploymentLead.agent.id],
+        relatedWorkerIds: [hypeLead.agent.id, deploymentLead.agent.id],
         summary: `${hypeLead.agent.name} gave the launch momentum while ${deploymentLead.agent.name} kept the rollout intact.`
       });
     }
@@ -430,7 +430,7 @@ function applySynergyRules(
       type: 'tension',
       metricId: 'trust',
       impact: -8,
-      relatedAgentIds: [volatileLead.agent.id],
+      relatedWorkerIds: [volatileLead.agent.id],
       summary: `${volatileLead.agent.name} raised the ceiling, but the team lacked enough guardrails to make that feel safe.`
     });
   }
@@ -441,7 +441,7 @@ function applySynergyRules(
       type: 'tension',
       metricId: 'launchStability',
       impact: -6,
-      relatedAgentIds: [overreachingLead.agent.id],
+      relatedWorkerIds: [overreachingLead.agent.id],
       summary: `${overreachingLead.agent.name} pushed the system harder than the current review layer could comfortably absorb.`
     });
   }
@@ -470,8 +470,8 @@ function buildContributions(
 
     const leaderScore = metricScoresByAgent.get(leader.agent.id)?.[metricId] ?? 0;
     contributions.push({
-      agentId: leader.agent.id,
-      agentName: leader.agent.name,
+      workerId: leader.agent.id,
+      workerName: leader.agent.name,
       metricId,
       impact: Math.max(3, Math.round((leaderScore - 50) * 0.25)),
       summary: `${leader.agent.name} lifted ${DEPLOYMENT_METRIC_LABELS[metricId].toLowerCase()} through ${getMetricReason(
@@ -493,8 +493,8 @@ function buildContributions(
 
   if (laggingAgent && laggingScore !== undefined && laggingScore < 52) {
     contributions.push({
-      agentId: laggingAgent.agent.id,
-      agentName: laggingAgent.agent.name,
+      workerId: laggingAgent.agent.id,
+      workerName: laggingAgent.agent.name,
       metricId: weakestMetricId,
       impact: -Math.max(3, Math.round((52 - laggingScore) * 0.3)),
       summary: `${laggingAgent.agent.name} left ${DEPLOYMENT_METRIC_LABELS[

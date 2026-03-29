@@ -598,7 +598,7 @@ export default function App({
       cycle,
       studioName: currentState.studioName,
       roles: currentState.roles,
-      agents: currentState.agents
+      workers: currentState.workers
     });
 
     if (!draftArtifacts) {
@@ -613,7 +613,7 @@ export default function App({
         cycle: draftArtifacts.provenance.cycle,
         studioName: currentState.studioName,
         roles: currentState.roles,
-        agents: currentState.agents
+        workers: currentState.workers
       }
     };
   }, []);

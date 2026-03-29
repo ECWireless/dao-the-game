@@ -69,7 +69,7 @@ export function buildDeploymentReadout({
   )[0];
   const weakestStageId = currentRun.pipeline?.weakestStageId;
   const leadLine = topContribution
-    ? `${topContribution.agentName} pushed ${METRIC_LABELS[topContribution.metricId]} hardest: ${topContribution.summary}`
+    ? `${topContribution.workerName} pushed ${METRIC_LABELS[topContribution.metricId]} hardest: ${topContribution.summary}`
     : `${currentArtifact.siteTitle} resolved as a ${PROFILE_LABELS[currentArtifact.profileTag]} launch.`;
   const cautionLine = topSynergy
     ? topSynergy.summary

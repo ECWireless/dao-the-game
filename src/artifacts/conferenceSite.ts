@@ -1,5 +1,5 @@
 import type {
-  Agent,
+  Worker,
   ArtifactBundle,
   ArtifactContributor,
   Brief,
@@ -18,7 +18,7 @@ type ConferenceSiteArtifactInput = {
   cycle: 1 | 2;
   studioName?: string;
   roles: HatRole[];
-  agents: Agent[];
+  workers: Worker[];
 };
 
 type ProfileTheme = {
@@ -192,7 +192,7 @@ const PROFILE_THEMES: Record<DeploymentProfileTag, ProfileTheme> = {
 const DEFAULT_CONFERENCE_SITE_SPEC: ConferenceSiteBriefSpec = {
   editionLabel: 'March 2027',
   location: 'Denver, Colorado',
-  audience: ['DAO operators', 'Onchain founders', 'Agent builders'],
+  audience: ['DAO operators', 'Onchain founders', 'Worker builders'],
   positioning:
     'A web3 conference for the people building autonomous organizations, shipping onchain products, and shaping the culture around them.',
   attendeePromise:
@@ -300,56 +300,58 @@ function resolveArtifactProfile(result: RunResult): DeploymentProfileTag {
 
 function buildContributors(
   roles: HatRole[],
-  agents: Agent[],
+  workers: Worker[],
   result: RunResult
 ): ArtifactContributor[] {
-  const agentById = new Map(agents.map((agent) => [agent.id, agent]));
+  const agentById = new Map(workers.map((agent) => [agent.id, agent]));
   const stages = result.pipeline?.stages ?? [];
   const stageRoleIds = new Set(stages.map((stage) => stage.roleId).filter(Boolean) as string[]);
 
   const contributors: ArtifactContributor[] = [];
 
   for (const stage of stages) {
-    if (!stage.assignedAgentId) {
+    if (!stage.assignedWorkerId) {
       continue;
     }
 
-    const agent = agentById.get(stage.assignedAgentId);
+    const agent = agentById.get(stage.assignedWorkerId);
 
     if (!agent) {
       continue;
     }
 
     contributors.push({
-      agentId: agent.id,
-      agentName: agent.name,
-      agentHandle: agent.handle,
+      workerId: agent.id,
+      workerName: agent.name,
+      workerHandle: agent.handle,
       roleId: stage.roleId,
       roleName: stage.roleName,
       stageId: stage.id,
+      roleTag: agent.roleTag,
       specialty: agent.specialty,
       traits: agent.traits
     });
   }
 
   for (const role of roles) {
-    if (!role.assignedAgentId || stageRoleIds.has(role.id)) {
+    if (!role.assignedWorkerId || stageRoleIds.has(role.id)) {
       continue;
     }
 
-    const agent = agentById.get(role.assignedAgentId);
+    const agent = agentById.get(role.assignedWorkerId);
 
     if (!agent) {
       continue;
     }
 
     contributors.push({
-      agentId: agent.id,
-      agentName: agent.name,
-      agentHandle: agent.handle,
+      workerId: agent.id,
+      workerName: agent.name,
+      workerHandle: agent.handle,
       roleId: role.id,
       roleName: role.name,
       stageId: role.pipelineStageId,
+      roleTag: agent.roleTag,
       specialty: agent.specialty,
       traits: agent.traits
     });
@@ -405,7 +407,7 @@ function buildNotes(
     profileNote,
     'The generated site reflects the current conference brief and the composition of the assembled crew.',
     primaryContributor
-      ? `${primaryContributor.agentName} anchors the ${primaryContributor.roleName?.toLowerCase() ?? 'lead'} pass in this assembled version.`
+      ? `${primaryContributor.workerName} anchors the ${primaryContributor.roleName?.toLowerCase() ?? 'lead'} pass in this assembled version.`
       : 'Crew provenance is embedded alongside the generated site manifest.'
   ];
 }
@@ -422,12 +424,12 @@ type ConferenceSiteArtifactMetadata = {
 function buildConferenceSiteArtifactMetadata(
   input: ConferenceSiteArtifactInput
 ): ConferenceSiteArtifactMetadata {
-  const { brief, result, cycle, studioName, roles, agents } = input;
+  const { brief, result, cycle, studioName, roles, workers } = input;
   const normalizedStudioName = studioName?.trim() || 'Ghost Studio';
   const profileTag = resolveArtifactProfile(result);
   const studioSlug = createStudioSlug(normalizedStudioName);
   const ensName = `${studioSlug}.daothegame.eth`;
-  const contributors = buildContributors(roles, agents, result);
+  const contributors = buildContributors(roles, workers, result);
   const siteTitle = buildSiteTitle(brief, cycle, profileTag);
   const notes = buildNotes(profileTag, contributors);
 
@@ -452,7 +454,7 @@ function buildConferenceSiteArtifactMetadata(
   };
 }
 
-function buildWorkerInfluence(leadAgent: Agent | null): WorkerInfluence {
+function buildWorkerInfluence(leadAgent: Worker | null): WorkerInfluence {
   if (!leadAgent) {
     return {
       variant: 'balanced',
@@ -479,7 +481,11 @@ function buildWorkerInfluence(leadAgent: Agent | null): WorkerInfluence {
     .join(' ')
     .toLowerCase();
 
-  if (blueprint.includes('minimalist') || blueprint.includes('design-faithful closer')) {
+  if (
+    blueprint.includes('minimalist') ||
+    blueprint.includes('design-faithful closer') ||
+    blueprint.includes('design-faithful')
+  ) {
     return {
       variant: 'minimal',
       accent: leadAgent.accent,
@@ -495,7 +501,12 @@ function buildWorkerInfluence(leadAgent: Agent | null): WorkerInfluence {
     };
   }
 
-  if (blueprint.includes('architecture first') || blueprint.includes('systems-first builder')) {
+  if (
+    blueprint.includes('architecture first') ||
+    blueprint.includes('systems-first builder') ||
+    blueprint.includes('information architecture') ||
+    blueprint.includes('control-room')
+  ) {
     return {
       variant: 'systems',
       accent: leadAgent.accent,
@@ -1514,14 +1525,14 @@ export function buildConferenceSiteArtifact(
   input: ConferenceSiteArtifactInput,
   generatedContent?: ConferenceSiteGeneratedContent
 ): ArtifactBundle {
-  const { brief, result, agents } = input;
+  const { brief, result, workers } = input;
   const spec = getConferenceSiteSpec(brief);
   const metadata = buildConferenceSiteArtifactMetadata(input);
   const { profileTag, siteTitle, ensName, notes, provenance } = metadata;
   const contributors = provenance.contributors;
   const leadContributor = contributors[0];
   const leadAgent = leadContributor
-    ? agents.find((agent) => agent.id === leadContributor.agentId) ?? null
+    ? workers.find((agent) => agent.id === leadContributor.workerId) ?? null
     : null;
   const workerInfluence = buildWorkerInfluence(leadAgent);
   const strongestMetricId = result.evaluation?.strongestMetricId ?? 'launchStability';

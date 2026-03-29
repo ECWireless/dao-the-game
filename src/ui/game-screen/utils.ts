@@ -1,5 +1,5 @@
 import { getScene, type StoryApp, type StoryScene } from '../../levels/story';
-import type { Agent, HatRole, RunResult } from '../../types';
+import type { RunResult } from '../../types';
 import { APP_INTRO_SCENE_INDEX, APP_ORDER } from './constants';
 import type { RunSummary } from './types';
 
@@ -14,16 +14,8 @@ export function getAppLaunchOrigin(targetApp: StoryApp, availableApps: StoryApp[
   return ((normalizedIndex + 0.5) / launchApps.length) * 100;
 }
 
-export function formatCredits(value: number): string {
-  return `${Math.max(0, Math.round(value))} cr`;
-}
-
-export function formatRoleAssignment(role: HatRole, agent?: Agent): string {
-  if (!agent) {
-    return `${role.name}: awaiting hire`;
-  }
-
-  return `${role.name}: ${agent.name} (${agent.roleAffinity})`;
+export function formatUsdc(value: number): string {
+  return `${(Math.max(0, value) / 100).toFixed(2)} USDC`;
 }
 
 export function getRunSummary(result?: RunResult): RunSummary | undefined {

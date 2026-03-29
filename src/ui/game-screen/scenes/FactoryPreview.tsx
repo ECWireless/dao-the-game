@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ArtifactBundle, RunResult } from '../../../types';
 import { buildDeploymentReadout } from '../deploymentReadout';
-import { formatCredits } from '../utils';
+import { formatUsdc } from '../utils';
 
 const DEPLOYMENT_PROFILE_LABELS = {
   premium: 'Premium launch',
@@ -151,7 +151,7 @@ export function FactoryPreview({
       {latestRun ? (
         <div className="deployment-metrics">
           <p>
-            Cost <strong>{formatCredits(latestRun.cost)}</strong>
+            Spend <strong>{formatUsdc(latestRun.cost)}</strong>
           </p>
           <p>
             Quality <strong>{latestRun.qualityScore}</strong>

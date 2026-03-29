@@ -1,29 +1,28 @@
-import type { Agent } from '../../types';
+import type { HatRole, Worker } from '../../types';
 import {
+  getWorkerAccent,
   getWorkerAverageCapability,
-  getWorkerPairingHint,
-  getWorkerRiskLabel,
+  getWorkerBio,
+  getWorkerHandle,
+  getWorkerRoleAffinity,
+  getWorkerRoleTagId,
+  getWorkerRoleTagLabel,
+  getWorkerShadow,
   getWorkerShortPitch,
-  getWorkerStageScoreSummary,
-  getWorkerStrengthLabel
+  getWorkerName
 } from '../../workers/catalog';
 
 export type GuildMemberProfile = {
   id: string;
-  agentId?: string;
+  workerId?: string;
   name: string;
   handle: string;
   accent: string;
   shadow: string;
   roleAffinity?: string;
+  roleTagLabel?: string;
+  bio?: string;
   shortPitch?: string;
-  stageScoreSummary?: string;
-  strengthLabel?: string;
-  pairingHint?: string;
-  riskLabel?: string;
-  styleSignature?: string;
-  styleExecution?: string;
-  styleCollaboration?: string;
 };
 
 export type GuildFeedEntry = {
@@ -81,43 +80,48 @@ export const RAIDGUILD_HISTORY: GuildFeedEntry[] = [
   }
 ];
 
-function createGuildProfile(agent: Agent, id: string): GuildMemberProfile {
+function createGuildProfile(worker: Worker, id: string): GuildMemberProfile {
   return {
     id,
-    agentId: agent.id,
-    name: agent.name,
-    handle: agent.handle,
-    accent: agent.accent,
-    shadow: agent.shadow,
-    roleAffinity: agent.roleAffinity,
-    shortPitch: getWorkerShortPitch(agent),
-    stageScoreSummary: getWorkerStageScoreSummary(agent),
-    strengthLabel: getWorkerStrengthLabel(agent),
-    pairingHint: getWorkerPairingHint(agent),
-    riskLabel: getWorkerRiskLabel(agent),
-    styleSignature: agent.styleProfile.signature,
-    styleExecution: agent.styleProfile.execution,
-    styleCollaboration: agent.styleProfile.collaboration
+    workerId: worker.id,
+    name: getWorkerName(worker),
+    handle: getWorkerHandle(worker),
+    accent: getWorkerAccent(worker),
+    shadow: getWorkerShadow(worker),
+    roleAffinity: getWorkerRoleAffinity(worker),
+    roleTagLabel: getWorkerRoleTagLabel(worker),
+    bio: getWorkerBio(worker),
+    shortPitch: getWorkerShortPitch(worker)
   };
 }
 
-function getRoleStageRank(agent: Agent, roleId: string): number {
+function getRoleStageRank(worker: Worker, roleId: string): number {
   switch (roleId) {
     case 'hat-02':
-      return agent.capabilityVector.design;
+      return worker.gameplay.capabilityVector.design;
     case 'hat-03':
-      return agent.capabilityVector.review;
+      return worker.gameplay.capabilityVector.review;
     case 'hat-04':
-      return agent.capabilityVector.deployment;
+      return worker.gameplay.capabilityVector.deployment;
     case 'hat-01':
     default:
-      return agent.capabilityVector.implementation;
+      return worker.gameplay.capabilityVector.implementation;
   }
 }
 
-function compareRoleCandidates(left: Agent, right: Agent, roleId?: string): number {
-  if (roleId) {
-    const roleDelta = getRoleStageRank(right, roleId) - getRoleStageRank(left, roleId);
+function matchesAllowedRoleTags(worker: Worker, role?: Pick<HatRole, 'metadata'>): boolean {
+  const allowedRoleTagIds = role?.metadata?.allowedRoleTagIds;
+
+  if (!allowedRoleTagIds?.length) {
+    return true;
+  }
+
+  return allowedRoleTagIds.includes(getWorkerRoleTagId(worker));
+}
+
+function compareRoleCandidates(left: Worker, right: Worker, role?: Pick<HatRole, 'id'>): number {
+  if (role?.id) {
+    const roleDelta = getRoleStageRank(right, role.id) - getRoleStageRank(left, role.id);
 
     if (roleDelta !== 0) {
       return roleDelta;
@@ -134,50 +138,54 @@ function compareRoleCandidates(left: Agent, right: Agent, roleId?: string): numb
 }
 
 function buildCandidateProfiles(
-  agents: Agent[],
+  workers: Worker[],
   count: number,
-  roleId?: string
+  role?: Pick<HatRole, 'id' | 'metadata'>
 ): GuildMemberProfile[] {
-  return [...agents]
-    .sort((left, right) => compareRoleCandidates(left, right, roleId))
-    .slice(0, Math.min(count, agents.length))
-    .map((agent) => createGuildProfile(agent, roleId ? `candidate-${roleId}-${agent.id}` : `candidate-${agent.id}`));
+  const eligibleWorkers = role ? workers.filter((worker) => matchesAllowedRoleTags(worker, role)) : workers;
+
+  return [...eligibleWorkers]
+    .sort((left, right) => compareRoleCandidates(left, right, role))
+    .slice(0, Math.min(count, eligibleWorkers.length))
+    .map((worker) =>
+      createGuildProfile(worker, role?.id ? `candidate-${role.id}-${worker.id}` : `candidate-${worker.id}`)
+    );
 }
 
 export function getRaidGuildCandidates(
-  agents: Agent[],
-  count = agents.length
+  workers: Worker[],
+  count = workers.length
 ): GuildMemberProfile[] {
-  return buildCandidateProfiles(agents, count);
+  return buildCandidateProfiles(workers, count);
 }
 
 export function getRaidGuildCandidatesForRole(
-  agents: Agent[],
-  roleId: string,
+  workers: Worker[],
+  role: Pick<HatRole, 'id' | 'metadata'>,
   count = 2
 ): GuildMemberProfile[] {
-  return buildCandidateProfiles(agents, count, roleId);
+  return buildCandidateProfiles(workers, count, role);
 }
 
 export function getPrimaryRaidGuildCandidateForRole(
-  agents: Agent[],
-  roleId: string
+  workers: Worker[],
+  role: Pick<HatRole, 'id' | 'metadata'>
 ): GuildMemberProfile | undefined {
-  return getRaidGuildCandidatesForRole(agents, roleId, 1)[0];
+  return getRaidGuildCandidatesForRole(workers, role, 1)[0];
 }
 
-export function getRaidGuildRoster(agents: Agent[]): GuildMemberProfile[] {
-  return [...DECOR_PROFILES, ...getRaidGuildCandidates(agents)];
+export function getRaidGuildRoster(workers: Worker[]): GuildMemberProfile[] {
+  return [...DECOR_PROFILES, ...getRaidGuildCandidates(workers)];
 }
 
 export function findRaidGuildMember(
-  agents: Agent[],
-  agentId?: string
+  workers: Worker[],
+  workerId?: string
 ): GuildMemberProfile | undefined {
-  if (!agentId) {
+  if (!workerId) {
     return undefined;
   }
 
-  const agent = agents.find((candidate) => candidate.id === agentId);
-  return agent ? createGuildProfile(agent, `candidate-${agent.id}`) : undefined;
+  const worker = workers.find((candidate) => candidate.id === workerId);
+  return worker ? createGuildProfile(worker, `candidate-${worker.id}`) : undefined;
 }

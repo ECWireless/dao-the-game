@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import type { ArtifactGenerationRecovery } from '../../../contracts/gameState';
 import { hasPipelineStage } from '../../../pipeline';
-import type { Agent, ArtifactBundle, Brief, HatRole, RunResult } from '../../../types';
+import type { Worker, ArtifactBundle, Brief, HatRole, RunResult } from '../../../types';
 import type { ArtifactGenerationProgress } from '../types';
 import { buildFactoryRoleLanes } from '../factoryUtils';
 import { usePannableViewport } from '../usePannableViewport';
@@ -13,7 +13,7 @@ type FactorySceneProps = {
   brief: Brief;
   cycle: 1 | 2;
   roles: HatRole[];
-  agents: Agent[];
+  workers: Worker[];
   canRun: boolean;
   hasRun: boolean;
   latestRun?: RunResult;
@@ -50,7 +50,7 @@ export function FactoryScene({
   brief,
   cycle,
   roles,
-  agents,
+  workers,
   canRun,
   hasRun,
   latestRun,
@@ -73,7 +73,7 @@ export function FactoryScene({
   const [openTraceStageId, setOpenTraceStageId] = useState<PositionedRoleLane['stageId'] | null>(null);
   const hasTriggeredRunRef = useRef(false);
   const hasSettledOnOutputRef = useRef(false);
-  const roleLanes = useMemo(() => buildFactoryRoleLanes(roles, agents), [agents, roles]);
+  const roleLanes = useMemo(() => buildFactoryRoleLanes(roles, workers), [workers, roles]);
   const workerTraceByStageId = useMemo(
     () => new Map((latestArtifacts?.workerTrace ?? []).map((trace) => [trace.stageId, trace])),
     [latestArtifacts?.workerTrace]

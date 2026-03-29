@@ -12,9 +12,10 @@ import {
   TUTORIAL_SEED,
   TUTORIAL_TREASURY
 } from '../levels/tutorial';
-import { generateStartingAgents, simulateRun } from '../sim';
+import { generateStartingWorkers, simulateRun } from '../sim';
+import { getWorkerLicenseCost } from '../workers/catalog';
 import type {
-  Agent,
+  Worker,
   ArtifactBundle,
   ClientReview,
   HatRole,
@@ -23,7 +24,7 @@ import type {
   ScoreBreakdown
 } from '../types';
 
-const GAME_STATE_STORAGE_KEY = 'dao-the-game:state:v3';
+const GAME_STATE_STORAGE_KEY = 'dao-the-game:state:v4';
 const FIRST_CYCLE_ROLE_COUNT = 1;
 const DEFAULT_STUDIO_NAME = '';
 
@@ -36,7 +37,7 @@ type GameStore = {
   studioName: string;
   hasSeenIntroDialog: boolean;
   roles: HatRole[];
-  agents: Agent[];
+  workers: Worker[];
   latestRun?: RunResult;
   latestArtifacts?: ArtifactBundle;
   runHistory: Partial<Record<1 | 2, RunResult>>;
@@ -54,7 +55,7 @@ type GameStore = {
   dismissIntroDialog: () => void;
   configureRole: (roleId: string, name: string) => void;
   unlockExpandedRoles: () => void;
-  assignRole: (roleId: string, agentId: string) => void;
+  assignRole: (roleId: string, workerId: string) => void;
   unassignRole: (roleId: string) => void;
   runProduction: () => RunResult | undefined;
   setLatestArtifacts: (artifacts?: ArtifactBundle) => void;
@@ -95,7 +96,7 @@ function getInitialState(ownerPlayerId: string | null = null): PersistedGameStat
     studioName: DEFAULT_STUDIO_NAME,
     hasSeenIntroDialog: false,
     roles: cloneTutorialRoles(),
-    agents: generateStartingAgents(TUTORIAL_SEED),
+    workers: generateStartingWorkers(TUTORIAL_SEED),
     latestRun: undefined,
     latestArtifacts: undefined,
     runHistory: {},
@@ -151,7 +152,7 @@ function normalizeGameStateSnapshot(
           const isConfigured =
             typeof persistedRole.isConfigured === 'boolean'
               ? persistedRole.isConfigured
-              : Boolean(persistedRole.assignedAgentId) || persistedRole.name !== role.name;
+              : Boolean(persistedRole.assignedWorkerId) || persistedRole.name !== role.name;
 
           return {
             ...role,
@@ -165,7 +166,7 @@ function normalizeGameStateSnapshot(
           };
         })
       : initial.roles,
-    agents: Array.isArray(candidate.agents) ? candidate.agents : initial.agents,
+    workers: Array.isArray(candidate.workers) ? candidate.workers : initial.workers,
     latestRun: candidate.latestRun,
     latestArtifacts: candidate.latestArtifacts,
     runHistory:
@@ -209,7 +210,7 @@ export function buildGameStateSnapshot(
     | 'studioName'
     | 'hasSeenIntroDialog'
     | 'roles'
-    | 'agents'
+    | 'workers'
     | 'latestRun'
     | 'latestArtifacts'
     | 'runHistory'
@@ -228,7 +229,7 @@ export function buildGameStateSnapshot(
     studioName: state.studioName,
     hasSeenIntroDialog: state.hasSeenIntroDialog,
     roles: state.roles,
-    agents: state.agents,
+    workers: state.workers,
     latestRun: state.latestRun,
     latestArtifacts: state.latestArtifacts,
     runHistory: state.runHistory,
@@ -248,14 +249,14 @@ function buildRunState(
   seed: number,
   treasury: number,
   roles: HatRole[],
-  agents: Agent[]
+  workers: Worker[]
 ): RunState {
   return {
     seed,
     treasury,
     brief: TUTORIAL_BRIEF,
     roles,
-    agents
+    workers
   };
 }
 
@@ -265,7 +266,7 @@ export function getActiveRoles(roles: HatRole[], unlockedRoleCount: number): Hat
 }
 
 export function countAssignedRoles(roles: HatRole[]): number {
-  return roles.filter((role) => Boolean(role.assignedAgentId)).length;
+  return roles.filter((role) => Boolean(role.assignedWorkerId)).length;
 }
 
 function getConfiguredRunRoles(roles: HatRole[]): HatRole[] {
@@ -273,16 +274,16 @@ function getConfiguredRunRoles(roles: HatRole[]): HatRole[] {
   return configuredRoles.length > 0 ? configuredRoles : roles;
 }
 
-export function estimateRunCost(roles: HatRole[], agents: Agent[]): number {
+export function estimateRunCost(roles: HatRole[], workers: Worker[]): number {
   const runnableRoles = getConfiguredRunRoles(roles);
-  const agentById = new Map(agents.map((agent) => [agent.id, agent]));
+  const workerById = new Map(workers.map((worker) => [worker.id, worker]));
   const assignedCost = runnableRoles.reduce((sum, role) => {
-    if (!role.assignedAgentId) {
+    if (!role.assignedWorkerId) {
       return sum;
     }
 
-    const agent = agentById.get(role.assignedAgentId);
-    return sum + (agent?.contractCost ?? 0);
+    const worker = workerById.get(role.assignedWorkerId);
+    return sum + (worker ? getWorkerLicenseCost(worker) : 0);
   }, 0);
 
   const baseCost = 36 + runnableRoles.length * 2;
@@ -292,13 +293,13 @@ export function estimateRunCost(roles: HatRole[], agents: Agent[]): number {
 export function estimateRunwayAfterRun(
   treasury: number,
   roles: HatRole[],
-  agents: Agent[]
+  workers: Worker[]
 ): number {
-  return treasury - estimateRunCost(roles, agents);
+  return treasury - estimateRunCost(roles, workers);
 }
 
 function areRolesFullyAssigned(roles: HatRole[]): boolean {
-  return roles.every((role) => Boolean(role.assignedAgentId));
+  return roles.every((role) => Boolean(role.assignedWorkerId));
 }
 
 function applyScoreOverride(result: RunResult, nextScore: number): RunResult {
@@ -413,14 +414,14 @@ export const useGameStore = create<GameStore>()(
       unlockExpandedRoles: () => {
         set((state) => ({ unlockedRoleCount: state.roles.length }));
       },
-      assignRole: (roleId, agentId) => {
+      assignRole: (roleId, workerId) => {
         const state = get();
         const activeRoles = getActiveRoles(state.roles, state.unlockedRoleCount);
         const isRoleUnlocked = activeRoles.some((role) => role.id === roleId);
         const role = state.roles.find((item) => item.id === roleId);
-        const agent = state.agents.find((item) => item.id === agentId);
+        const worker = state.workers.find((item) => item.id === workerId);
 
-        if (!isRoleUnlocked || !role || !agent) {
+        if (!isRoleUnlocked || !role || !worker) {
           return;
         }
 
@@ -429,18 +430,18 @@ export const useGameStore = create<GameStore>()(
             item.id === roleId
               ? {
                   ...item,
-                  assignedAgentId: agentId
+                  assignedWorkerId: workerId
                 }
-              : item.assignedAgentId === agentId
+              : item.assignedWorkerId === workerId
                 ? {
                     ...item,
-                    assignedAgentId: undefined
+                    assignedWorkerId: undefined
                   }
                 : item
           ),
           assignmentLog: [
             createAssignmentLogEntry(
-              `${role.name} assigned to ${agent.name}`
+              `${role.name} assigned to ${worker.manifest.identity.name}`
             ),
             ...state.assignmentLog
           ].slice(0, 8)
@@ -459,7 +460,7 @@ export const useGameStore = create<GameStore>()(
             item.id === roleId
               ? {
                   ...item,
-                  assignedAgentId: undefined
+                  assignedWorkerId: undefined
                 }
               : item
           ),
@@ -478,7 +479,7 @@ export const useGameStore = create<GameStore>()(
           return undefined;
         }
 
-        const runState = buildRunState(state.seed, state.treasury, runnableRoles, state.agents);
+        const runState = buildRunState(state.seed, state.treasury, runnableRoles, state.workers);
         let result = simulateRun(runState);
 
         if (state.runCount === 0) {
@@ -540,7 +541,7 @@ export const useGameStore = create<GameStore>()(
     }),
     {
       name: GAME_STATE_STORAGE_KEY,
-      version: 7,
+      version: 8,
       storage: createJSONStorage(() => localStorage),
       partialize: (state): PersistedGameState => ({
         ownerPlayerId: state.ownerPlayerId,

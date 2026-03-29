@@ -20,16 +20,16 @@ function assignAllVisibleRoles() {
   const state = useGameStore.getState();
   const activeRoles = getActiveRoles(state.roles, state.unlockedRoleCount);
   const recommendedAssignments: Record<string, string> = {
-    'hat-01': 'agent-01',
-    'hat-02': 'agent-03',
-    'hat-03': 'agent-05',
-    'hat-04': 'agent-06'
+    'hat-01': 'worker-01',
+    'hat-02': 'worker-03',
+    'hat-03': 'worker-05',
+    'hat-04': 'worker-06'
   };
 
   activeRoles.forEach((role, index) => {
     state.assignRole(
       role.id,
-      recommendedAssignments[role.id] ?? `agent-${String(index + 1).padStart(2, '0')}`
+      recommendedAssignments[role.id] ?? `worker-${String(index + 1).padStart(2, '0')}`
     );
   });
 }
@@ -39,8 +39,8 @@ function configureExpandedCycleTwoRoles() {
   state.configureRole('hat-01', 'Frontend Engineer');
   state.configureRole('hat-02', 'Designer');
   state.configureRole('hat-03', 'QA Reviewer');
-  state.assignRole('hat-02', 'agent-03');
-  state.assignRole('hat-03', 'agent-05');
+  state.assignRole('hat-02', 'worker-03');
+  state.assignRole('hat-03', 'worker-05');
 }
 
 describe('gameStore role visibility', () => {
@@ -69,7 +69,7 @@ describe('gameStore role visibility', () => {
     state.unlockExpandedRoles();
     state.setStudioName('Night Shift');
     state.dismissIntroDialog();
-    state.assignRole('hat-01', 'agent-01');
+    state.assignRole('hat-01', 'worker-01');
 
     useGameStore.getState().hydrateForPlayer('player-two', null);
     const next = useGameStore.getState();
@@ -79,7 +79,7 @@ describe('gameStore role visibility', () => {
     expect(next.unlockedRoleCount).toBe(1);
     expect(next.studioName).toBe('');
     expect(next.hasSeenIntroDialog).toBe(false);
-    expect(next.roles.every((role) => role.assignedAgentId === undefined)).toBe(true);
+    expect(next.roles.every((role) => role.assignedWorkerId === undefined)).toBe(true);
   });
 
   it('tracks intro dialog dismissal and restores it on reset', () => {
@@ -131,38 +131,38 @@ describe('gameStore role visibility', () => {
     const state = useGameStore.getState();
     const activeRoles = getActiveRoles(state.roles, state.unlockedRoleCount);
 
-    const cost = estimateRunCost(activeRoles, state.agents);
-    const runway = estimateRunwayAfterRun(state.treasury, activeRoles, state.agents);
+    const cost = estimateRunCost(activeRoles, state.workers);
+    const runway = estimateRunwayAfterRun(state.treasury, activeRoles, state.workers);
 
     expect(runway).toBe(state.treasury - cost);
   });
 
-  it('keeps agent assignments unique across roles', () => {
+  it('keeps worker assignments unique across roles', () => {
     const state = useGameStore.getState();
     state.unlockExpandedRoles();
 
     const expanded = useGameStore.getState();
-    expanded.assignRole('hat-01', 'agent-01');
-    expanded.assignRole('hat-02', 'agent-01');
+    expanded.assignRole('hat-01', 'worker-01');
+    expanded.assignRole('hat-02', 'worker-01');
 
     const next = useGameStore.getState();
     const roleOne = next.roles.find((role) => role.id === 'hat-01');
     const roleTwo = next.roles.find((role) => role.id === 'hat-02');
 
-    expect(roleOne?.assignedAgentId).toBeUndefined();
-    expect(roleTwo?.assignedAgentId).toBe('agent-01');
+    expect(roleOne?.assignedWorkerId).toBeUndefined();
+    expect(roleTwo?.assignedWorkerId).toBe('worker-01');
   });
 
   it('preserves worker identity when assigning them to a role', () => {
     const state = useGameStore.getState();
     state.unlockExpandedRoles();
     state.configureRole('hat-02', 'Designer');
-    state.assignRole('hat-02', 'agent-03');
+    state.assignRole('hat-02', 'worker-03');
 
-    const assignedAgent = useGameStore.getState().agents.find((agent) => agent.id === 'agent-03');
+    const assignedWorker = useGameStore.getState().workers.find((worker) => worker.id === 'worker-03');
 
-    expect(assignedAgent?.name).toBe('Kestrel Vale');
-    expect(assignedAgent?.roleAffinity).toBe('Skeuomorphic interaction and product design');
+    expect(assignedWorker?.name).toBe('Kestrel Vale');
+    expect(assignedWorker?.roleAffinity).toBe('Skeuomorphic interaction and product design');
   });
 });
 
@@ -213,7 +213,7 @@ describe('gameStore narrative run shaping', () => {
           cycle: 1,
           studioName: useGameStore.getState().studioName,
           roles: useGameStore.getState().roles,
-          agents: useGameStore.getState().agents
+          workers: useGameStore.getState().workers
         })
       : undefined;
 
@@ -235,7 +235,7 @@ describe('gameStore narrative run shaping', () => {
           cycle: 2,
           studioName: useGameStore.getState().studioName,
           roles: useGameStore.getState().roles,
-          agents: useGameStore.getState().agents
+          workers: useGameStore.getState().workers
         })
       : undefined;
 
@@ -255,7 +255,7 @@ describe('gameStore narrative run shaping', () => {
     const activeRoles = getActiveRoles(state.roles, state.unlockedRoleCount);
     const configuredRoles = activeRoles.filter((role) => role.isConfigured);
 
-    expect(estimateRunCost(activeRoles, state.agents)).toBe(estimateRunCost(configuredRoles, state.agents));
+    expect(estimateRunCost(activeRoles, state.workers)).toBe(estimateRunCost(configuredRoles, state.workers));
 
     const secondRun = useGameStore.getState().runProduction();
 
@@ -268,7 +268,7 @@ describe('gameStore narrative run shaping', () => {
     state.setStorySceneIndex(4);
     state.unlockExpandedRoles();
 
-    const raw = localStorage.getItem('dao-the-game:state:v3');
+    const raw = localStorage.getItem('dao-the-game:state:v4');
     expect(raw).toBeTruthy();
 
     const stored = JSON.parse(raw ?? '{}');
@@ -288,7 +288,7 @@ describe('gameStore narrative run shaping', () => {
     });
 
     const snapshot = buildGameStateSnapshot(useGameStore.getState());
-    const raw = localStorage.getItem('dao-the-game:state:v3');
+    const raw = localStorage.getItem('dao-the-game:state:v4');
     const stored = JSON.parse(raw ?? '{}');
 
     expect(snapshot.artifactGenerationRecovery).toEqual({
@@ -318,10 +318,10 @@ describe('gameStore narrative run shaping', () => {
           {
             id: 'hat-01',
             name: 'Legacy Lead',
-            assignedAgentId: 'agent-01'
+            assignedWorkerId: 'worker-01'
           }
         ],
-        agents: useGameStore.getState().agents,
+        workers: useGameStore.getState().workers,
         latestRun: undefined,
         latestArtifacts: undefined,
         runCount: 2,

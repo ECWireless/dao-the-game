@@ -2,35 +2,35 @@ import { describe, expect, it } from 'vitest';
 import type { HatRole, RunResult, RunState } from '../../types';
 import { TUTORIAL_BRIEF } from '../../levels/tutorial';
 import { generateArtifacts } from '../generateArtifacts';
-import { generateStartingAgents } from '../generateStartingAgents';
+import { generateStartingWorkers } from '../generateStartingWorkers';
 import { simulateRun } from '../simulateRun';
 
 const roles: HatRole[] = [
   {
     id: 'hat-01',
     name: 'Frontend Engineer',
-    assignedAgentId: 'agent-01',
+    assignedWorkerId: 'worker-01',
     pipelineStageId: 'implementation',
     isConfigured: true
   },
   {
     id: 'hat-02',
-    name: 'Designer Agent',
-    assignedAgentId: 'agent-03',
+    name: 'Designer Worker',
+    assignedWorkerId: 'worker-03',
     pipelineStageId: 'design',
     isConfigured: true
   },
   {
     id: 'hat-03',
-    name: 'Reviewer Agent',
-    assignedAgentId: 'agent-05',
+    name: 'Reviewer Worker',
+    assignedWorkerId: 'worker-05',
     pipelineStageId: 'review',
     isConfigured: true
   },
   {
     id: 'hat-04',
-    name: 'Deployment Agent',
-    assignedAgentId: 'agent-06',
+    name: 'Deployment Worker',
+    assignedWorkerId: 'worker-06',
     pipelineStageId: 'deployment',
     isConfigured: true
   }
@@ -42,7 +42,7 @@ function buildState(overrides: Partial<RunState> = {}): RunState {
     treasury: 540,
     brief: TUTORIAL_BRIEF,
     roles,
-    agents: generateStartingAgents(424242),
+    workers: generateStartingWorkers(424242),
     ...overrides
   };
 }
@@ -56,7 +56,7 @@ describe('generateArtifacts', () => {
       cycle: 2,
       studioName: 'Coopa LLC',
       roles,
-      agents: buildState().agents
+      workers: buildState().workers
     });
 
     expect(artifacts.artifactType).toBe('conference-site');
@@ -81,7 +81,7 @@ describe('generateArtifacts', () => {
       cycle: 1,
       studioName: 'Ghost Studio',
       roles,
-      agents: buildState().agents
+      workers: buildState().workers
     });
 
     expect(['messy', 'failed']).toContain(artifacts.profileTag);
@@ -106,7 +106,7 @@ describe('generateArtifacts', () => {
       cycle: 2,
       studioName: 'Ghost Studio',
       roles,
-      agents: buildState().agents
+      workers: buildState().workers
     });
 
     expect(artifacts.profileTag).toBe('stable');
@@ -118,7 +118,7 @@ describe('generateArtifacts', () => {
         {
           id: 'hat-01',
           name: 'Frontend Engineer',
-          assignedAgentId: 'agent-01',
+          assignedWorkerId: 'worker-01',
           pipelineStageId: 'implementation',
           isConfigured: true
         }
@@ -129,7 +129,7 @@ describe('generateArtifacts', () => {
         {
           id: 'hat-01',
           name: 'Frontend Engineer',
-          assignedAgentId: 'agent-02',
+          assignedWorkerId: 'worker-02',
           pipelineStageId: 'implementation',
           isConfigured: true
         }
@@ -142,7 +142,7 @@ describe('generateArtifacts', () => {
       cycle: 1,
       studioName: 'Ghost Studio',
       roles: lineupState.roles,
-      agents: lineupState.agents
+      workers: lineupState.workers
     });
     const dorianArtifacts = generateArtifacts({
       result: simulateRun(altLineupState),
@@ -150,7 +150,7 @@ describe('generateArtifacts', () => {
       cycle: 1,
       studioName: 'Ghost Studio',
       roles: altLineupState.roles,
-      agents: altLineupState.agents
+      workers: altLineupState.workers
     });
 
     expect(runeArtifacts.siteDocument).toContain('Clarity as a coordination primitive');

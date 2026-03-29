@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Agent, HatRole } from '../../../types';
+import type { Worker, HatRole } from '../../../types';
 import fullLogo from '../../../assets/raidguild-full.svg';
 import { GuildMemberAvatar } from '../components/GuildMemberAvatar';
 import { GuildMemberCard } from '../components/GuildMemberCard';
@@ -14,19 +14,19 @@ type AssignmentLogEntry = {
 export type GuildSceneProps = {
   studioName?: string;
   roles: HatRole[];
-  agents: Agent[];
+  workers: Worker[];
   assignmentLog: AssignmentLogEntry[];
-  onAssign?: (roleId: string, agentId: string) => void;
+  onAssign?: (roleId: string, workerId: string) => void;
   onContinue?: () => void;
   continueDisabled?: boolean;
   isReadOnly?: boolean;
 };
 
-function FirstCycleGuildScene({ studioName, roles, agents, onContinue, isReadOnly = false }: GuildSceneProps) {
+function FirstCycleGuildScene({ studioName, roles, workers, onContinue, isReadOnly = false }: GuildSceneProps) {
   const role = roles[0];
   const roleDisplayName = role?.name ?? 'Frontend Engineer';
-  const roster = useMemo(() => getRaidGuildRoster(agents), [agents]);
-  const candidates = useMemo(() => getRaidGuildCandidates(agents, 2), [agents]);
+  const roster = useMemo(() => getRaidGuildRoster(workers), [workers]);
+  const candidates = useMemo(() => getRaidGuildCandidates(workers, 2), [workers]);
   const [postStage, setPostStage] = useState(isReadOnly ? 3 : 0);
   const [isPostingSequenceActive, setIsPostingSequenceActive] = useState(false);
   const [openMemberId, setOpenMemberId] = useState<string | null>(null);
@@ -84,7 +84,9 @@ function FirstCycleGuildScene({ studioName, roles, agents, onContinue, isReadOnl
   const datePreview = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date());
   const visibleChannels = RAIDGUILD_CHANNELS.filter((channel) => channel !== '#hiring-board');
   const openMember = roster.find((member) => member.id === openMemberId);
-  const openAgent = openMember?.agentId ? agents.find((agent) => agent.id === openMember.agentId) : undefined;
+  const openWorker = openMember?.workerId
+    ? workers.find((worker) => worker.id === openMember.workerId)
+    : undefined;
   const studioLabel = studioName || 'Unnamed Studio';
   const studioGlyph = studioLabel.trim().charAt(0).toUpperCase() || 'S';
   const hasPosted = postStage >= 1;
@@ -241,7 +243,7 @@ function FirstCycleGuildScene({ studioName, roles, agents, onContinue, isReadOnl
         )}
       </footer>
 
-      {openMember ? <GuildMemberCard member={openMember} agent={openAgent} onClose={() => setOpenMemberId(null)} /> : null}
+      {openMember ? <GuildMemberCard member={openMember} worker={openWorker} onClose={() => setOpenMemberId(null)} /> : null}
     </section>
   );
 }

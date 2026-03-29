@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { ArtifactGenerationRecovery } from '../../contracts/gameState';
 import type { OrgTreeRecord } from '../../contracts/org';
 import { TUTORIAL_BRIEF } from '../../levels/tutorial';
-import type { Agent, ArtifactBundle, ClientReview, HatRole, RunResult } from '../../types';
+import type { Worker, ArtifactBundle, ClientReview, HatRole, RunResult } from '../../types';
 import type { ArtifactGenerationProgress, AssignmentLogEntry, ChatLine } from './types';
 import { MessagesScene } from './scenes/CommunicationScenes';
 import { MailScene } from './scenes/MailScenes';
@@ -22,7 +22,7 @@ type SceneContentArgs = {
   studioName: string;
   orgTree: OrgTreeRecord | null;
   activeRoles: HatRole[];
-  agents: Agent[];
+  workers: Worker[];
   assignmentLog: AssignmentLogEntry[];
   assignedActiveRoles: number;
   latestRun?: RunResult;
@@ -41,7 +41,7 @@ type SceneContentArgs = {
   setStudioName: (name: string) => Promise<void> | void;
   configureRole: (roleId: string, name: string) => Promise<void> | void;
   unlockExpandedRoles: () => void;
-  assignRole: (roleId: string, agentId: string) => void;
+  assignRole: (roleId: string, workerId: string) => void;
   runProduction: () => Promise<void> | void;
   submitClientReview: (cycle: 1 | 2) => void;
   resetDemo: () => Promise<void> | void;
@@ -101,7 +101,7 @@ export function renderSceneContent({
   studioName,
   orgTree,
   activeRoles,
-  agents,
+  workers,
   assignmentLog,
   assignedActiveRoles,
   latestRun,
@@ -131,7 +131,7 @@ export function renderSceneContent({
     (role) => role.id !== activeRoles[0]?.id
   );
   const assignedConfiguredRoles = configuredExpandedRoles.filter((role) =>
-    Boolean(role.assignedAgentId)
+    Boolean(role.assignedWorkerId)
   ).length;
 
   switch (sceneId) {
@@ -208,7 +208,7 @@ export function renderSceneContent({
       return (
         <WhiteboardScene
           roles={activeRoles}
-          agents={agents}
+          workers={workers}
           studioName={studioName}
           orgTree={orgTree}
           isExpanded={false}
@@ -237,7 +237,7 @@ export function renderSceneContent({
         <GuildScene
           studioName={studioName}
           roles={activeRoles}
-          agents={agents}
+          workers={workers}
           assignmentLog={assignmentLog}
           onAssign={isInteractive ? assignRole : undefined}
           onContinue={isInteractive ? queueCrossAppAdvance : undefined}
@@ -249,7 +249,7 @@ export function renderSceneContent({
       return (
         <WhiteboardScene
           roles={activeRoles}
-          agents={agents}
+          workers={workers}
           studioName={studioName}
           orgTree={orgTree}
           isExpanded={false}
@@ -266,7 +266,7 @@ export function renderSceneContent({
           brief={TUTORIAL_BRIEF}
           cycle={1}
           roles={activeRoles}
-          agents={agents}
+          workers={workers}
           canRun={assignedActiveRoles === activeRoles.length}
           hasRun={runCount >= 1}
           latestRun={runCount >= 1 ? latestRun : undefined}
@@ -319,7 +319,7 @@ export function renderSceneContent({
       return (
         <WhiteboardScene
           roles={activeRoles}
-          agents={agents}
+          workers={workers}
           studioName={studioName}
           orgTree={orgTree}
           isExpanded
@@ -334,7 +334,7 @@ export function renderSceneContent({
         <GuildScene
           studioName={studioName}
           roles={secondCycleHiringRoles}
-          agents={agents}
+          workers={workers}
           assignmentLog={assignmentLog}
           onAssign={isInteractive ? assignRole : undefined}
           onContinue={isInteractive ? queueCrossAppAdvance : undefined}
@@ -346,7 +346,7 @@ export function renderSceneContent({
       return (
         <WhiteboardScene
           roles={configuredExpandedRoles}
-          agents={agents}
+          workers={workers}
           studioName={studioName}
           orgTree={orgTree}
           isExpanded
@@ -362,7 +362,7 @@ export function renderSceneContent({
           brief={TUTORIAL_BRIEF}
           cycle={2}
           roles={configuredExpandedRoles}
-          agents={agents}
+          workers={workers}
           canRun={assignedConfiguredRoles === configuredExpandedRoles.length && runwayAfterRun >= 0}
           hasRun={runCount >= 2}
           latestRun={runCount >= 2 ? latestRun : undefined}
