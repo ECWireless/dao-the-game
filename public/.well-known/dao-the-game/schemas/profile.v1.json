@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://daothegame.com/.well-known/dao-the-game/schemas/profile.v1.json",
+  "title": "DAO the Game Worker Profile v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["specVersion", "identity", "summary"],
+  "properties": {
+    "specVersion": {
+      "const": "dao-the-game.profile.v1"
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "roleTag"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "roleTag": {
+          "type": "string",
+          "enum": ["ui-designer", "brand-designer", "frontend-engineer", "code-reviewer"]
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["oneLiner", "bestFit", "processBullets"],
+      "properties": {
+        "oneLiner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bestFit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "processBullets": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "avoid": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

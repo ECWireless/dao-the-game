@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://daothegame.com/.well-known/dao-the-game/schemas/manifest.v1.json",
+  "title": "DAO the Game Worker Manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["specVersion", "identity", "pricing"],
+  "properties": {
+    "specVersion": {
+      "const": "dao-the-game.worker.v1"
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "handle", "roleTag", "bio", "shortPitch"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "handle": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "roleTag": {
+          "type": "string",
+          "enum": ["ui-designer", "brand-designer", "frontend-engineer", "code-reviewer"]
+        },
+        "bio": {
+          "type": "string",
+          "minLength": 1
+        },
+        "shortPitch": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "pricing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["asset", "amount", "chargeModel"],
+      "properties": {
+        "asset": {
+          "const": "USDC"
+        },
+        "amount": {
+          "type": "string",
+          "pattern": "^(0|[1-9]\\d*)(\\.\\d+)?$"
+        },
+        "chargeModel": {
+          "const": "per_request_attempt"
+        }
+      }
+    }
+  }
+}

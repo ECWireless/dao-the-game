@@ -266,9 +266,6 @@ describe('simulateRun', () => {
                 bio: 'A deliberately weak fixture for blocked-stage regression tests.',
                 shortPitch: 'I can take the build, but this fixture is deliberately underpowered.'
               },
-              execution: {
-                publicEndpoint: 'https://daothegame.com/workers/fixtures/worker-low'
-              },
               pricing: {
                 asset: 'USDC',
                 amount: '0.01',

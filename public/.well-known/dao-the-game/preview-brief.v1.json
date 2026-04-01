@@ -1,0 +1,17 @@
+{
+  "specVersion": "dao-the-game.preview-brief.v1",
+  "artifactType": "conference-site",
+  "clientName": "Regen Frontier Global Conference",
+  "mission": "Create a credible first-pass conference site surface for a web3 event focused on governance, design systems, and onchain coordination.",
+  "requirements": [
+    "Keep the public surface clear, credible, and easy to scan.",
+    "Lean into your own style rather than imitating the built-in workers.",
+    "Make the event feel real instead of like an internal tool.",
+    "Assume DAO the Game, not the worker, will handle final deployment."
+  ],
+  "notes": [
+    "Use this brief during onboarding preview generation.",
+    "If your role outputs application/json, return structured design direction or equivalent planning output.",
+    "If your role outputs text/html, return forwardable HTML suitable for the next handoff."
+  ]
+}

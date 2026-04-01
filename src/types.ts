@@ -2,6 +2,8 @@ export type PipelineStageId = 'design' | 'implementation' | 'review' | 'deployme
 
 export type ArtifactType = 'conference-site';
 
+export type WorkerContentType = 'text/plain' | 'text/html' | 'application/json';
+
 export type RoleTagId =
   | 'ui-designer'
   | 'brand-designer'
@@ -12,6 +14,12 @@ export type RoleTagDefinition = {
   id: RoleTagId;
   label: string;
   description: string;
+  expectedOutputContentTypes: WorkerContentType[];
+};
+
+export type RoleTagCatalog = {
+  specVersion: 'dao-the-game.role-tags.v1';
+  roleTags: RoleTagDefinition[];
 };
 
 export type WorkerManifest = {
@@ -23,15 +31,88 @@ export type WorkerManifest = {
     bio: string;
     shortPitch: string;
   };
-  execution: {
-    publicEndpoint: string;
-    paymentProtocol?: 'x402';
-  };
   pricing: {
     asset: 'USDC';
     amount: string;
     chargeModel: 'per_request_attempt';
   };
+};
+
+export type WorkerProfile = {
+  specVersion: 'dao-the-game.profile.v1';
+  identity: {
+    name: string;
+    roleTag: RoleTagId;
+  };
+  summary: {
+    oneLiner: string;
+    bestFit: string;
+    processBullets: string[];
+    avoid?: string;
+  };
+};
+
+export type WorkerSelfTestResponse = {
+  specVersion: 'dao-the-game.self-test.v1';
+  ok: boolean;
+  worker: {
+    name: string;
+    roleTag: RoleTagId;
+  };
+  checks: {
+    manifestReachable: boolean;
+    profileReachable: boolean;
+    runReachable: boolean;
+  };
+  preview?: {
+    url?: string;
+    summary?: string;
+  };
+  notes?: string[];
+};
+
+export type WorkerHandoff = {
+  summary: string;
+  contentType: WorkerContentType;
+  content: string;
+  notes?: string[];
+};
+
+export type WorkerRunRequest = {
+  specVersion: 'dao-the-game.run-request.v1';
+  job: {
+    artifactType: ArtifactType;
+    hatName: string;
+    brief: {
+      clientName: string;
+      mission: string;
+      requirements: string[];
+    };
+    contract: {
+      inputContentType?: WorkerContentType;
+      outputContentType: WorkerContentType;
+    };
+    upstreamHandoff?: WorkerHandoff;
+  };
+};
+
+export type WorkerRunResponse = {
+  specVersion: 'dao-the-game.run-response.v1';
+  ok: boolean;
+  handoff?: WorkerHandoff;
+  error?: {
+    code: string;
+    message: string;
+  };
+};
+
+export type WorkerPreviewBrief = {
+  specVersion: 'dao-the-game.preview-brief.v1';
+  artifactType: ArtifactType;
+  clientName: string;
+  mission: string;
+  requirements: string[];
+  notes: string[];
 };
 
 export type WorkerRegistration = {
@@ -141,10 +222,11 @@ export type Worker = WorkerRegistryRecord & {
 export type EngineerIntake = {
   name: string;
   roleTag: RoleTagId;
-  description: string;
+  bestAt: string;
+  styleProcess: string;
   priceUsdc: string;
-  referenceUrls?: string[];
-  styleNotes?: string;
+  referenceUrls: string[];
+  avoid?: string;
   engineerEmail?: string;
 };
 
