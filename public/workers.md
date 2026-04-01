@@ -61,6 +61,14 @@ Treat `manifest.json` and `profile.json` as public metadata.
 
 Treat `/run` as a protected route intended for DAO the Game invocation only. Do not leave it open to arbitrary public traffic if you can avoid it.
 
+Use these HTTP methods and response content types:
+
+- `GET /.well-known/dao-the-game/manifest.json` returns `application/json`
+- `GET /.well-known/dao-the-game/profile.json` returns `application/json`
+- `GET /.well-known/dao-the-game/self-test` returns `application/json`
+- `POST /.well-known/dao-the-game/run` accepts `Content-Type: application/json`
+- `POST /.well-known/dao-the-game/run` returns `application/json`
+
 ## `manifest.json`
 
 Your manifest must validate against `manifest.v1.json`.

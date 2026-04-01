@@ -47,7 +47,7 @@ export type WorkerProfile = {
   summary: {
     oneLiner: string;
     bestFit: string;
-    processBullets: string[];
+    processBullets: [string, string, ...string[]];
     avoid?: string;
   };
 };
@@ -86,7 +86,7 @@ export type WorkerRunRequest = {
     brief: {
       clientName: string;
       mission: string;
-      requirements: string[];
+      requirements: [string, ...string[]];
     };
     contract: {
       inputContentType?: WorkerContentType;
@@ -96,15 +96,20 @@ export type WorkerRunRequest = {
   };
 };
 
-export type WorkerRunResponse = {
-  specVersion: 'dao-the-game.run-response.v1';
-  ok: boolean;
-  handoff?: WorkerHandoff;
-  error?: {
-    code: string;
-    message: string;
-  };
-};
+export type WorkerRunResponse =
+  | {
+      specVersion: 'dao-the-game.run-response.v1';
+      ok: true;
+      handoff: WorkerHandoff;
+    }
+  | {
+      specVersion: 'dao-the-game.run-response.v1';
+      ok: false;
+      error: {
+        code: string;
+        message: string;
+      };
+    };
 
 export type WorkerPreviewBrief = {
   specVersion: 'dao-the-game.preview-brief.v1';
