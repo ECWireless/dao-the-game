@@ -51,10 +51,6 @@ export const BUILTIN_WORKER_REGISTRY: Worker[] = [
         shortPitch:
           "I've got this. If the concept already feels right, I can build it fast without sanding off the edge."
       },
-      execution: {
-        publicEndpoint: 'https://daothegame.com/workers/builtin/rune-mercer',
-        paymentProtocol: 'x402'
-      },
       pricing: {
         asset: 'USDC',
         amount: '0.04',
@@ -113,10 +109,6 @@ export const BUILTIN_WORKER_REGISTRY: Worker[] = [
         bio: 'Best when a project needs stronger hierarchy, cleaner structure, and a calmer path to launch.',
         shortPitch:
           "I'm not the strongest design lead, but I am a good fit when the site needs stronger structure, hierarchy, and trust. Tap my avatar for the full profile."
-      },
-      execution: {
-        publicEndpoint: 'https://daothegame.com/workers/builtin/dorian-ash',
-        paymentProtocol: 'x402'
       },
       pricing: {
         asset: 'USDC',
@@ -177,10 +169,6 @@ export const BUILTIN_WORKER_REGISTRY: Worker[] = [
         shortPitch:
           'This is right up my alley. I can make the site feel tactile, intuitive, and much more like a real product.'
       },
-      execution: {
-        publicEndpoint: 'https://daothegame.com/workers/builtin/kestrel-vale',
-        paymentProtocol: 'x402'
-      },
       pricing: {
         asset: 'USDC',
         amount: '0.05',
@@ -239,10 +227,6 @@ export const BUILTIN_WORKER_REGISTRY: Worker[] = [
         bio: 'Best when the site needs a bold public identity that feels immediate, loud, and impossible to ignore.',
         shortPitch:
           "Yeah, I can take this. If you want a bolder identity and more public-facing punch, I'll push it there fast."
-      },
-      execution: {
-        publicEndpoint: 'https://daothegame.com/workers/builtin/hexa-thorn',
-        paymentProtocol: 'x402'
       },
       pricing: {
         asset: 'USDC',
@@ -303,10 +287,6 @@ export const BUILTIN_WORKER_REGISTRY: Worker[] = [
         shortPitch:
           "I can do the QA pass. If this build is risky, I'll find the brittle parts before the client does."
       },
-      execution: {
-        publicEndpoint: 'https://daothegame.com/workers/builtin/sable-quill',
-        paymentProtocol: 'x402'
-      },
       pricing: {
         asset: 'USDC',
         amount: '0.03',
@@ -365,10 +345,6 @@ export const BUILTIN_WORKER_REGISTRY: Worker[] = [
         bio: 'Best when the team needs confidence that the site will survive launch conditions and tiny screens alike.',
         shortPitch:
           "Happy to take release. I'll harden the launch, check the tiny screens, and make sure this thing survives the rollout."
-      },
-      execution: {
-        publicEndpoint: 'https://daothegame.com/workers/builtin/mint-halberd',
-        paymentProtocol: 'x402'
       },
       pricing: {
         asset: 'USDC',

@@ -1,0 +1,29 @@
+{
+  "specVersion": "dao-the-game.role-tags.v1",
+  "roleTags": [
+    {
+      "id": "ui-designer",
+      "label": "UI Designer",
+      "description": "Shapes interface systems, interaction logic, and product-facing visual detail.",
+      "expectedOutputContentTypes": ["application/json"]
+    },
+    {
+      "id": "brand-designer",
+      "label": "Brand Designer",
+      "description": "Builds identity systems, public-facing visual language, and campaign-level design direction.",
+      "expectedOutputContentTypes": ["application/json"]
+    },
+    {
+      "id": "frontend-engineer",
+      "label": "Frontend Engineer",
+      "description": "Implements the live surface, layout system, and production-facing interface behavior.",
+      "expectedOutputContentTypes": ["text/html"]
+    },
+    {
+      "id": "code-reviewer",
+      "label": "Code Reviewer",
+      "description": "Runs a truth pass on quality, breakage, and release-readiness before the work ships.",
+      "expectedOutputContentTypes": ["text/html"]
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://daothegame.com/.well-known/dao-the-game/schemas/run-request.v1.json",
+  "title": "DAO the Game Worker Run Request v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["specVersion", "job"],
+  "properties": {
+    "specVersion": {
+      "const": "dao-the-game.run-request.v1"
+    },
+    "job": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifactType", "hatName", "brief", "contract"],
+      "properties": {
+        "artifactType": {
+          "const": "conference-site"
+        },
+        "hatName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "brief": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["clientName", "mission", "requirements"],
+          "properties": {
+            "clientName": {
+              "type": "string",
+              "minLength": 1
+            },
+            "mission": {
+              "type": "string",
+              "minLength": 1
+            },
+            "requirements": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "contract": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["outputContentType"],
+          "properties": {
+            "inputContentType": {
+              "type": "string",
+              "enum": ["text/plain", "text/html", "application/json"]
+            },
+            "outputContentType": {
+              "type": "string",
+              "enum": ["text/plain", "text/html", "application/json"]
+            }
+          }
+        },
+        "upstreamHandoff": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["summary", "contentType", "content"],
+          "properties": {
+            "summary": {
+              "type": "string",
+              "minLength": 1
+            },
+            "contentType": {
+              "type": "string",
+              "enum": ["text/plain", "text/html", "application/json"]
+            },
+            "content": {
+              "type": "string"
+            },
+            "notes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
