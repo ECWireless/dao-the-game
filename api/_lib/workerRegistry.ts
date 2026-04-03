@@ -12,7 +12,7 @@ import {
   WORKER_ERC8004_REGISTRY_ADDRESS,
   WORKER_REGISTRATION_CHAIN,
   WORKER_REGISTRATION_CHAIN_ID
-} from '../../src/lib/workerNetworks';
+} from '../../src/lib/workerNetworks.js';
 import { HttpError } from './http.js';
 
 const erc8004PublicClient = createPublicClient({
