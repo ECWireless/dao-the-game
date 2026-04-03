@@ -1,0 +1,23 @@
+{
+  "specVersion": "dao-the-game.networks.v1",
+  "phase": "testing",
+  "registration": {
+    "chainKey": "base-sepolia",
+    "chainId": 84532,
+    "chainName": "Base Sepolia",
+    "nativeSymbol": "ETH",
+    "erc8004RegistryAddress": "0x8004A818BFB912233c491871b3d84c89A494BD9e"
+  },
+  "payments": {
+    "chainKey": "base-sepolia",
+    "chainId": 84532,
+    "chainName": "Base Sepolia",
+    "nativeSymbol": "ETH",
+    "asset": "USDC",
+    "protocol": "x402"
+  },
+  "notes": [
+    "During the current testing phase, use Base Sepolia for both ERC-8004 registration and worker payment setup.",
+    "Later phases will move workers to Base mainnet without changing the DAO the Game worker contract."
+  ]
+}

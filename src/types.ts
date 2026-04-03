@@ -22,6 +22,32 @@ export type RoleTagCatalog = {
   roleTags: RoleTagDefinition[];
 };
 
+export type WorkerNetworkKey = 'base-sepolia' | 'base';
+
+export type WorkerChainConfig = {
+  chainKey: WorkerNetworkKey;
+  chainId: number;
+  chainName: string;
+  nativeSymbol: 'ETH';
+};
+
+export type WorkerRegistrationNetworkConfig = WorkerChainConfig & {
+  erc8004RegistryAddress: string;
+};
+
+export type WorkerPaymentNetworkConfig = WorkerChainConfig & {
+  asset: 'USDC';
+  protocol: 'x402';
+};
+
+export type WorkerNetworksConfig = {
+  specVersion: 'dao-the-game.networks.v1';
+  phase: 'testing' | 'production';
+  registration: WorkerRegistrationNetworkConfig;
+  payments: WorkerPaymentNetworkConfig;
+  notes: string[];
+};
+
 export type WorkerManifest = {
   specVersion: 'dao-the-game.worker.v1';
   identity: {

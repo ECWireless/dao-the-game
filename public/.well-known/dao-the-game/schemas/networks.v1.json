@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://daothegame.com/.well-known/dao-the-game/schemas/networks.v1.json",
+  "title": "DAO the Game Worker Networks v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["specVersion", "phase", "registration", "payments", "notes"],
+  "properties": {
+    "specVersion": {
+      "const": "dao-the-game.networks.v1"
+    },
+    "phase": {
+      "type": "string",
+      "enum": ["testing", "production"]
+    },
+    "registration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["chainKey", "chainId", "chainName", "nativeSymbol", "erc8004RegistryAddress"],
+      "properties": {
+        "chainKey": {
+          "type": "string",
+          "enum": ["base-sepolia", "base"]
+        },
+        "chainId": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "chainName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "nativeSymbol": {
+          "const": "ETH"
+        },
+        "erc8004RegistryAddress": {
+          "type": "string",
+          "pattern": "^0x[a-fA-F0-9]{40}$"
+        }
+      }
+    },
+    "payments": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["chainKey", "chainId", "chainName", "nativeSymbol", "asset", "protocol"],
+      "properties": {
+        "chainKey": {
+          "type": "string",
+          "enum": ["base-sepolia", "base"]
+        },
+        "chainId": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "chainName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "nativeSymbol": {
+          "const": "ETH"
+        },
+        "asset": {
+          "const": "USDC"
+        },
+        "protocol": {
+          "const": "x402"
+        }
+      }
+    },
+    "notes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

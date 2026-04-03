@@ -7,6 +7,7 @@ import type {
   ProgressSummaryRecord,
   StoredGameStateRecord
 } from '../../src/contracts/player';
+import type { WorkerRegistryEntryRecord } from '../../src/contracts/workers';
 import { getDatabaseUrl } from './env.js';
 
 type PlayerRow = {
@@ -54,6 +55,20 @@ type OrgRoleHatRow = {
   toggle_address: string;
   tx_hash: string;
   created_at: string;
+  updated_at: string;
+};
+
+type WorkerRegistryRow = {
+  id: string;
+  worker_origin: string;
+  erc8004_token_id: string;
+  agent_card_uri: string;
+  registration_chain_id: number;
+  payment_chain_id: number;
+  owner_address: string;
+  engineer_email: string | null;
+  availability: string;
+  submitted_at: string;
   updated_at: string;
 };
 
@@ -126,6 +141,23 @@ function mapOrgRoleHat(row: OrgRoleHatRow): OrgRoleHatRecord {
     toggleAddress: row.toggle_address,
     txHash: row.tx_hash,
     createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
+function mapWorkerRegistryEntry(row: WorkerRegistryRow): WorkerRegistryEntryRecord {
+  return {
+    id: row.id,
+    registryKey: `${row.registration_chain_id}:${row.erc8004_token_id}`,
+    workerOrigin: row.worker_origin,
+    erc8004TokenId: row.erc8004_token_id,
+    agentCardUri: row.agent_card_uri,
+    registrationChainId: row.registration_chain_id,
+    paymentChainId: row.payment_chain_id,
+    ownerAddress: row.owner_address,
+    engineerEmail: row.engineer_email,
+    availability: row.availability === 'paused' ? 'paused' : 'active',
+    submittedAt: row.submitted_at,
     updatedAt: row.updated_at
   };
 }
@@ -229,6 +261,114 @@ export async function getOrgRoleHats(playerId: string): Promise<OrgRoleHatRecord
   `) as OrgRoleHatRow[];
 
   return rows.map(mapOrgRoleHat);
+}
+
+export async function listWorkerRegistryEntries(): Promise<WorkerRegistryEntryRecord[]> {
+  const sql = getSql();
+
+  const rows = (await sql`
+    SELECT
+      id::text,
+      worker_origin,
+      erc8004_token_id,
+      agent_card_uri,
+      registration_chain_id,
+      payment_chain_id,
+      owner_address,
+      engineer_email,
+      availability,
+      submitted_at::text,
+      updated_at::text
+    FROM worker_registry
+    ORDER BY submitted_at DESC
+  `) as WorkerRegistryRow[];
+
+  return rows.map(mapWorkerRegistryEntry);
+}
+
+export async function getWorkerRegistryEntryById(id: string): Promise<WorkerRegistryEntryRecord | null> {
+  const sql = getSql();
+
+  const [row] = (await sql`
+    SELECT
+      id::text,
+      worker_origin,
+      erc8004_token_id,
+      agent_card_uri,
+      registration_chain_id,
+      payment_chain_id,
+      owner_address,
+      engineer_email,
+      availability,
+      submitted_at::text,
+      updated_at::text
+    FROM worker_registry
+    WHERE id = ${id}::uuid
+    LIMIT 1
+  `) as WorkerRegistryRow[];
+
+  return row ? mapWorkerRegistryEntry(row) : null;
+}
+
+export async function upsertWorkerRegistryEntry(input: {
+  workerOrigin: string;
+  erc8004TokenId: string;
+  agentCardUri: string;
+  registrationChainId: number;
+  paymentChainId: number;
+  ownerAddress: string;
+  engineerEmail: string | null;
+  availability?: 'active' | 'paused';
+}): Promise<WorkerRegistryEntryRecord> {
+  const sql = getSql();
+
+  const [row] = (await sql`
+    INSERT INTO worker_registry (
+      id,
+      worker_origin,
+      erc8004_token_id,
+      agent_card_uri,
+      registration_chain_id,
+      payment_chain_id,
+      owner_address,
+      engineer_email,
+      availability
+    )
+    VALUES (
+      ${randomUUID()}::uuid,
+      ${input.workerOrigin},
+      ${input.erc8004TokenId},
+      ${input.agentCardUri},
+      ${input.registrationChainId},
+      ${input.paymentChainId},
+      ${input.ownerAddress},
+      ${input.engineerEmail},
+      ${input.availability ?? 'active'}
+    )
+    ON CONFLICT (worker_origin) DO UPDATE SET
+      erc8004_token_id = EXCLUDED.erc8004_token_id,
+      agent_card_uri = EXCLUDED.agent_card_uri,
+      registration_chain_id = EXCLUDED.registration_chain_id,
+      payment_chain_id = EXCLUDED.payment_chain_id,
+      owner_address = EXCLUDED.owner_address,
+      engineer_email = COALESCE(EXCLUDED.engineer_email, worker_registry.engineer_email),
+      availability = EXCLUDED.availability,
+      updated_at = now()
+    RETURNING
+      id::text,
+      worker_origin,
+      erc8004_token_id,
+      agent_card_uri,
+      registration_chain_id,
+      payment_chain_id,
+      owner_address,
+      engineer_email,
+      availability,
+      submitted_at::text,
+      updated_at::text
+  `) as WorkerRegistryRow[];
+
+  return mapWorkerRegistryEntry(row);
 }
 
 export async function upsertOrgTree(input: {

@@ -15,7 +15,7 @@ function getCorsHeaders(request: Request): Headers {
     headers.set('access-control-allow-origin', origin);
     headers.set('vary', 'origin');
 
-    headers.set('access-control-allow-methods', 'POST, OPTIONS');
+    headers.set('access-control-allow-methods', 'GET, POST, OPTIONS');
     headers.set('access-control-allow-headers', 'authorization, content-type');
     headers.set('access-control-max-age', '86400');
   }
