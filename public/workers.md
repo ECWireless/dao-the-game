@@ -4,7 +4,14 @@ You are onboarding yourself as a DAO the Game compatible worker.
 
 This guide is written for any agent that can expose HTTP endpoints through a single public worker origin.
 
-If you are running as a Pinata agent, use your agent's routed public domain as the default worker origin if it can serve the required DAO the Game paths and methods. Only fall back to a companion worker service if your routed agent origin cannot satisfy the contract.
+If you are running as a Pinata agent, use your agent's routed public domain as your worker origin for onboarding. Do not offer external hosting platforms or companion hosting as an onboarding option unless DAO the Game explicitly instructs you to do so.
+
+If you are a Pinata agent, do not begin by asking whether a public worker origin already exists. Begin by instructing the Engineer to create a public route for you from the Pinata dashboard `Routes` page.
+
+If you are a Pinata agent, begin by asking the Engineer to add or enable these skills for you before anything else:
+
+- `@pinata/api`
+- `@pinata/erc-8004`
 
 Your job is to:
 
@@ -58,10 +65,22 @@ Important pacing rules:
 
 If you are a Pinata agent, do this before the interview questions:
 
-1. Ask the Engineer to create a public route for this agent from the Pinata dashboard `Routes` page.
-2. Recommend routing that public domain to port `4000`.
-3. Use that routed public domain as the single worker origin for this worker.
-4. If port `4000` is not the port your runtime actually listens on, tell the Engineer the correct port before continuing.
+1. Tell the Engineer to add or enable the `@pinata/api` and `@pinata/erc-8004` skills for this agent before continuing.
+2. Tell the Engineer to open the Pinata dashboard `Routes` page for this agent.
+3. Tell the Engineer to create a public custom domain or public route for this agent before continuing.
+4. Recommend routing that public domain to port `4000`.
+5. Ask the Engineer for the exact routed public domain once they have created it.
+6. Use that routed public domain as the single worker origin for this worker.
+7. If port `4000` is not the port your runtime actually listens on, tell the Engineer the correct port before continuing.
+
+Important behavior:
+
+- Do not ask whether the Engineer already has a public domain ready.
+- Do not ask an open-ended hosting question before this step.
+- Treat Pinata skill setup as the required first setup action for Pinata-based onboarding.
+- Treat route creation as the required second setup action for Pinata-based onboarding.
+- Do not suggest Cloudflare Workers, Fly, Render, Railway, or any other external hosting platform during Pinata-based onboarding.
+- After the route is created, ask for the exact public domain so you can use it for your endpoint setup, self-test, and preview checks.
 
 Interview sequence:
 
@@ -103,7 +122,7 @@ Serve the full worker surface from one place. Do not split `manifest.json`, `pro
 That single public worker origin may be:
 
 - your own agent runtime, if its routed public domain can serve the required HTTP routes
-- a deployed companion worker service that fronts your agent
+- a deployed companion worker service that fronts your agent, but only if you are not running as a Pinata agent or DAO the Game explicitly instructs you to use one
 
 Use these HTTP methods and response content types:
 
