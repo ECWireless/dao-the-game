@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DAO the Game Worker Registry</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #16202b;
+        --muted: #596574;
+        --paper: #f5f2ea;
+        --panel: rgba(255, 255, 255, 0.84);
+        --line: rgba(22, 32, 43, 0.12);
+        --accent: #c65a2e;
+        --accent-soft: #f7d7c8;
+        --ok: #1f7a4c;
+        --warn: #9a6a12;
+        --bad: #a2302b;
+        --shadow: 0 18px 48px rgba(22, 32, 43, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Georgia, "Times New Roman", serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, rgba(198, 90, 46, 0.15), transparent 30%),
+          linear-gradient(180deg, #f9f6ef 0%, var(--paper) 100%);
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .shell {
+        width: min(1120px, calc(100vw - 32px));
+        margin: 0 auto;
+        padding: 32px 0 64px;
+      }
+
+      .hero {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 24px;
+      }
+
+      .kicker {
+        margin: 0 0 8px;
+        font-size: 12px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(32px, 5vw, 54px);
+        line-height: 0.95;
+        letter-spacing: -0.04em;
+      }
+
+      .subhead {
+        max-width: 620px;
+        margin: 12px 0 0;
+        font-size: 16px;
+        line-height: 1.5;
+        color: var(--muted);
+      }
+
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      button {
+        appearance: none;
+        border: 0;
+        border-radius: 999px;
+        background: var(--ink);
+        color: white;
+        padding: 12px 18px;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      button:disabled {
+        opacity: 0.6;
+        cursor: default;
+      }
+
+      .chip {
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.72);
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .status {
+        margin: 0 0 20px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .status.error {
+        color: var(--bad);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+      }
+
+      .card {
+        background: var(--panel);
+        backdrop-filter: blur(16px);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 18px;
+        box-shadow: var(--shadow);
+      }
+
+      .card-head {
+        display: flex;
+        align-items: start;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .card h2 {
+        margin: 0;
+        font-size: 24px;
+        line-height: 1;
+      }
+
+      .role {
+        margin: 6px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .pill {
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .pill.ok {
+        background: rgba(31, 122, 76, 0.12);
+        color: var(--ok);
+      }
+
+      .pill.bad {
+        background: rgba(162, 48, 43, 0.12);
+        color: var(--bad);
+      }
+
+      .pitch {
+        margin: 0 0 14px;
+        color: var(--ink);
+        line-height: 1.45;
+      }
+
+      .rows {
+        display: grid;
+        gap: 10px;
+        margin: 0 0 14px;
+      }
+
+      .row {
+        display: grid;
+        gap: 4px;
+      }
+
+      .row label {
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .row strong,
+      .row span {
+        font-size: 14px;
+        word-break: break-word;
+      }
+
+      .links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .links a {
+        font-size: 13px;
+        text-decoration: none;
+        color: var(--accent);
+      }
+
+      .notes,
+      .error-box {
+        margin-top: 12px;
+        border-radius: 16px;
+        padding: 12px;
+        font-size: 13px;
+      }
+
+      .notes {
+        background: rgba(198, 90, 46, 0.08);
+      }
+
+      .error-box {
+        background: rgba(162, 48, 43, 0.08);
+        color: var(--bad);
+      }
+
+      .empty {
+        padding: 28px;
+        border: 1px dashed var(--line);
+        border-radius: 24px;
+        text-align: center;
+        color: var(--muted);
+        background: rgba(255, 255, 255, 0.5);
+      }
+
+      @media (max-width: 720px) {
+        .hero {
+          flex-direction: column;
+          align-items: start;
+        }
+
+        .shell {
+          width: min(100vw - 20px, 1120px);
+          padding-top: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <section class="hero">
+        <div>
+          <p class="kicker">DAO the Game</p>
+          <h1>Worker Registry</h1>
+          <p class="subhead">
+            Read-only debug surface for registered workers. This page fetches the live DAO registry
+            API and shows both stored registration data and current worker metadata.
+          </p>
+        </div>
+        <div class="toolbar">
+          <button id="refresh-button" type="button">Refresh Registry</button>
+          <span class="chip" id="worker-count">0 workers</span>
+        </div>
+      </section>
+
+      <p class="status" id="status">Loading registry...</p>
+      <section class="grid" id="grid" aria-live="polite"></section>
+    </div>
+
+    <script>
+      const statusEl = document.getElementById('status');
+      const gridEl = document.getElementById('grid');
+      const countEl = document.getElementById('worker-count');
+      const refreshButton = document.getElementById('refresh-button');
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;')
+          .replaceAll("'", '&#39;');
+      }
+
+      function formatDate(value) {
+        if (!value) {
+          return 'Unknown';
+        }
+
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+      }
+
+      function renderWorker(worker) {
+        const name = worker.live?.manifest?.identity?.name ?? worker.workerOrigin;
+        const roleTag = worker.live?.manifest?.identity?.roleTag ?? 'unknown';
+        const pitch = worker.live?.manifest?.identity?.shortPitch ?? 'No live pitch available.';
+        const bestFit = worker.live?.profile?.summary?.bestFit ?? '';
+        const liveStatus = worker.liveError ? 'broken' : 'live';
+
+        return `
+          <article class="card">
+            <div class="card-head">
+              <div>
+                <h2>${escapeHtml(name)}</h2>
+                <p class="role">${escapeHtml(roleTag)}</p>
+              </div>
+              <span class="pill ${liveStatus === 'live' ? 'ok' : 'bad'}">${escapeHtml(liveStatus)}</span>
+            </div>
+
+            <p class="pitch">${escapeHtml(pitch)}</p>
+
+            <div class="rows">
+              <div class="row">
+                <label>Worker Origin</label>
+                <strong>${escapeHtml(worker.workerOrigin)}</strong>
+              </div>
+              <div class="row">
+                <label>ERC-8004 Token</label>
+                <span>${escapeHtml(worker.erc8004TokenId)}</span>
+              </div>
+              <div class="row">
+                <label>Owner</label>
+                <span>${escapeHtml(worker.ownerAddress)}</span>
+              </div>
+              <div class="row">
+                <label>Registration Chain</label>
+                <span>${escapeHtml(String(worker.registrationChainId))}</span>
+              </div>
+              <div class="row">
+                <label>Payment Chain</label>
+                <span>${escapeHtml(String(worker.paymentChainId))}</span>
+              </div>
+              <div class="row">
+                <label>Submitted</label>
+                <span>${escapeHtml(formatDate(worker.submittedAt))}</span>
+              </div>
+            </div>
+
+            ${
+              bestFit
+                ? `<div class="notes"><strong>Best fit:</strong> ${escapeHtml(bestFit)}</div>`
+                : ''
+            }
+
+            ${
+              worker.liveError
+                ? `<div class="error-box"><strong>Live fetch failed:</strong> ${escapeHtml(worker.liveError)}</div>`
+                : ''
+            }
+
+            <div class="links">
+              <a href="${escapeHtml(worker.workerOrigin)}" target="_blank" rel="noreferrer">Open worker origin</a>
+              <a href="/api/workers/${escapeHtml(worker.id)}" target="_blank" rel="noreferrer">Open detail JSON</a>
+            </div>
+          </article>
+        `;
+      }
+
+      async function loadWorkers() {
+        refreshButton.disabled = true;
+        statusEl.className = 'status';
+        statusEl.textContent = 'Loading registry...';
+
+        try {
+          const response = await fetch('/api/workers?hydrate=1', {
+            headers: {
+              accept: 'application/json'
+            }
+          });
+
+          if (!response.ok) {
+            throw new Error(`Registry request failed with ${response.status}.`);
+          }
+
+          const payload = await response.json();
+          const workers = Array.isArray(payload.workers) ? payload.workers : [];
+
+          countEl.textContent = `${workers.length} worker${workers.length === 1 ? '' : 's'}`;
+
+          if (!workers.length) {
+            gridEl.innerHTML = '<div class="empty">No workers have been registered yet.</div>';
+            statusEl.textContent = 'Registry loaded.';
+            return;
+          }
+
+          gridEl.innerHTML = workers.map(renderWorker).join('');
+          statusEl.textContent = 'Registry loaded.';
+        } catch (error) {
+          gridEl.innerHTML = '';
+          statusEl.className = 'status error';
+          statusEl.textContent =
+            error instanceof Error ? error.message : 'Failed to load worker registry.';
+          countEl.textContent = '0 workers';
+        } finally {
+          refreshButton.disabled = false;
+        }
+      }
+
+      refreshButton.addEventListener('click', loadWorkers);
+      void loadWorkers();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://daothegame.com/.well-known/dao-the-game/schemas/registry-submit-response.v1.json",
+  "title": "DAO the Game Worker Registry Submit Response v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["worker"],
+  "properties": {
+    "worker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "registryKey",
+        "workerOrigin",
+        "erc8004TokenId",
+        "agentCardUri",
+        "registrationChainId",
+        "paymentChainId",
+        "ownerAddress",
+        "engineerEmail",
+        "availability",
+        "submittedAt",
+        "updatedAt"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "registryKey": {
+          "type": "string",
+          "pattern": "^\\d+:\\d+$"
+        },
+        "workerOrigin": {
+          "type": "string",
+          "format": "uri"
+        },
+        "erc8004TokenId": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "agentCardUri": {
+          "type": "string",
+          "minLength": 1
+        },
+        "registrationChainId": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "paymentChainId": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "ownerAddress": {
+          "type": "string",
+          "pattern": "^0x[a-fA-F0-9]{40}$"
+        },
+        "engineerEmail": {
+          "type": ["string", "null"],
+          "format": "email"
+        },
+        "availability": {
+          "type": "string",
+          "enum": ["active", "paused"]
+        },
+        "submittedAt": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
+        },
+        "live": {
+          "type": "object"
+        },
+        "liveError": {
+          "type": ["string", "null"]
+        }
+      }
+    }
+  }
+}

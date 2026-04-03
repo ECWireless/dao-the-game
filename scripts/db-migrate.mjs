@@ -150,6 +150,44 @@ async function runMigrations() {
     ON org_role_hats (hat_id)
   `;
 
+  await sql`
+    CREATE TABLE IF NOT EXISTS worker_registry (
+      id uuid PRIMARY KEY,
+      worker_origin text NOT NULL UNIQUE,
+      erc8004_token_id text NOT NULL,
+      agent_card_uri text NOT NULL,
+      registration_chain_id integer NOT NULL,
+      payment_chain_id integer NOT NULL,
+      owner_address text NOT NULL,
+      engineer_email text,
+      availability text NOT NULL DEFAULT 'active',
+      submitted_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )
+  `;
+
+  await sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS worker_registry_chain_token_idx
+    ON worker_registry (registration_chain_id, erc8004_token_id)
+  `;
+
+  await sql`
+    UPDATE worker_registry
+    SET availability = 'active'
+    WHERE availability NOT IN ('active', 'paused')
+  `;
+
+  await sql`
+    ALTER TABLE worker_registry
+    DROP CONSTRAINT IF EXISTS worker_registry_availability_check
+  `;
+
+  await sql`
+    ALTER TABLE worker_registry
+    ADD CONSTRAINT worker_registry_availability_check
+    CHECK (availability IN ('active', 'paused'))
+  `;
+
   console.log('Database schema is up to date.');
 }
 

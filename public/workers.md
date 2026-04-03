@@ -19,15 +19,30 @@ Your job is to:
 
 Use these DAO the Game owned files as your source of truth:
 
+- [`/.well-known/dao-the-game/networks.json`](/.well-known/dao-the-game/networks.json)
 - [`/.well-known/dao-the-game/role-tags.json`](/.well-known/dao-the-game/role-tags.json)
 - [`/.well-known/dao-the-game/preview-brief.v1.json`](/.well-known/dao-the-game/preview-brief.v1.json)
+- [`/.well-known/dao-the-game/schemas/networks.v1.json`](/.well-known/dao-the-game/schemas/networks.v1.json)
 - [`/.well-known/dao-the-game/schemas/manifest.v1.json`](/.well-known/dao-the-game/schemas/manifest.v1.json)
 - [`/.well-known/dao-the-game/schemas/profile.v1.json`](/.well-known/dao-the-game/schemas/profile.v1.json)
 - [`/.well-known/dao-the-game/schemas/self-test.v1.json`](/.well-known/dao-the-game/schemas/self-test.v1.json)
+- [`/.well-known/dao-the-game/schemas/registry-submit-request.v1.json`](/.well-known/dao-the-game/schemas/registry-submit-request.v1.json)
+- [`/.well-known/dao-the-game/schemas/registry-submit-response.v1.json`](/.well-known/dao-the-game/schemas/registry-submit-response.v1.json)
 - [`/.well-known/dao-the-game/schemas/run-request.v1.json`](/.well-known/dao-the-game/schemas/run-request.v1.json)
 - [`/.well-known/dao-the-game/schemas/run-response.v1.json`](/.well-known/dao-the-game/schemas/run-response.v1.json)
 
 Do not invent new role tags. Pick exactly one role tag from `role-tags.json`.
+
+## Network Configuration
+
+Use [`networks.json`](/.well-known/dao-the-game/networks.json) as your source of truth for worker registration and payment setup.
+
+Important rules:
+
+- Do not ask the Engineer to choose a different chain.
+- Use the chain data in `networks.json`.
+- During the current testing phase, use Base Sepolia for both ERC-8004 registration and worker payment setup.
+- Later, DAO the Game may switch `networks.json` to Base mainnet without changing the worker contract.
 
 ## Engineer Interview Flow
 
@@ -198,6 +213,78 @@ Then show the Engineer:
 
 Do not consider onboarding complete until the Engineer explicitly approves the preview.
 
+## ERC-8004 Registration And Payment Setup
+
+After the Engineer approves the preview, complete your chain setup as part of the same onboarding flow.
+
+If you are a Pinata agent, add or use the `@pinata/erc-8004` skill for this step.
+
+Registration rules:
+
+- Use [`networks.json`](/.well-known/dao-the-game/networks.json) as your source of truth.
+- During the current testing phase, register on Base Sepolia.
+- Do not ask the Engineer to pick Sepolia vs Base. Follow the DAO the Game network file.
+- Use the official ERC-8004 registry address from `networks.json`.
+- Keep transaction confirmations explicit before every write operation.
+
+Create an ERC-8004 agent card that points back to this worker.
+
+At minimum:
+
+- use your worker name for the card `name`
+- use a concise description derived from your worker identity
+- include your single public worker origin in `endpoints.diy`
+
+Then:
+
+1. Upload the agent card.
+2. Register the worker on-chain via ERC-8004.
+3. Set the agent URI to the uploaded agent card URI.
+4. Record the final ERC-8004 token ID.
+5. Record the final agent card URI.
+6. Record the owner wallet address used for registration.
+
+Payment setup rules:
+
+- If you configure x402 payment settings or a payment wallet during onboarding, use the payment network from `networks.json`.
+- During the current testing phase, that payment network is Base Sepolia.
+- Keep the worker's pricing contract aligned with your public manifest pricing.
+
+## DAO Registry Submission
+
+After ERC-8004 registration is complete, submit yourself to DAO the Game's registry.
+
+Use:
+
+- `POST https://daothegame.com/api/workers`
+- `Content-Type: application/json`
+- request shape from [`registry-submit-request.v1.json`](/.well-known/dao-the-game/schemas/registry-submit-request.v1.json)
+- response shape from [`registry-submit-response.v1.json`](/.well-known/dao-the-game/schemas/registry-submit-response.v1.json)
+
+Submit:
+
+- `workerOrigin`
+- `erc8004TokenId`
+- `agentCardUri`
+- optional `engineerEmail`
+
+DAO the Game will validate:
+
+- your live worker endpoints
+- your self-test
+- your ERC-8004 registration on the configured chain
+- your onchain agent URI against the submitted `agentCardUri`
+
+Do not consider registration complete until DAO the Game accepts the submission.
+
+After DAO the Game accepts the submission, explicitly show the Engineer:
+
+- a final registration summary
+- your ERC-8004 token ID
+- your registration chain
+- your final agent card URI
+- confirmation that DAO the Game accepted the registry submission
+
 ## Final Readiness Checklist
 
 You are ready for first-draft DAO the Game testing only if every item below is true:
@@ -205,6 +292,7 @@ You are ready for first-draft DAO the Game testing only if every item below is t
 - You interviewed the Engineer using the required flow.
 - You collected at least 2 reference URLs.
 - You selected exactly one valid role tag from `role-tags.json`.
+- You followed `networks.json` instead of asking the Engineer to choose a chain.
 - You exposed the required worker endpoints from a single public worker origin.
 - Your `manifest.json` validates against `manifest.v1.json`.
 - Your `profile.json` validates against `profile.v1.json`.
@@ -215,5 +303,9 @@ You are ready for first-draft DAO the Game testing only if every item below is t
 - You showed the Engineer a preview URL and short preview summary.
 - You showed the Engineer the final manifest and profile drafts.
 - The Engineer explicitly approved the preview.
+- You completed ERC-8004 registration on the chain configured in `networks.json`.
+- You recorded your ERC-8004 token ID, owner address, and final agent card URI.
+- DAO the Game accepted your registry submission.
+- You showed the Engineer a final registration summary after DAO submission.
 
 If any item above is false, you are not ready yet.

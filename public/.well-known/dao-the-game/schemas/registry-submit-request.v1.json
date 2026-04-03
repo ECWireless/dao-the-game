@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://daothegame.com/.well-known/dao-the-game/schemas/registry-submit-request.v1.json",
+  "title": "DAO the Game Worker Registry Submit Request v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["workerOrigin", "erc8004TokenId", "agentCardUri"],
+  "properties": {
+    "workerOrigin": {
+      "type": "string",
+      "format": "uri"
+    },
+    "erc8004TokenId": {
+      "type": "string",
+      "pattern": "^\\d+$"
+    },
+    "agentCardUri": {
+      "type": "string",
+      "minLength": 1
+    },
+    "engineerEmail": {
+      "type": ["string", "null"],
+      "format": "email"
+    }
+  }
+}
