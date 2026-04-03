@@ -9,6 +9,7 @@ import type {
 } from '../../src/contracts/player';
 import type { WorkerRegistryEntryRecord } from '../../src/contracts/workers';
 import { getDatabaseUrl } from './env.js';
+import { HttpError } from './http.js';
 
 type PlayerRow = {
   id: string;
@@ -70,6 +71,11 @@ type WorkerRegistryRow = {
   availability: string;
   submitted_at: string;
   updated_at: string;
+};
+
+type DatabaseErrorLike = {
+  code?: string;
+  constraint?: string;
 };
 
 type SqlClient = ReturnType<typeof neon>;
@@ -322,51 +328,70 @@ export async function upsertWorkerRegistryEntry(input: {
 }): Promise<WorkerRegistryEntryRecord> {
   const sql = getSql();
 
-  const [row] = (await sql`
-    INSERT INTO worker_registry (
-      id,
-      worker_origin,
-      erc8004_token_id,
-      agent_card_uri,
-      registration_chain_id,
-      payment_chain_id,
-      owner_address,
-      engineer_email,
-      availability
-    )
-    VALUES (
-      ${randomUUID()}::uuid,
-      ${input.workerOrigin},
-      ${input.erc8004TokenId},
-      ${input.agentCardUri},
-      ${input.registrationChainId},
-      ${input.paymentChainId},
-      ${input.ownerAddress},
-      ${input.engineerEmail},
-      ${input.availability ?? 'active'}
-    )
-    ON CONFLICT (worker_origin) DO UPDATE SET
-      erc8004_token_id = EXCLUDED.erc8004_token_id,
-      agent_card_uri = EXCLUDED.agent_card_uri,
-      registration_chain_id = EXCLUDED.registration_chain_id,
-      payment_chain_id = EXCLUDED.payment_chain_id,
-      owner_address = EXCLUDED.owner_address,
-      engineer_email = COALESCE(EXCLUDED.engineer_email, worker_registry.engineer_email),
-      availability = EXCLUDED.availability,
-      updated_at = now()
-    RETURNING
-      id::text,
-      worker_origin,
-      erc8004_token_id,
-      agent_card_uri,
-      registration_chain_id,
-      payment_chain_id,
-      owner_address,
-      engineer_email,
-      availability,
-      submitted_at::text,
-      updated_at::text
-  `) as WorkerRegistryRow[];
+  let row: WorkerRegistryRow | undefined;
+
+  try {
+    [row] = (await sql`
+      INSERT INTO worker_registry (
+        id,
+        worker_origin,
+        erc8004_token_id,
+        agent_card_uri,
+        registration_chain_id,
+        payment_chain_id,
+        owner_address,
+        engineer_email,
+        availability
+      )
+      VALUES (
+        ${randomUUID()}::uuid,
+        ${input.workerOrigin},
+        ${input.erc8004TokenId},
+        ${input.agentCardUri},
+        ${input.registrationChainId},
+        ${input.paymentChainId},
+        ${input.ownerAddress},
+        ${input.engineerEmail},
+        ${input.availability ?? 'active'}
+      )
+      ON CONFLICT (worker_origin) DO UPDATE SET
+        erc8004_token_id = EXCLUDED.erc8004_token_id,
+        agent_card_uri = EXCLUDED.agent_card_uri,
+        registration_chain_id = EXCLUDED.registration_chain_id,
+        payment_chain_id = EXCLUDED.payment_chain_id,
+        owner_address = EXCLUDED.owner_address,
+        engineer_email = COALESCE(EXCLUDED.engineer_email, worker_registry.engineer_email),
+        availability = EXCLUDED.availability,
+        updated_at = now()
+      RETURNING
+        id::text,
+        worker_origin,
+        erc8004_token_id,
+        agent_card_uri,
+        registration_chain_id,
+        payment_chain_id,
+        owner_address,
+        engineer_email,
+        availability,
+        submitted_at::text,
+        updated_at::text
+    `) as WorkerRegistryRow[];
+  } catch (error) {
+    const databaseError = error as DatabaseErrorLike;
+
+    if (databaseError.code === '23505' && databaseError.constraint === 'worker_registry_chain_token_idx') {
+      throw new HttpError(
+        409,
+        'This ERC-8004 worker is already registered to a different worker origin.'
+      );
+    }
+
+    throw error;
+  }
+
+  if (!row) {
+    throw new HttpError(500, 'Worker registry upsert returned no row.');
+  }
 
   return mapWorkerRegistryEntry(row);
 }

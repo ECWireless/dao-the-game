@@ -7,12 +7,19 @@ export const runtime = 'nodejs';
 
 export const OPTIONS = options;
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 function getWorkerIdFromRequest(request: Request): string {
   const pathname = new URL(request.url).pathname;
   const id = pathname.split('/').filter(Boolean).at(-1);
 
   if (!id) {
     throw new HttpError(400, 'A worker id is required.');
+  }
+
+  if (!UUID_PATTERN.test(id)) {
+    throw new HttpError(400, 'Worker id must be a valid UUID.');
   }
 
   return id;

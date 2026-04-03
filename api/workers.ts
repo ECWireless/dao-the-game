@@ -1,7 +1,12 @@
 import type {
+  WorkerRegistryEntry,
   WorkerRegistryListResponse,
   WorkerRegistrySubmitResponse
 } from '../src/contracts/workers';
+import {
+  WORKER_PAYMENT_CHAIN_ID,
+  WORKER_REGISTRATION_CHAIN_ID
+} from '../src/lib/workerNetworks';
 import {
   listWorkerRegistryEntries,
   upsertWorkerRegistryEntry
@@ -11,9 +16,7 @@ import {
   hydrateWorkerRegistryEntry,
   normalizeWorkerOrigin,
   parseWorkerRegistrySubmitRequest,
-  verifyErc8004Registration,
-  WORKER_PAYMENT_CHAIN_ID,
-  WORKER_REGISTRATION_CHAIN_ID
+  verifyErc8004Registration
 } from './_lib/workerRegistry.js';
 import { handleRouteError, json, options, parseOptionalJsonBody, withCors } from './_lib/http.js';
 
@@ -21,10 +24,31 @@ export const runtime = 'nodejs';
 
 export const OPTIONS = options;
 
+const HYDRATION_BATCH_SIZE = 5;
+
+function shouldHydrateWorkers(request: Request): boolean {
+  const hydrate = new URL(request.url).searchParams.get('hydrate');
+  return hydrate === '1' || hydrate === 'true';
+}
+
+async function hydrateWorkersInBatches(
+  entries: Awaited<ReturnType<typeof listWorkerRegistryEntries>>
+): Promise<WorkerRegistryEntry[]> {
+  const hydratedWorkers: WorkerRegistryEntry[] = [];
+
+  for (let index = 0; index < entries.length; index += HYDRATION_BATCH_SIZE) {
+    const batch = entries.slice(index, index + HYDRATION_BATCH_SIZE);
+    const hydratedBatch = await Promise.all(batch.map(hydrateWorkerRegistryEntry));
+    hydratedWorkers.push(...hydratedBatch);
+  }
+
+  return hydratedWorkers;
+}
+
 export async function GET(request: Request): Promise<Response> {
   try {
     const entries = await listWorkerRegistryEntries();
-    const workers = await Promise.all(entries.map(hydrateWorkerRegistryEntry));
+    const workers = shouldHydrateWorkers(request) ? await hydrateWorkersInBatches(entries) : entries;
     const response: WorkerRegistryListResponse = { workers };
     return withCors(request, json(response));
   } catch (error) {
@@ -36,7 +60,7 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const body = await parseOptionalJsonBody<unknown>(request);
     const parsed = parseWorkerRegistrySubmitRequest(body);
-    const workerOrigin = normalizeWorkerOrigin(parsed.workerOrigin);
+    const workerOrigin = await normalizeWorkerOrigin(parsed.workerOrigin);
 
     const [live, registration] = await Promise.all([
       fetchWorkerLiveMetadata(workerOrigin),

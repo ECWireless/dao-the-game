@@ -368,7 +368,7 @@
         statusEl.textContent = 'Loading registry...';
 
         try {
-          const response = await fetch('/api/workers', {
+          const response = await fetch('/api/workers?hydrate=1', {
             headers: {
               accept: 'application/json'
             }

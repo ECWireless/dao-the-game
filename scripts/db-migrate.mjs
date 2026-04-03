@@ -171,6 +171,23 @@ async function runMigrations() {
     ON worker_registry (registration_chain_id, erc8004_token_id)
   `;
 
+  await sql`
+    UPDATE worker_registry
+    SET availability = 'active'
+    WHERE availability NOT IN ('active', 'paused')
+  `;
+
+  await sql`
+    ALTER TABLE worker_registry
+    DROP CONSTRAINT IF EXISTS worker_registry_availability_check
+  `;
+
+  await sql`
+    ALTER TABLE worker_registry
+    ADD CONSTRAINT worker_registry_availability_check
+    CHECK (availability IN ('active', 'paused'))
+  `;
+
   console.log('Database schema is up to date.');
 }
 
