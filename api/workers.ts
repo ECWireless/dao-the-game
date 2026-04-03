@@ -6,7 +6,7 @@ import type {
 import {
   WORKER_PAYMENT_CHAIN_ID,
   WORKER_REGISTRATION_CHAIN_ID
-} from '../src/lib/workerNetworks';
+} from '../src/lib/workerNetworks.js';
 import {
   listWorkerRegistryEntries,
   upsertWorkerRegistryEntry
