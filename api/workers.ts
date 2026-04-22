@@ -14,12 +14,12 @@ import {
 import {
   fetchWorkerLiveMetadata,
   hydrateWorkerRegistryEntry,
-  normalizeWorkerOrigin,
   parseWorkerRegistrySubmitRequest,
   type WorkerRegistryHydrationMode,
   verifyErc8004Registration
 } from './_lib/workerRegistry.js';
 import { handleRouteError, json, options, parseOptionalJsonBody, withCors } from './_lib/http.js';
+import { normalizeWorkerOrigin } from './_lib/workerOrigin.js';
 
 export const runtime = 'nodejs';
 

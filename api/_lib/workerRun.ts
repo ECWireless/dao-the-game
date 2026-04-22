@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { WorkerHandoff, WorkerRunRequest, WorkerRunResponse } from '../../src/types.js';
 import { HttpError } from './http.js';
+import { normalizeWorkerOrigin } from './workerOrigin.js';
 
 const WORKER_RUN_TIMEOUT_MS = 55_000;
 const MAX_WORKER_RUN_RESPONSE_BYTES = 512 * 1024;
@@ -118,7 +119,11 @@ export async function runExternalWorker(
   workerOrigin: string,
   body: WorkerRunRequest
 ): Promise<WorkerRunResponse> {
-  const response = await fetch(buildWorkerRunUrl(workerOrigin), {
+  const normalizedWorkerOrigin = await normalizeWorkerOrigin(workerOrigin, {
+    errorStatus: 502,
+    label: 'External worker origin'
+  });
+  const response = await fetch(buildWorkerRunUrl(normalizedWorkerOrigin), {
     method: 'POST',
     headers: {
       accept: 'application/json',
