@@ -26,6 +26,11 @@
           "type": "string",
           "enum": ["ui-designer", "brand-designer", "frontend-engineer", "code-reviewer"]
         },
+        "avatarUrl": {
+          "type": "string",
+          "format": "uri-reference",
+          "minLength": 1
+        },
         "bio": {
           "type": "string",
           "minLength": 1

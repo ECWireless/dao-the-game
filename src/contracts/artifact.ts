@@ -30,7 +30,7 @@ export type ArtifactDeployEvent =
       workerSpecialty: string;
       model?: string | null;
       durationMs?: number;
-      output: Record<string, unknown> | null;
+      output: unknown;
       rawOutputText?: string | null;
       usedFallback: boolean;
       error?: string;

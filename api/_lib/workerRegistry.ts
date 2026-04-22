@@ -1,5 +1,3 @@
-import { lookup } from 'node:dns/promises';
-import { isIP } from 'node:net';
 import { z } from 'zod';
 import { createPublicClient, http } from 'viem';
 import type {
@@ -52,6 +50,7 @@ const WorkerManifestSchema = z
         name: z.string().min(1),
         handle: z.string().min(1),
         roleTag: RoleTagSchema,
+        avatarUrl: z.string().min(1).optional(),
         bio: z.string().min(1),
         shortPitch: z.string().min(1)
       })
@@ -123,8 +122,8 @@ const WorkerRegistrySubmitRequestSchema = z.object({
 
 const WORKER_FETCH_TIMEOUT_MS = 5000;
 const MAX_WORKER_RESPONSE_BYTES = 256 * 1024;
-const BLOCKED_HOSTNAMES = new Set(['localhost', 'metadata', 'metadata.google.internal']);
-const BLOCKED_HOSTNAME_SUFFIXES = ['.localhost', '.local', '.internal'];
+
+export type WorkerRegistryHydrationMode = 'manifest' | 'full';
 
 function parseContentLength(response: Response): number | null {
   const rawContentLength = response.headers.get('content-length');
@@ -231,142 +230,6 @@ function buildWorkerUrl(workerOrigin: string, path: string): string {
   return new URL(path, `${workerOrigin}/`).toString();
 }
 
-function normalizeHostForChecks(hostname: string): string {
-  return hostname
-    .replace(/^\[|\]$/gu, '')
-    .replace(/\.$/u, '')
-    .toLowerCase();
-}
-
-function isBlockedHostname(hostname: string): boolean {
-  if (BLOCKED_HOSTNAMES.has(hostname)) {
-    return true;
-  }
-
-  if (BLOCKED_HOSTNAME_SUFFIXES.some((suffix) => hostname.endsWith(suffix))) {
-    return true;
-  }
-
-  return !isIP(hostname) && !hostname.includes('.');
-}
-
-function isBlockedIpv4(address: string): boolean {
-  const octets = address.split('.').map((part) => Number.parseInt(part, 10));
-
-  if (octets.length !== 4 || octets.some((part) => Number.isNaN(part) || part < 0 || part > 255)) {
-    return true;
-  }
-
-  const [a, b, c, d] = octets;
-
-  return (
-    a === 0 ||
-    a === 10 ||
-    a === 127 ||
-    (a === 100 && b >= 64 && b <= 127) ||
-    (a === 169 && b === 254) ||
-    (a === 172 && b >= 16 && b <= 31) ||
-    (a === 192 && b === 0 && c === 0) ||
-    (a === 192 && b === 0 && c === 2) ||
-    (a === 192 && b === 168) ||
-    (a === 198 && (b === 18 || b === 19)) ||
-    (a === 198 && b === 51 && c === 100) ||
-    (a === 203 && b === 0 && c === 113) ||
-    a >= 224 ||
-    (a === 255 && b === 255 && c === 255 && d === 255)
-  );
-}
-
-function isBlockedIpv6(address: string): boolean {
-  const normalized = normalizeHostForChecks(address).split('%')[0];
-
-  if (normalized === '::' || normalized === '::1') {
-    return true;
-  }
-
-  if (normalized.startsWith('::ffff:')) {
-    const mappedIpv4 = normalized.slice('::ffff:'.length);
-    return isIP(mappedIpv4) === 4 ? isBlockedIpv4(mappedIpv4) : true;
-  }
-
-  return (
-    normalized.startsWith('fc') || normalized.startsWith('fd') || /^fe[89ab]/u.test(normalized)
-  );
-}
-
-function isBlockedAddress(address: string): boolean {
-  const normalized = normalizeHostForChecks(address);
-  const family = isIP(normalized);
-
-  if (family === 4) {
-    return isBlockedIpv4(normalized);
-  }
-
-  if (family === 6) {
-    return isBlockedIpv6(normalized);
-  }
-
-  return true;
-}
-
-async function assertPublicWorkerHost(hostname: string): Promise<void> {
-  const normalizedHostname = normalizeHostForChecks(hostname);
-
-  if (isBlockedHostname(normalizedHostname)) {
-    throw new HttpError(400, 'workerOrigin must use a public internet hostname.');
-  }
-
-  if (isIP(normalizedHostname)) {
-    if (isBlockedAddress(normalizedHostname)) {
-      throw new HttpError(400, 'workerOrigin must not target a private or local address.');
-    }
-
-    return;
-  }
-
-  let resolvedAddresses: Array<{ address: string; family: number }>;
-
-  try {
-    resolvedAddresses = await lookup(normalizedHostname, { all: true, verbatim: true });
-  } catch {
-    throw new HttpError(400, 'workerOrigin hostname could not be resolved.');
-  }
-
-  if (!resolvedAddresses.length) {
-    throw new HttpError(400, 'workerOrigin hostname could not be resolved.');
-  }
-
-  if (resolvedAddresses.some((result) => isBlockedAddress(result.address))) {
-    throw new HttpError(400, 'workerOrigin must resolve only to public internet addresses.');
-  }
-}
-
-export async function normalizeWorkerOrigin(value: string): Promise<string> {
-  let parsed: URL;
-
-  try {
-    parsed = new URL(value);
-  } catch {
-    throw new HttpError(400, 'workerOrigin must be a valid URL.');
-  }
-
-  if (parsed.protocol !== 'https:') {
-    throw new HttpError(400, 'workerOrigin must use https.');
-  }
-
-  if (parsed.pathname !== '/' && parsed.pathname !== '') {
-    throw new HttpError(400, 'workerOrigin must be a bare origin without a path.');
-  }
-
-  if (parsed.search || parsed.hash) {
-    throw new HttpError(400, 'workerOrigin must not include query params or fragments.');
-  }
-
-  await assertPublicWorkerHost(parsed.hostname);
-
-  return parsed.origin;
-}
-
 export function parseWorkerRegistrySubmitRequest(body: unknown): WorkerRegistrySubmitRequest {
   const parsed = WorkerRegistrySubmitRequestSchema.safeParse(body);
 
@@ -380,19 +243,14 @@ export function parseWorkerRegistrySubmitRequest(body: unknown): WorkerRegistryS
   };
 }
 
-export async function fetchWorkerLiveMetadata(
+export async function fetchWorkerManifestMetadata(
   workerOrigin: string
-): Promise<WorkerRegistryLiveMetadata> {
-  const [manifest, profile, selfTest] = await Promise.all([
+): Promise<Pick<WorkerRegistryLiveMetadata, 'manifest' | 'selfTest'>> {
+  const [manifest, selfTest] = await Promise.all([
     fetchJson(
       buildWorkerUrl(workerOrigin, '/.well-known/dao-the-game/manifest.json'),
       WorkerManifestSchema,
       'manifest.json'
-    ),
-    fetchJson(
-      buildWorkerUrl(workerOrigin, '/.well-known/dao-the-game/profile.json'),
-      WorkerProfileSchema,
-      'profile.json'
     ),
     fetchJson(
       buildWorkerUrl(workerOrigin, '/.well-known/dao-the-game/self-test'),
@@ -402,12 +260,10 @@ export async function fetchWorkerLiveMetadata(
   ]);
 
   if (
-    manifest.identity.name !== profile.identity.name ||
     manifest.identity.name !== selfTest.worker.name ||
-    manifest.identity.roleTag !== profile.identity.roleTag ||
     manifest.identity.roleTag !== selfTest.worker.roleTag
   ) {
-    throw new HttpError(400, 'Worker manifest, profile, and self-test identity fields must agree.');
+    throw new HttpError(400, 'Worker manifest and self-test identity fields must agree.');
   }
 
   if (!selfTest.ok) {
@@ -423,6 +279,31 @@ export async function fetchWorkerLiveMetadata(
       400,
       'Worker self-test must report manifest, profile, and run as reachable.'
     );
+  }
+
+  return {
+    manifest,
+    selfTest
+  };
+}
+
+export async function fetchWorkerLiveMetadata(
+  workerOrigin: string
+): Promise<WorkerRegistryLiveMetadata> {
+  const [{ manifest, selfTest }, profile] = await Promise.all([
+    fetchWorkerManifestMetadata(workerOrigin),
+    fetchJson(
+      buildWorkerUrl(workerOrigin, '/.well-known/dao-the-game/profile.json'),
+      WorkerProfileSchema,
+      'profile.json'
+    )
+  ]);
+
+  if (
+    manifest.identity.name !== profile.identity.name ||
+    manifest.identity.roleTag !== profile.identity.roleTag
+  ) {
+    throw new HttpError(400, 'Worker manifest, profile, and self-test identity fields must agree.');
   }
 
   return {
@@ -474,10 +355,14 @@ export async function verifyErc8004Registration(input: {
 }
 
 export async function hydrateWorkerRegistryEntry(
-  entry: WorkerRegistryEntryRecord
+  entry: WorkerRegistryEntryRecord,
+  mode: WorkerRegistryHydrationMode = 'full'
 ): Promise<WorkerRegistryEntry> {
   try {
-    const live = await fetchWorkerLiveMetadata(entry.workerOrigin);
+    const live =
+      mode === 'manifest'
+        ? await fetchWorkerManifestMetadata(entry.workerOrigin)
+        : await fetchWorkerLiveMetadata(entry.workerOrigin);
     return { ...entry, live, liveError: null };
   } catch (error) {
     const liveError = error instanceof Error ? error.message : 'Failed to fetch worker metadata.';

@@ -1,4 +1,9 @@
-import type { HatRole, PipelineStageDefinition, PipelineStageId } from './types';
+import type {
+  HatExecutionContract,
+  HatRole,
+  PipelineStageDefinition,
+  PipelineStageId
+} from './types';
 
 const TUTORIAL_ROLE_STAGE_BY_ID: Record<string, PipelineStageId> = {
   'hat-01': 'implementation',
@@ -41,6 +46,24 @@ export const PIPELINE_STAGE_DEFINITIONS: Record<PipelineStageId, PipelineStageDe
   }
 };
 
+const DEFAULT_PIPELINE_STAGE_CONTRACTS: Record<PipelineStageId, HatExecutionContract> = {
+  design: {
+    outputContentType: 'application/json'
+  },
+  implementation: {
+    inputContentType: 'application/json',
+    outputContentType: 'text/html'
+  },
+  review: {
+    inputContentType: 'text/html',
+    outputContentType: 'text/html'
+  },
+  deployment: {
+    inputContentType: 'text/html',
+    outputContentType: 'text/html'
+  }
+};
+
 function normalizeRoleName(roleName: string): string {
   return roleName.trim().toLowerCase();
 }
@@ -51,6 +74,10 @@ export function isPipelineStageId(value: unknown): value is PipelineStageId {
 
 export function getPipelineStageDefinition(stageId: PipelineStageId): PipelineStageDefinition {
   return PIPELINE_STAGE_DEFINITIONS[stageId];
+}
+
+export function getPipelineStageContract(stageId: PipelineStageId): HatExecutionContract {
+  return DEFAULT_PIPELINE_STAGE_CONTRACTS[stageId];
 }
 
 export function inferPipelineStageId(
@@ -95,6 +122,17 @@ export function inferPipelineStageId(
   }
 
   return undefined;
+}
+
+export function getHatExecutionContract(
+  role: Pick<HatRole, 'id' | 'name' | 'pipelineStageId' | 'metadata'>
+): HatExecutionContract | undefined {
+  if (role.metadata?.contract) {
+    return role.metadata.contract;
+  }
+
+  const stageId = inferPipelineStageId(role);
+  return stageId ? getPipelineStageContract(stageId) : undefined;
 }
 
 export function getPipelineStageIndex(stageId: PipelineStageId | undefined): number {

@@ -100,7 +100,11 @@ export const TUTORIAL_ROLES: HatRole[] = [
     metadata: {
       allowedRoleTagIds: ['frontend-engineer'],
       pipelinePath: [2],
-      executionMode: 'worker'
+      executionMode: 'worker',
+      contract: {
+        inputContentType: 'application/json',
+        outputContentType: 'text/html'
+      }
     }
   },
   {
@@ -110,7 +114,10 @@ export const TUTORIAL_ROLES: HatRole[] = [
     metadata: {
       allowedRoleTagIds: ['ui-designer', 'brand-designer'],
       pipelinePath: [1],
-      executionMode: 'worker'
+      executionMode: 'worker',
+      contract: {
+        outputContentType: 'application/json'
+      }
     }
   },
   {
@@ -120,7 +127,11 @@ export const TUTORIAL_ROLES: HatRole[] = [
     metadata: {
       allowedRoleTagIds: ['code-reviewer'],
       pipelinePath: [3],
-      executionMode: 'worker'
+      executionMode: 'worker',
+      contract: {
+        inputContentType: 'text/html',
+        outputContentType: 'text/html'
+      }
     }
   },
   {
@@ -130,7 +141,11 @@ export const TUTORIAL_ROLES: HatRole[] = [
     metadata: {
       allowedRoleTagIds: ['code-reviewer'],
       pipelinePath: [4],
-      executionMode: 'worker'
+      executionMode: 'worker',
+      contract: {
+        inputContentType: 'text/html',
+        outputContentType: 'text/html'
+      }
     }
   }
 ];

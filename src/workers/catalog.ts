@@ -22,6 +22,10 @@ export function getWorkerRoleTagLabel(worker: Worker): string {
   return getRoleTagLabel(getWorkerRoleTagId(worker));
 }
 
+export function getWorkerAvatarUrl(worker: Worker): string | undefined {
+  return worker.manifest.identity.avatarUrl;
+}
+
 export function getWorkerBio(worker: Worker): string {
   return worker.manifest.identity.bio;
 }

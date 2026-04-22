@@ -18,13 +18,20 @@ import {
 } from '../../src/artifacts/conferenceSite.js';
 import type { ArtifactDeployEvent } from '../../src/contracts/artifact.js';
 import type {
-  Worker,
   ArtifactBundle,
   ArtifactWorkerTrace,
+  HatExecutionContract,
+  HatRole,
   PipelineStageId,
-  RunArtifactsInput
+  RunArtifactsInput,
+  Worker,
+  WorkerHandoff,
+  WorkerRunRequest
 } from '../../src/types';
+import { getHatExecutionContract, getPipelineStageContract } from '../../src/pipeline.js';
 import { getArtifactDebugWorkers, getOpenAiApiKey } from './env.js';
+import { HttpError } from './http.js';
+import { runExternalWorker } from './workerRun.js';
 
 const LAYOUT_VARIANTS = [
   'balanced-summit',
@@ -170,6 +177,8 @@ type DeploymentWorkerOutput = z.infer<typeof DeploymentWorkerSchema>;
 
 type StageAssignment = {
   agent: Worker;
+  contract: HatExecutionContract;
+  role?: HatRole;
   roleName?: string;
   stageId: PipelineStageId;
 };
@@ -194,6 +203,16 @@ type WorkerGenerationDirective = {
   reviewFocus?: string[];
 };
 
+type StageTraceSource<TInternal> =
+  | {
+      kind: 'internal';
+      output: TInternal;
+    }
+  | {
+      kind: 'external';
+      handoff: WorkerHandoff;
+    };
+
 export type WorkerGeneratedArtifactResult = {
   artifact: ArtifactBundle;
   usedFallback: boolean;
@@ -216,6 +235,7 @@ export function canUseConferenceSiteGeneration(): boolean {
 
 function getStageAssignments(input: RunArtifactsInput): Map<PipelineStageId, StageAssignment> {
   const agentById = new Map(input.workers.map((agent) => [agent.id, agent]));
+  const roleById = new Map(input.roles.map((role) => [role.id, role]));
   const assignments = new Map<PipelineStageId, StageAssignment>();
 
   for (const stage of input.result.pipeline?.stages ?? []) {
@@ -229,9 +249,15 @@ function getStageAssignments(input: RunArtifactsInput): Map<PipelineStageId, Sta
       continue;
     }
 
+    const role = stage.roleId ? roleById.get(stage.roleId) : undefined;
+    const contract =
+      (role ? getHatExecutionContract(role) : undefined) ?? getPipelineStageContract(stage.id);
+
     assignments.set(stage.id, {
       agent,
-      roleName: stage.roleName,
+      contract,
+      role,
+      roleName: stage.roleName ?? role?.name,
       stageId: stage.id
     });
   }
@@ -319,13 +345,15 @@ function buildImplementationStageContext({
   worker,
   workerDirective,
   designContract,
-  contentSeed
+  contentSeed,
+  upstreamHandoff
 }: {
   baseContext: ReturnType<typeof buildBaseContext>;
   worker: Record<string, unknown>;
   workerDirective: WorkerGenerationDirective;
   designContract: Record<string, unknown>;
   contentSeed: Record<string, unknown>;
+  upstreamHandoff?: WorkerHandoff;
 }): Record<string, unknown> {
   return {
     studioName: baseContext.studioName,
@@ -335,7 +363,12 @@ function buildImplementationStageContext({
     worker,
     workerDirective,
     designContract,
-    contentSeed
+    contentSeed,
+    upstreamDesignHandoff: upstreamHandoff
+      ? upstreamHandoff.contentType === 'application/json'
+        ? (safeParseJsonObject(upstreamHandoff.content) ?? upstreamHandoff.content)
+        : upstreamHandoff.content
+      : null
   };
 }
 
@@ -400,6 +433,371 @@ function buildDeploymentStageContext({
     workerDirective,
     finalSiteSummary
   };
+}
+
+function isExternalWorker(agent: Worker): boolean {
+  return Boolean(
+    agent.workerOrigin &&
+      agent.registration.erc8004Id &&
+      !agent.registryRecordId.startsWith('builtin-')
+  );
+}
+
+function normalizeBriefRequirements(requirements: string[]): [string, ...string[]] {
+  if (requirements.length > 0) {
+    return [requirements[0]!, ...requirements.slice(1)];
+  }
+
+  return ['Deliver a credible conference-site handoff for the assigned hat.'];
+}
+
+function safeParseJsonObject(value: string): Record<string, unknown> | null {
+  try {
+    const parsed = JSON.parse(value) as unknown;
+
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return null;
+    }
+
+    return parsed as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function assertExpectedOutputContentType(
+  assignment: StageAssignment,
+  handoff: WorkerHandoff
+): void {
+  if (handoff.contentType !== assignment.contract.outputContentType) {
+    throw new HttpError(
+      502,
+      `${assignment.agent.name} returned ${handoff.contentType}, but ${assignment.roleName ?? assignment.stageId} requires ${assignment.contract.outputContentType}.`
+    );
+  }
+}
+
+function normalizeExternalHandoff(
+  assignment: StageAssignment,
+  handoff: WorkerHandoff
+): WorkerHandoff {
+  assertExpectedOutputContentType(assignment, handoff);
+
+  if (handoff.contentType === 'text/html') {
+    return {
+      ...handoff,
+      content: buildHtmlHandoff(handoff.content).document
+    };
+  }
+
+  return handoff;
+}
+
+function buildExternalWorkerRunRequest({
+  input,
+  assignment,
+  upstreamHandoff
+}: {
+  input: RunArtifactsInput;
+  assignment: StageAssignment;
+  upstreamHandoff?: WorkerHandoff;
+}): WorkerRunRequest {
+  if (
+    upstreamHandoff &&
+    assignment.contract.inputContentType &&
+    upstreamHandoff.contentType !== assignment.contract.inputContentType
+  ) {
+    throw new HttpError(
+      502,
+      `${assignment.agent.name} expected ${assignment.contract.inputContentType} input, but received ${upstreamHandoff.contentType}.`
+    );
+  }
+
+  return {
+    specVersion: 'dao-the-game.run-request.v1',
+    job: {
+      requestId: crypto.randomUUID(),
+      requestKind: 'live-assignment',
+      requestedAt: new Date().toISOString(),
+      artifactType: input.brief.artifactType,
+      hatName: assignment.roleName ?? assignment.role?.name ?? assignment.stageId,
+      brief: {
+        clientName: input.brief.clientName,
+        mission: input.brief.mission,
+        requirements: normalizeBriefRequirements(input.brief.requirements)
+      },
+      contract: assignment.contract,
+      ...(upstreamHandoff ? { upstreamHandoff } : {})
+    }
+  };
+}
+
+async function runExternalAssignedWorker({
+  input,
+  assignment,
+  upstreamHandoff,
+  sink
+}: {
+  input: RunArtifactsInput;
+  assignment: StageAssignment;
+  upstreamHandoff?: WorkerHandoff;
+  sink?: GenerationEventSink;
+}): Promise<WorkerHandoff> {
+  const workerOrigin = assignment.agent.workerOrigin;
+
+  if (!workerOrigin) {
+    throw new HttpError(
+      502,
+      `${assignment.agent.name} is missing a public worker origin for external execution.`
+    );
+  }
+
+  await sink?.({
+    type: 'worker-start',
+    stageId: assignment.stageId,
+    workerName: assignment.agent.name,
+    workerSpecialty: assignment.agent.specialty,
+    note: getStageWorkerNote(assignment.stageId, assignment.agent.name)
+  });
+
+  const startedAt = Date.now();
+
+  try {
+    const response = await runExternalWorker(
+      workerOrigin,
+      buildExternalWorkerRunRequest({
+        input,
+        assignment,
+        upstreamHandoff
+      })
+    );
+    const durationMs = Date.now() - startedAt;
+
+    if (!response.ok) {
+      throw new HttpError(
+        502,
+        `${assignment.agent.name} returned an external worker error: ${response.error.message}`
+      );
+    }
+
+    const handoff = normalizeExternalHandoff(assignment, response.handoff);
+
+    await sink?.({
+      type: 'worker-output',
+      stageId: assignment.stageId,
+      workerName: assignment.agent.name,
+      workerSpecialty: assignment.agent.specialty,
+      model: 'external-run',
+      durationMs,
+      output: shouldDebugWorkers
+        ? {
+            summary: handoff.summary,
+            contentType: handoff.contentType,
+            notes: handoff.notes ?? []
+          }
+        : null,
+      rawOutputText: shouldDebugWorkers ? handoff.content : undefined,
+      usedFallback: false
+    });
+
+    return handoff;
+  } catch (error) {
+    const durationMs = Date.now() - startedAt;
+    const message = error instanceof Error ? error.message : 'External worker run failed.';
+
+    await sink?.({
+      type: 'worker-output',
+      stageId: assignment.stageId,
+      workerName: assignment.agent.name,
+      workerSpecialty: assignment.agent.specialty,
+      model: 'external-run',
+      durationMs,
+      output: null,
+      rawOutputText: undefined,
+      usedFallback: false,
+      error: message
+    });
+
+    throw error;
+  }
+}
+
+function inferSiteTitleFromHtml(document: string, fallbackTitle: string): string {
+  const titleMatch = document.match(/<title[^>]*>([\s\S]*?)<\/title>/iu);
+
+  if (titleMatch?.[1]?.trim()) {
+    return trimValue(titleMatch[1].replace(/\s+/gu, ' ').trim(), 120);
+  }
+
+  const headingMatch = document.match(/<h1[^>]*>([\s\S]*?)<\/h1>/iu);
+
+  if (headingMatch?.[1]?.trim()) {
+    return trimValue(headingMatch[1].replace(/<[^>]+>/gu, '').replace(/\s+/gu, ' ').trim(), 120);
+  }
+
+  return fallbackTitle;
+}
+
+function fillList(
+  values: string[] | undefined,
+  fallback: string[],
+  length: number
+): [string, ...string[]] {
+  const normalized = (values ?? []).map((value) => trimValue(value, 140)).filter(Boolean);
+  const merged = [...normalized];
+
+  for (const item of fallback) {
+    if (merged.length >= length) {
+      break;
+    }
+
+    merged.push(trimValue(item, 140));
+  }
+
+  if (merged.length === 0) {
+    merged.push('External worker returned no additional notes.');
+  }
+
+  while (merged.length < length) {
+    merged.push(merged[merged.length - 1] ?? 'External worker returned no additional notes.');
+  }
+
+  return [merged[0]!, ...merged.slice(1, length)];
+}
+
+function buildDesignHandoff(designContract: Record<string, unknown>): WorkerHandoff {
+  const handoffObject = safeParseJsonObject(JSON.stringify(designContract)) ?? designContract;
+  const nonNegotiables = Array.isArray(handoffObject.nonNegotiables)
+    ? handoffObject.nonNegotiables.filter((value): value is string => typeof value === 'string')
+    : [];
+
+  return {
+    summary:
+      typeof handoffObject.implementationDirective === 'string'
+        ? trimValue(handoffObject.implementationDirective, 180)
+        : 'Design direction established for the next worker.',
+    contentType: 'application/json',
+    content: JSON.stringify(handoffObject, null, 2),
+    notes: nonNegotiables.slice(0, 3)
+  };
+}
+
+function buildImplementationHandoff(output: ImplementationWorkerOutput): WorkerHandoff {
+  return {
+    summary: trimValue(output.buildSummary, 180),
+    contentType: 'text/html',
+    content: output.siteDocument,
+    notes: [output.mobileStrategy, ...output.sectionHighlights].slice(0, 4)
+  };
+}
+
+function buildReviewHandoff(siteDocument: string, output: ReviewJudgeOutput): WorkerHandoff {
+  return {
+    summary: trimValue(output.reviewSummary, 180),
+    contentType: 'text/html',
+    content: siteDocument,
+    notes: [...output.correctionsMade, ...output.mobileChecks, output.riskCallout].slice(0, 5)
+  };
+}
+
+function buildDeploymentHandoff(siteDocument: string, output: DeploymentWorkerOutput): WorkerHandoff {
+  return {
+    summary: trimValue(output.launchSummary, 180),
+    contentType: 'text/html',
+    content: siteDocument,
+    notes: [...output.finalChecks, output.shipReadiness].slice(0, 4)
+  };
+}
+
+function buildSyntheticImplementationOutput(
+  handoff: WorkerHandoff,
+  fallbackSiteTitle: string
+): ImplementationWorkerOutput {
+  return {
+    siteTitle: inferSiteTitleFromHtml(handoff.content, fallbackSiteTitle),
+    siteDocument: handoff.content,
+    buildSummary: trimValue(handoff.summary, 220),
+    mobileStrategy: trimValue(
+      handoff.notes?.[0] ?? 'Returned a full HTML handoff intended to keep the site responsive.',
+      180
+    ),
+    preservedSignals: fillList(handoff.notes, ['Preserved the requested worker direction.'], 3).slice(
+      0,
+      3
+    ) as [string, string, string],
+    sectionHighlights: fillList(
+      handoff.notes,
+      ['Returned a complete conference-site HTML document.'],
+      3
+    ).slice(0, 3) as [string, string, string],
+    studioReport: {
+      body: `I received the brief and returned a full HTML handoff for the next station. The build stays grounded in the requested worker direction and is ready for the next pass.`
+    }
+  };
+}
+
+function buildSyntheticReviewOutput(
+  inputDocument: string,
+  handoff: WorkerHandoff
+): ReviewJudgeOutput {
+  const normalizedInput = minifyHtmlDocument(inputDocument);
+  const normalizedOutput = minifyHtmlDocument(handoff.content);
+
+  return {
+    needsChanges: normalizedInput !== normalizedOutput,
+    reviewSummary: trimValue(handoff.summary, 220),
+    correctionsMade: fillList(
+      handoff.notes,
+      ['Returned a forward-moving HTML handoff after the review pass.'],
+      3
+    ).slice(0, 3) as [string, string, string],
+    mobileChecks: fillList(
+      handoff.notes,
+      ['Kept the page readable and stable for small screens.'],
+      2
+    ).slice(0, 2) as [string, string],
+    riskCallout: trimValue(
+      handoff.notes?.[0] ?? 'No extra risk callout was included in the external review handoff.',
+      180
+    ),
+    studioReport: {
+      body: `I reviewed the current HTML handoff and returned a forward-moving version for the next station. Any important changes or cautions were packed into the review notes.`
+    }
+  };
+}
+
+function buildSyntheticDeploymentOutput(handoff: WorkerHandoff): DeploymentWorkerOutput {
+  return {
+    launchSummary: trimValue(handoff.summary, 220),
+    shipReadiness: trimValue(
+      handoff.notes?.[0] ?? 'Returned a final HTML handoff that is ready for DAO the Game to publish.',
+      180
+    ),
+    finalChecks: fillList(
+      handoff.notes,
+      ['Returned the final HTML handoff for publish.'],
+      3
+    ).slice(0, 3) as [string, string, string],
+    studioReport: {
+      body: `I received the late-stage handoff and returned the final HTML package upward. The launch notes stay attached so DAO the Game can publish it honestly.`
+    }
+  };
+}
+
+function buildExternalDesignContractPatch(handoff: WorkerHandoff): Partial<DesignWorkerOutput> {
+  const parsed = safeParseJsonObject(handoff.content);
+
+  if (!parsed) {
+    throw new HttpError(502, 'External design worker returned invalid JSON handoff content.');
+  }
+
+  const result = DesignWorkerSchema.partial().safeParse(parsed);
+
+  if (!result.success) {
+    return {};
+  }
+
+  return result.data;
 }
 
 function getWorkerGenerationDirective(agent: Worker): WorkerGenerationDirective {
@@ -687,6 +1085,126 @@ function buildDeploymentTrace(
   };
 }
 
+function buildExternalStageTrace(
+  assignment: StageAssignment,
+  handoff: WorkerHandoff,
+  reportTo: string,
+  summary: string,
+  highlights: ArtifactWorkerTrace['highlights'],
+  finalizedDocument = false
+): ArtifactWorkerTrace {
+  return {
+    stageId: assignment.stageId,
+    roleName: assignment.roleName,
+    workerName: assignment.agent.name,
+    workerSpecialty: assignment.agent.specialty,
+    reportTo,
+    reportBody: trimValue(handoff.summary, 320),
+    summary,
+    highlights,
+    finalizedDocument
+  };
+}
+
+function buildExternalDesignTrace(
+  assignment: StageAssignment,
+  handoff: WorkerHandoff,
+  reportTo: string
+): ArtifactWorkerTrace {
+  const parsed = safeParseJsonObject(handoff.content);
+  const topKeys = parsed ? Object.keys(parsed).slice(0, 4) : [];
+
+  return buildExternalStageTrace(
+    assignment,
+    handoff,
+    reportTo,
+    `${assignment.agent.name} delivered a public design handoff for the next station to build from.`,
+    [
+      { label: 'Handoff', value: trimValue(handoff.summary, 120) },
+      { label: 'Output type', value: handoff.contentType },
+      {
+        label: 'JSON keys',
+        value: topKeys.length ? topKeys.join(' • ') : 'No structured design keys surfaced'
+      },
+      {
+        label: 'Notes',
+        value: handoff.notes?.length ? handoff.notes.map((note) => trimValue(note, 32)).join(' • ') : 'No extra notes'
+      }
+    ]
+  );
+}
+
+function buildExternalImplementationTrace(
+  assignment: StageAssignment,
+  handoff: WorkerHandoff,
+  reportTo: string,
+  finalizedDocument = false,
+  siteTitle?: string
+): ArtifactWorkerTrace {
+  return buildExternalStageTrace(
+    assignment,
+    handoff,
+    reportTo,
+    finalizedDocument
+      ? `${assignment.agent.name} returned the HTML handoff that shipped as the final document.`
+      : `${assignment.agent.name} returned a public HTML handoff for the next station.`,
+    [
+      ...(siteTitle ? [{ label: 'Site title', value: trimValue(siteTitle, 72) }] : []),
+      { label: 'Handoff', value: trimValue(handoff.summary, 120) },
+      { label: 'Output type', value: handoff.contentType },
+      {
+        label: 'Notes',
+        value: handoff.notes?.length ? handoff.notes.map((note) => trimValue(note, 32)).join(' • ') : 'No extra notes'
+      }
+    ],
+    finalizedDocument
+  );
+}
+
+function buildExternalReviewTrace(
+  assignment: StageAssignment,
+  handoff: WorkerHandoff,
+  reportTo: string
+): ArtifactWorkerTrace {
+  return buildExternalStageTrace(
+    assignment,
+    handoff,
+    reportTo,
+    `${assignment.agent.name} reviewed the current HTML handoff and kept the line moving forward.`,
+    [
+      { label: 'Review summary', value: trimValue(handoff.summary, 120) },
+      { label: 'Output type', value: handoff.contentType },
+      {
+        label: 'Notes',
+        value: handoff.notes?.length ? handoff.notes.map((note) => trimValue(note, 32)).join(' • ') : 'No extra notes'
+      }
+    ]
+  );
+}
+
+function buildExternalDeploymentTrace(
+  assignment: StageAssignment,
+  handoff: WorkerHandoff,
+  reportTo: string,
+  siteTitle?: string
+): ArtifactWorkerTrace {
+  return buildExternalStageTrace(
+    assignment,
+    handoff,
+    reportTo,
+    `${assignment.agent.name} returned the final launch handoff for DAO the Game to publish.`,
+    [
+      ...(siteTitle ? [{ label: 'Final site title', value: trimValue(siteTitle, 72) }] : []),
+      { label: 'Launch summary', value: trimValue(handoff.summary, 120) },
+      { label: 'Output type', value: handoff.contentType },
+      {
+        label: 'Notes',
+        value: handoff.notes?.length ? handoff.notes.map((note) => trimValue(note, 32)).join(' • ') : 'No extra notes'
+      }
+    ]
+  );
+}
+
 function buildWorkerTrace({
   studioName,
   designWorker,
@@ -702,13 +1220,13 @@ function buildWorkerTrace({
 }: {
   studioName: string;
   designWorker: StageAssignment | undefined;
-  design: DesignWorkerOutput | null;
+  design: StageTraceSource<DesignWorkerOutput> | null;
   implementationWorker: StageAssignment | undefined;
-  implementation: ImplementationWorkerOutput | null;
+  implementation: StageTraceSource<ImplementationWorkerOutput> | null;
   reviewWorker: StageAssignment | undefined;
-  review: ReviewJudgeOutput | null;
+  review: StageTraceSource<ReviewJudgeOutput> | null;
   deploymentWorker: StageAssignment | undefined;
-  deployment: DeploymentWorkerOutput | null;
+  deployment: StageTraceSource<DeploymentWorkerOutput> | null;
   finalDocumentWorker: StageAssignment | null;
   finalDocument:
     | Pick<ImplementationWorkerOutput, 'siteTitle'>
@@ -719,35 +1237,61 @@ function buildWorkerTrace({
 
   if (designWorker && design) {
     traces.push(
-      buildDesignTrace(
-        designWorker,
-        design,
-        reportTo,
-        finalDocumentWorker?.stageId === 'design',
-        finalDocument?.siteTitle
-      )
+      design.kind === 'internal'
+        ? buildDesignTrace(
+            designWorker,
+            design.output,
+            reportTo,
+            finalDocumentWorker?.stageId === 'design',
+            finalDocument?.siteTitle
+          )
+        : buildExternalDesignTrace(designWorker, design.handoff, reportTo)
     );
   }
 
   if (implementationWorker && implementation) {
     traces.push(
-      buildImplementationTrace(
-        implementationWorker,
-        implementation,
-        reportTo,
-        finalDocumentWorker?.stageId === 'implementation',
-        finalDocument?.siteTitle
-      )
+      implementation.kind === 'internal'
+        ? buildImplementationTrace(
+            implementationWorker,
+            implementation.output,
+            reportTo,
+            finalDocumentWorker?.stageId === 'implementation',
+            finalDocument?.siteTitle
+          )
+        : buildExternalImplementationTrace(
+            implementationWorker,
+            implementation.handoff,
+            reportTo,
+            finalDocumentWorker?.stageId === 'implementation',
+            finalDocument?.siteTitle
+          )
     );
   }
 
   if (reviewWorker && review) {
-    traces.push(buildReviewTrace(reviewWorker, review, reportTo));
+    traces.push(
+      review.kind === 'internal'
+        ? buildReviewTrace(reviewWorker, review.output, reportTo)
+        : buildExternalReviewTrace(reviewWorker, review.handoff, reportTo)
+    );
   }
 
   if (deploymentWorker && deployment) {
     traces.push(
-      buildDeploymentTrace(deploymentWorker, deployment, reportTo, finalDocument?.siteTitle)
+      deployment.kind === 'internal'
+        ? buildDeploymentTrace(
+            deploymentWorker,
+            deployment.output,
+            reportTo,
+            finalDocument?.siteTitle
+          )
+        : buildExternalDeploymentTrace(
+            deploymentWorker,
+            deployment.handoff,
+            reportTo,
+            finalDocument?.siteTitle
+          )
     );
   }
 
@@ -1148,69 +1692,95 @@ export async function generateConferenceSiteArtifactWithWorkers(
 
   try {
     const designWorker = assignments.get('design');
-    const designResult = designWorker
-      ? await runStructuredWorker({
-          client,
-          schema: DesignWorkerSchema,
-          schemaName: 'conference_design_worker_output',
-          systemPrompt: getDesignSystemPrompt(),
-          assignment: designWorker,
-          sink,
-          context: buildDesignStageContext({
-            baseContext,
-            worker: summarizeWorker(designWorker.agent, designWorker.roleName),
-            workerDirective: getWorkerGenerationDirective(designWorker.agent),
-            currentDraft: {
-              heroLayout: fallback.heroLayout,
-              designLanguage: fallback.designLanguage,
-              visualTreatment: fallback.visualTreatment,
-              panelStyle: fallback.panelStyle,
-              cardGeometry: fallback.cardGeometry,
-              density: fallback.density,
-              trackLayout: fallback.trackLayout,
-              detailLayout: fallback.detailLayout,
-              headlineFont: fallback.headlineFont,
-              sectionOrder: fallback.sectionOrder,
-              heroHeadline: fallback.heroHeadline,
-              heroSubhead: fallback.heroSubhead,
-              heroAtmosphere: fallback.heroAtmosphere,
-              layoutVariant: fallback.layoutVariant
-            }
+    const designResult =
+      designWorker && !isExternalWorker(designWorker.agent)
+        ? await runStructuredWorker({
+            client,
+            schema: DesignWorkerSchema,
+            schemaName: 'conference_design_worker_output',
+            systemPrompt: getDesignSystemPrompt(),
+            assignment: designWorker,
+            sink,
+            context: buildDesignStageContext({
+              baseContext,
+              worker: summarizeWorker(designWorker.agent, designWorker.roleName),
+              workerDirective: getWorkerGenerationDirective(designWorker.agent),
+              currentDraft: {
+                heroLayout: fallback.heroLayout,
+                designLanguage: fallback.designLanguage,
+                visualTreatment: fallback.visualTreatment,
+                panelStyle: fallback.panelStyle,
+                cardGeometry: fallback.cardGeometry,
+                density: fallback.density,
+                trackLayout: fallback.trackLayout,
+                detailLayout: fallback.detailLayout,
+                headlineFont: fallback.headlineFont,
+                sectionOrder: fallback.sectionOrder,
+                heroHeadline: fallback.heroHeadline,
+                heroSubhead: fallback.heroSubhead,
+                heroAtmosphere: fallback.heroAtmosphere,
+                layoutVariant: fallback.layoutVariant
+              }
+            })
           })
-        })
-      : null;
+        : null;
+    const externalDesignHandoff =
+      designWorker && isExternalWorker(designWorker.agent)
+        ? await runExternalAssignedWorker({
+            input,
+            assignment: designWorker,
+            sink
+          })
+        : null;
     const design = designResult?.output ?? null;
+    const designContractPatch = design
+      ? {
+          layoutVariant: design.layoutVariant,
+          designLanguage: design.designLanguage,
+          heroLayout: design.heroLayout,
+          visualTreatment: design.visualTreatment,
+          panelStyle: design.panelStyle,
+          cardGeometry: design.cardGeometry,
+          density: design.density,
+          trackLayout: design.trackLayout,
+          detailLayout: design.detailLayout,
+          headlineFont: design.headlineFont,
+          sectionOrder: design.sectionOrder,
+          heroHeadline: design.heroHeadline,
+          heroSubhead: design.heroSubhead,
+          heroAtmosphere: design.heroAtmosphere,
+          aestheticThesis: design.aestheticThesis,
+          paletteDirection: design.paletteDirection,
+          typographyDirection: design.typographyDirection,
+          surfaceDirection: design.surfaceDirection,
+          interactionDirection: design.interactionDirection,
+          mobileDirection: design.mobileDirection,
+          implementationDirective: design.implementationDirective,
+          nonNegotiables: design.nonNegotiables,
+          antiPatterns: design.antiPatterns,
+          screenshotTest: design.screenshotTest
+        }
+      : externalDesignHandoff
+        ? buildExternalDesignContractPatch(externalDesignHandoff)
+        : {};
     const designContract = {
       ...defaultDesignContract,
-      ...(design
-        ? {
-            layoutVariant: design.layoutVariant,
-            designLanguage: design.designLanguage,
-            heroLayout: design.heroLayout,
-            visualTreatment: design.visualTreatment,
-            panelStyle: design.panelStyle,
-            cardGeometry: design.cardGeometry,
-            density: design.density,
-            trackLayout: design.trackLayout,
-            detailLayout: design.detailLayout,
-            headlineFont: design.headlineFont,
-            sectionOrder: design.sectionOrder,
-            heroHeadline: design.heroHeadline,
-            heroSubhead: design.heroSubhead,
-            heroAtmosphere: design.heroAtmosphere,
-            aestheticThesis: design.aestheticThesis,
-            paletteDirection: design.paletteDirection,
-            typographyDirection: design.typographyDirection,
-            surfaceDirection: design.surfaceDirection,
-            interactionDirection: design.interactionDirection,
-            mobileDirection: design.mobileDirection,
-            implementationDirective: design.implementationDirective,
-            nonNegotiables: design.nonNegotiables,
-            antiPatterns: design.antiPatterns,
-            screenshotTest: design.screenshotTest
-          }
-        : {})
+      ...designContractPatch
     };
+    const designHandoff = design
+      ? buildDesignHandoff(designContract)
+      : externalDesignHandoff;
+    const designTraceSource: StageTraceSource<DesignWorkerOutput> | null = design
+      ? {
+          kind: 'internal',
+          output: design
+        }
+      : externalDesignHandoff
+        ? {
+            kind: 'external',
+            handoff: externalDesignHandoff
+          }
+        : null;
     const reviewDesignGuardrails = {
       designLanguage: designContract.designLanguage,
       heroLayout: designContract.heroLayout,
@@ -1245,33 +1815,69 @@ export async function generateConferenceSiteArtifactWithWorkers(
     };
 
     const implementationWorker = assignments.get('implementation');
-    const implementationResult = implementationWorker
-      ? await runStructuredWorker({
-          client,
-          schema: ImplementationWorkerSchema,
-          schemaName: 'conference_implementation_worker_output',
-          systemPrompt: getImplementationSystemPrompt(),
-          assignment: implementationWorker,
-          sink,
-          context: buildImplementationStageContext({
-            baseContext,
-            worker: summarizeWorker(implementationWorker.agent, implementationWorker.roleName),
-            workerDirective: getWorkerGenerationDirective(implementationWorker.agent),
-            designContract,
-            contentSeed: implementationSeed
+    const implementationResult =
+      implementationWorker && !isExternalWorker(implementationWorker.agent)
+        ? await runStructuredWorker({
+            client,
+            schema: ImplementationWorkerSchema,
+            schemaName: 'conference_implementation_worker_output',
+            systemPrompt: getImplementationSystemPrompt(),
+            assignment: implementationWorker,
+            sink,
+            context: buildImplementationStageContext({
+              baseContext,
+              worker: summarizeWorker(implementationWorker.agent, implementationWorker.roleName),
+              workerDirective: getWorkerGenerationDirective(implementationWorker.agent),
+              designContract,
+              contentSeed: implementationSeed,
+              upstreamHandoff: designHandoff ?? undefined
+            })
           })
-        })
-      : null;
+        : null;
+    const externalImplementationHandoff =
+      implementationWorker && isExternalWorker(implementationWorker.agent)
+        ? await runExternalAssignedWorker({
+            input,
+            assignment: implementationWorker,
+            upstreamHandoff: designHandoff ?? undefined,
+            sink
+          })
+        : null;
     const implementation = implementationResult?.output
       ? {
           ...implementationResult.output,
           siteDocument: buildHtmlHandoff(implementationResult.output.siteDocument).document
         }
-      : null;
+      : externalImplementationHandoff
+        ? buildSyntheticImplementationOutput(
+            externalImplementationHandoff,
+            deterministicFallback.siteTitle
+          )
+        : null;
+    const implementationHandoff = implementationResult?.output
+      ? buildImplementationHandoff({
+          ...implementationResult.output,
+          siteDocument: buildHtmlHandoff(implementationResult.output.siteDocument).document
+        })
+      : externalImplementationHandoff;
+    const implementationTraceSource: StageTraceSource<ImplementationWorkerOutput> | null =
+      implementationResult?.output
+        ? {
+            kind: 'internal',
+            output: implementation!
+          }
+        : externalImplementationHandoff
+          ? {
+              kind: 'external',
+              handoff: externalImplementationHandoff
+            }
+          : null;
 
     const reviewWorker = assignments.get('review');
+    const reviewInputHandoff =
+      implementationHandoff?.contentType === 'text/html' ? implementationHandoff : undefined;
     const reviewJudgeContext =
-      reviewWorker && implementation?.siteDocument?.trim()
+      reviewWorker && implementation?.siteDocument?.trim() && !isExternalWorker(reviewWorker.agent)
         ? buildReviewStageContext({
             baseContext,
             stage: 'review',
@@ -1291,17 +1897,18 @@ export async function generateConferenceSiteArtifactWithWorkers(
             }
           })
         : null;
-    const reviewJudgeInitialResult = reviewWorker && reviewJudgeContext
-      ? await runStructuredWorker({
-          client,
-          schema: ReviewJudgeSchema,
-          schemaName: 'conference_review_judge_output',
-          systemPrompt: getReviewJudgeSystemPrompt(),
-          assignment: reviewWorker,
-          sink,
-          context: reviewJudgeContext
-        })
-      : null;
+    const reviewJudgeInitialResult =
+      reviewWorker && reviewJudgeContext
+        ? await runStructuredWorker({
+            client,
+            schema: ReviewJudgeSchema,
+            schemaName: 'conference_review_judge_output',
+            systemPrompt: getReviewJudgeSystemPrompt(),
+            assignment: reviewWorker,
+            sink,
+            context: reviewJudgeContext
+          })
+        : null;
     const reviewJudgeResult =
       reviewWorker &&
       reviewJudgeContext &&
@@ -1317,42 +1924,92 @@ export async function generateConferenceSiteArtifactWithWorkers(
             context: reviewJudgeContext
           })
         : reviewJudgeInitialResult;
-    const reviewJudge = reviewJudgeResult?.output ?? null;
+    const externalReviewHandoff =
+      reviewWorker && isExternalWorker(reviewWorker.agent) && reviewInputHandoff
+        ? await runExternalAssignedWorker({
+            input,
+            assignment: reviewWorker,
+            upstreamHandoff: reviewInputHandoff,
+            sink
+          })
+        : null;
+    const reviewJudge =
+      reviewJudgeResult?.output ??
+      (externalReviewHandoff && reviewInputHandoff
+        ? buildSyntheticReviewOutput(reviewInputHandoff.content, externalReviewHandoff)
+        : null);
+    const reviewHandoff =
+      reviewJudgeResult?.output && reviewInputHandoff
+        ? buildReviewHandoff(reviewInputHandoff.content, reviewJudgeResult.output)
+        : externalReviewHandoff;
+    const reviewTraceSource: StageTraceSource<ReviewJudgeOutput> | null = reviewJudgeResult?.output
+      ? {
+          kind: 'internal',
+          output: reviewJudgeResult.output
+        }
+      : externalReviewHandoff
+        ? {
+            kind: 'external',
+            handoff: externalReviewHandoff
+          }
+        : null;
 
     const deploymentWorker = assignments.get('deployment');
-    const deploymentSource = implementation?.siteDocument?.trim()
-      ? buildDeploymentSummaryContext({
-          siteTitle: implementation.siteTitle,
-          buildSummary: implementation.buildSummary,
-          reviewSummary: reviewJudge?.reviewSummary,
-          mobileStrategy: implementation.mobileStrategy,
-          mobileChecks: reviewJudge?.mobileChecks,
-          preservedSignals: implementation.preservedSignals,
-          sectionHighlights: implementation.sectionHighlights,
-          correctionsMade: reviewJudge?.correctionsMade,
-          riskCallout: reviewJudge?.riskCallout,
-          htmlCharCount: implementation.siteDocument.length
-        })
-      : null;
-    const deploymentResult = deploymentWorker && deploymentSource
-      ? await runStructuredWorker({
-          client,
-          schema: DeploymentWorkerSchema,
-          schemaName: 'conference_deployment_worker_output',
-          systemPrompt: getDeploymentSystemPrompt(),
-          assignment: deploymentWorker,
-          sink,
-          context: buildDeploymentStageContext({
-            baseContext,
-            worker: summarizeWorker(deploymentWorker.agent, deploymentWorker.roleName),
-            workerDirective: getWorkerGenerationDirective(deploymentWorker.agent),
-            finalSiteSummary: deploymentSource
+    const deploymentInputHandoff =
+      reviewHandoff?.contentType === 'text/html'
+        ? reviewHandoff
+        : implementationHandoff?.contentType === 'text/html'
+          ? implementationHandoff
+          : undefined;
+    const deploymentSource =
+      deploymentWorker && deploymentInputHandoff?.content.trim() && implementation
+        ? buildDeploymentSummaryContext({
+            siteTitle: inferSiteTitleFromHtml(
+              deploymentInputHandoff.content,
+              implementation.siteTitle
+            ),
+            buildSummary: implementation.buildSummary,
+            reviewSummary: reviewJudge?.reviewSummary,
+            mobileStrategy: implementation.mobileStrategy,
+            mobileChecks: reviewJudge?.mobileChecks,
+            preservedSignals: implementation.preservedSignals,
+            sectionHighlights: implementation.sectionHighlights,
+            correctionsMade: reviewJudge?.correctionsMade,
+            riskCallout: reviewJudge?.riskCallout,
+            htmlCharCount: deploymentInputHandoff.content.length
           })
-        })
-      : null;
+        : null;
+    const deploymentResult =
+      deploymentWorker && deploymentSource && !isExternalWorker(deploymentWorker.agent)
+        ? await runStructuredWorker({
+            client,
+            schema: DeploymentWorkerSchema,
+            schemaName: 'conference_deployment_worker_output',
+            systemPrompt: getDeploymentSystemPrompt(),
+            assignment: deploymentWorker,
+            sink,
+            context: buildDeploymentStageContext({
+              baseContext,
+              worker: summarizeWorker(deploymentWorker.agent, deploymentWorker.roleName),
+              workerDirective: getWorkerGenerationDirective(deploymentWorker.agent),
+              finalSiteSummary: deploymentSource
+            })
+          })
+        : null;
+    const externalDeploymentHandoff =
+      deploymentWorker && isExternalWorker(deploymentWorker.agent) && deploymentInputHandoff
+        ? await runExternalAssignedWorker({
+            input,
+            assignment: deploymentWorker,
+            upstreamHandoff: deploymentInputHandoff,
+            sink
+          })
+        : null;
     const deployment = deploymentResult?.output
       ? deploymentResult.output
-      : deploymentWorker && deploymentSource
+      : externalDeploymentHandoff
+        ? buildSyntheticDeploymentOutput(externalDeploymentHandoff)
+        : deploymentWorker && deploymentSource
         ? {
             launchSummary: 'I prepared the assembled site for publish without reopening the HTML build.',
             shipReadiness: reviewJudge?.needsChanges
@@ -1368,11 +2025,56 @@ export async function generateConferenceSiteArtifactWithWorkers(
             }
           }
         : null;
+    const deploymentHandoff =
+      deploymentResult?.output && deploymentInputHandoff
+        ? buildDeploymentHandoff(deploymentInputHandoff.content, deploymentResult.output)
+        : externalDeploymentHandoff;
+    const deploymentTraceSource: StageTraceSource<DeploymentWorkerOutput> | null =
+      deploymentResult?.output
+        ? {
+            kind: 'internal',
+            output: deploymentResult.output
+          }
+        : externalDeploymentHandoff
+          ? {
+              kind: 'external',
+              handoff: externalDeploymentHandoff
+            }
+          : deployment
+            ? {
+                kind: 'internal',
+                output: deployment
+              }
+          : null;
+    const finalHtmlHandoff =
+      deploymentHandoff?.contentType === 'text/html'
+        ? deploymentHandoff
+        : reviewHandoff?.contentType === 'text/html'
+          ? reviewHandoff
+          : implementationHandoff?.contentType === 'text/html'
+            ? implementationHandoff
+            : null;
     const finalDocumentWorker =
-      implementation?.siteDocument?.trim() && implementationWorker
-        ? implementationWorker
-        : null;
-    const finalDocument = implementation ?? null;
+      deploymentHandoff?.contentType === 'text/html' &&
+      deploymentWorker &&
+      isExternalWorker(deploymentWorker.agent)
+        ? deploymentWorker
+        : reviewHandoff?.contentType === 'text/html' &&
+            reviewWorker &&
+            isExternalWorker(reviewWorker.agent)
+          ? reviewWorker
+          : implementationHandoff?.contentType === 'text/html' && implementationWorker
+            ? implementationWorker
+            : null;
+    const finalDocument = finalHtmlHandoff?.content.trim()
+      ? {
+          siteTitle: inferSiteTitleFromHtml(
+            finalHtmlHandoff.content,
+            implementation?.siteTitle ?? deterministicFallback.siteTitle
+          ),
+          siteDocument: finalHtmlHandoff.content
+        }
+      : null;
 
     const usedFallback = Boolean(
       designResult?.usedFallback ||
@@ -1403,13 +2105,13 @@ export async function generateConferenceSiteArtifactWithWorkers(
     const workerTrace = buildWorkerTrace({
       studioName: input.studioName?.trim() || 'Ghost Studio',
       designWorker,
-      design,
+      design: designTraceSource,
       implementationWorker,
-      implementation,
+      implementation: implementationTraceSource,
       reviewWorker,
-      review: reviewJudge,
+      review: reviewTraceSource,
       deploymentWorker,
-      deployment,
+      deployment: deploymentTraceSource,
       finalDocumentWorker,
       finalDocument
     });
