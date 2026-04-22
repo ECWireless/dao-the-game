@@ -54,6 +54,7 @@ export type WorkerManifest = {
     name: string;
     handle: string;
     roleTag: RoleTagId;
+    avatarUrl?: string;
     bio: string;
     shortPitch: string;
   };
@@ -107,6 +108,9 @@ export type WorkerHandoff = {
 export type WorkerRunRequest = {
   specVersion: 'dao-the-game.run-request.v1';
   job: {
+    requestId: string;
+    requestKind: 'live-assignment';
+    requestedAt: string;
     artifactType: ArtifactType;
     hatName: string;
     brief: {
@@ -226,6 +230,7 @@ export type WorkerGameplayProfile = {
 
 export type WorkerRegistryRecord = {
   registryRecordId: string;
+  workerOrigin?: string | null;
   manifest: WorkerManifest;
   registration: WorkerRegistration;
   availability: 'active' | 'paused';
@@ -263,10 +268,16 @@ export type EngineerIntake = {
 
 export type HatExecutionMode = 'worker' | 'squad';
 
+export type HatExecutionContract = {
+  inputContentType?: WorkerContentType;
+  outputContentType: WorkerContentType;
+};
+
 export type HatMetadata = {
   allowedRoleTagIds: RoleTagId[];
   pipelinePath: number[];
   executionMode: HatExecutionMode;
+  contract?: HatExecutionContract;
 };
 
 export type HatRole = {

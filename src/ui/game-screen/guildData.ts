@@ -2,6 +2,7 @@ import type { HatRole, Worker } from '../../types';
 import {
   getWorkerAccent,
   getWorkerAverageCapability,
+  getWorkerAvatarUrl,
   getWorkerBio,
   getWorkerHandle,
   getWorkerRoleAffinity,
@@ -17,6 +18,7 @@ export type GuildMemberProfile = {
   workerId?: string;
   name: string;
   handle: string;
+  avatarUrl?: string;
   accent: string;
   shadow: string;
   roleAffinity?: string;
@@ -86,6 +88,7 @@ function createGuildProfile(worker: Worker, id: string): GuildMemberProfile {
     workerId: worker.id,
     name: getWorkerName(worker),
     handle: getWorkerHandle(worker),
+    avatarUrl: getWorkerAvatarUrl(worker),
     accent: getWorkerAccent(worker),
     shadow: getWorkerShadow(worker),
     roleAffinity: getWorkerRoleAffinity(worker),

@@ -52,6 +52,7 @@ const WorkerManifestSchema = z
         name: z.string().min(1),
         handle: z.string().min(1),
         roleTag: RoleTagSchema,
+        avatarUrl: z.string().min(1).optional(),
         bio: z.string().min(1),
         shortPitch: z.string().min(1)
       })
@@ -125,6 +126,8 @@ const WORKER_FETCH_TIMEOUT_MS = 5000;
 const MAX_WORKER_RESPONSE_BYTES = 256 * 1024;
 const BLOCKED_HOSTNAMES = new Set(['localhost', 'metadata', 'metadata.google.internal']);
 const BLOCKED_HOSTNAME_SUFFIXES = ['.localhost', '.local', '.internal'];
+
+export type WorkerRegistryHydrationMode = 'manifest' | 'full';
 
 function parseContentLength(response: Response): number | null {
   const rawContentLength = response.headers.get('content-length');
@@ -380,19 +383,14 @@ export function parseWorkerRegistrySubmitRequest(body: unknown): WorkerRegistryS
   };
 }
 
-export async function fetchWorkerLiveMetadata(
+export async function fetchWorkerManifestMetadata(
   workerOrigin: string
-): Promise<WorkerRegistryLiveMetadata> {
-  const [manifest, profile, selfTest] = await Promise.all([
+): Promise<Pick<WorkerRegistryLiveMetadata, 'manifest' | 'selfTest'>> {
+  const [manifest, selfTest] = await Promise.all([
     fetchJson(
       buildWorkerUrl(workerOrigin, '/.well-known/dao-the-game/manifest.json'),
       WorkerManifestSchema,
       'manifest.json'
-    ),
-    fetchJson(
-      buildWorkerUrl(workerOrigin, '/.well-known/dao-the-game/profile.json'),
-      WorkerProfileSchema,
-      'profile.json'
     ),
     fetchJson(
       buildWorkerUrl(workerOrigin, '/.well-known/dao-the-game/self-test'),
@@ -402,12 +400,10 @@ export async function fetchWorkerLiveMetadata(
   ]);
 
   if (
-    manifest.identity.name !== profile.identity.name ||
     manifest.identity.name !== selfTest.worker.name ||
-    manifest.identity.roleTag !== profile.identity.roleTag ||
     manifest.identity.roleTag !== selfTest.worker.roleTag
   ) {
-    throw new HttpError(400, 'Worker manifest, profile, and self-test identity fields must agree.');
+    throw new HttpError(400, 'Worker manifest and self-test identity fields must agree.');
   }
 
   if (!selfTest.ok) {
@@ -423,6 +419,31 @@ export async function fetchWorkerLiveMetadata(
       400,
       'Worker self-test must report manifest, profile, and run as reachable.'
     );
+  }
+
+  return {
+    manifest,
+    selfTest
+  };
+}
+
+export async function fetchWorkerLiveMetadata(
+  workerOrigin: string
+): Promise<WorkerRegistryLiveMetadata> {
+  const [{ manifest, selfTest }, profile] = await Promise.all([
+    fetchWorkerManifestMetadata(workerOrigin),
+    fetchJson(
+      buildWorkerUrl(workerOrigin, '/.well-known/dao-the-game/profile.json'),
+      WorkerProfileSchema,
+      'profile.json'
+    )
+  ]);
+
+  if (
+    manifest.identity.name !== profile.identity.name ||
+    manifest.identity.roleTag !== profile.identity.roleTag
+  ) {
+    throw new HttpError(400, 'Worker manifest, profile, and self-test identity fields must agree.');
   }
 
   return {
@@ -474,10 +495,14 @@ export async function verifyErc8004Registration(input: {
 }
 
 export async function hydrateWorkerRegistryEntry(
-  entry: WorkerRegistryEntryRecord
+  entry: WorkerRegistryEntryRecord,
+  mode: WorkerRegistryHydrationMode = 'full'
 ): Promise<WorkerRegistryEntry> {
   try {
-    const live = await fetchWorkerLiveMetadata(entry.workerOrigin);
+    const live =
+      mode === 'manifest'
+        ? await fetchWorkerManifestMetadata(entry.workerOrigin)
+        : await fetchWorkerLiveMetadata(entry.workerOrigin);
     return { ...entry, live, liveError: null };
   } catch (error) {
     const liveError = error instanceof Error ? error.message : 'Failed to fetch worker metadata.';

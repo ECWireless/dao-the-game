@@ -135,6 +135,37 @@
   color: rgb(249 218 167 / 78%);
 }
 
+.guild-member-loading {
+  display: grid;
+  gap: 0.42rem;
+}
+
+.guild-member-skeleton {
+  height: 0.72rem;
+  border-radius: 999px;
+  background:
+    linear-gradient(
+      90deg,
+      rgb(249 247 231 / 7%) 0%,
+      rgb(249 218 167 / 20%) 50%,
+      rgb(249 247 231 / 7%) 100%
+    );
+  background-size: 220% 100%;
+  animation: guildMemberSkeletonShift 1.1s ease-in-out infinite;
+}
+
+.guild-member-skeleton-short {
+  width: 42%;
+}
+
+.guild-member-skeleton-medium {
+  width: 68%;
+}
+
+.guild-member-skeleton-long {
+  width: 100%;
+}
+
 .guild-member-strategy {
   margin-top: 0.18rem;
   border: 1px solid rgb(189 72 45 / 18%);
@@ -242,4 +273,14 @@
   font-family: var(--font-raidguild-body);
   font-size: 0.74rem;
   line-height: 1.4;
+}
+
+@keyframes guildMemberSkeletonShift {
+  0% {
+    background-position: 100% 0;
+  }
+
+  100% {
+    background-position: -100% 0;
+  }
 }

@@ -16,6 +16,7 @@ import {
   hydrateWorkerRegistryEntry,
   normalizeWorkerOrigin,
   parseWorkerRegistrySubmitRequest,
+  type WorkerRegistryHydrationMode,
   verifyErc8004Registration
 } from './_lib/workerRegistry.js';
 import { handleRouteError, json, options, parseOptionalJsonBody, withCors } from './_lib/http.js';
@@ -26,19 +27,29 @@ export const OPTIONS = options;
 
 const HYDRATION_BATCH_SIZE = 5;
 
-function shouldHydrateWorkers(request: Request): boolean {
+function getWorkerHydrationMode(request: Request): WorkerRegistryHydrationMode | null {
   const hydrate = new URL(request.url).searchParams.get('hydrate');
-  return hydrate === '1' || hydrate === 'true';
+
+  if (hydrate === 'manifest') {
+    return 'manifest';
+  }
+
+  if (hydrate === '1' || hydrate === 'true' || hydrate === 'full') {
+    return 'full';
+  }
+
+  return null;
 }
 
 async function hydrateWorkersInBatches(
-  entries: Awaited<ReturnType<typeof listWorkerRegistryEntries>>
+  entries: Awaited<ReturnType<typeof listWorkerRegistryEntries>>,
+  mode: WorkerRegistryHydrationMode
 ): Promise<WorkerRegistryEntry[]> {
   const hydratedWorkers: WorkerRegistryEntry[] = [];
 
   for (let index = 0; index < entries.length; index += HYDRATION_BATCH_SIZE) {
     const batch = entries.slice(index, index + HYDRATION_BATCH_SIZE);
-    const hydratedBatch = await Promise.all(batch.map(hydrateWorkerRegistryEntry));
+    const hydratedBatch = await Promise.all(batch.map((entry) => hydrateWorkerRegistryEntry(entry, mode)));
     hydratedWorkers.push(...hydratedBatch);
   }
 
@@ -48,7 +59,8 @@ async function hydrateWorkersInBatches(
 export async function GET(request: Request): Promise<Response> {
   try {
     const entries = await listWorkerRegistryEntries();
-    const workers = shouldHydrateWorkers(request) ? await hydrateWorkersInBatches(entries) : entries;
+    const hydrationMode = getWorkerHydrationMode(request);
+    const workers = hydrationMode ? await hydrateWorkersInBatches(entries, hydrationMode) : entries;
     const response: WorkerRegistryListResponse = { workers };
     return withCors(request, json(response));
   } catch (error) {

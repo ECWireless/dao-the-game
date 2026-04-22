@@ -33,6 +33,21 @@ function createAuthorizedJsonRequest(identityToken: string, body?: unknown): Req
   };
 }
 
+export async function getApi<TResponse>(path: string): Promise<TResponse> {
+  const response = await fetch(getApiUrl(path), {
+    headers: {
+      accept: 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new ApiError(response.status, payload?.error ?? 'Request failed.');
+  }
+
+  return (await response.json()) as TResponse;
+}
+
 export async function postApi<TRequest, TResponse>(
   path: string,
   identityToken: string,

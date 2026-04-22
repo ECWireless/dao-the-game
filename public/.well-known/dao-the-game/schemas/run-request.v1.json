@@ -12,8 +12,19 @@
     "job": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["artifactType", "hatName", "brief", "contract"],
+      "required": ["requestId", "requestKind", "requestedAt", "artifactType", "hatName", "brief", "contract"],
       "properties": {
+        "requestId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "requestKind": {
+          "const": "live-assignment"
+        },
+        "requestedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
         "artifactType": {
           "const": "conference-site"
         },

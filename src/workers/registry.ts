@@ -19,14 +19,24 @@ type BuiltinWorkerSeed = Omit<
 >;
 
 function createBuiltinWorker(seed: BuiltinWorkerSeed): Worker {
+  const identity = {
+    ...seed.manifest.identity,
+    avatarUrl:
+      seed.manifest.identity.avatarUrl ?? `/raidguild-avatars/${seed.manifest.identity.handle}.png`
+  };
+
   return {
     ...seed,
-    name: seed.manifest.identity.name,
-    handle: seed.manifest.identity.handle,
-    roleTag: seed.manifest.identity.roleTag,
-    specialty: getRoleTagLabel(seed.manifest.identity.roleTag),
-    bio: seed.manifest.identity.bio,
-    shortPitch: seed.manifest.identity.shortPitch,
+    manifest: {
+      ...seed.manifest,
+      identity
+    },
+    name: identity.name,
+    handle: identity.handle,
+    roleTag: identity.roleTag,
+    specialty: getRoleTagLabel(identity.roleTag),
+    bio: identity.bio,
+    shortPitch: identity.shortPitch,
     accent: seed.presentation?.accent ?? '#6A7281',
     shadow: seed.presentation?.shadow ?? '#303642',
     roleAffinity: seed.gameplay.roleAffinity,

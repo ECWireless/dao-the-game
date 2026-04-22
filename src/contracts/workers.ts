@@ -17,8 +17,8 @@ export type WorkerRegistryEntryRecord = {
 
 export type WorkerRegistryLiveMetadata = {
   manifest: WorkerManifest;
-  profile: WorkerProfile;
-  selfTest: WorkerSelfTestResponse;
+  profile?: WorkerProfile;
+  selfTest?: WorkerSelfTestResponse;
 };
 
 export type WorkerRegistryEntry = WorkerRegistryEntryRecord & {

@@ -19,6 +19,7 @@ import type {
   OrgTreeUpsertRequest,
   OrgTreeUpsertResponse
 } from './contracts/org';
+import type { WorkerRegistryListResponse } from './contracts/workers';
 import { shallow } from 'zustand/shallow';
 import type {
   GameStateRequest,
@@ -43,6 +44,7 @@ import {
   type HatsExecutionClient
 } from './lib/hats';
 import { deployArtifactWithProgress, postApi } from './lib/api';
+import { getApi } from './lib/api';
 import { buildGameStateSnapshot, useGameStore } from './state/gameStore';
 import { usePlayerStore } from './state/playerStore';
 import { generateArtifacts } from './sim';
@@ -135,6 +137,7 @@ export default function App({
   const hasSeenIntroDialog = useGameStore((state) => state.hasSeenIntroDialog);
   const dismissIntroDialog = useGameStore((state) => state.dismissIntroDialog);
   const hydrateForPlayer = useGameStore((state) => state.hydrateForPlayer);
+  const syncWorkerRoster = useGameStore((state) => state.syncWorkerRoster);
   const resetTutorial = useGameStore((state) => state.resetTutorial);
   const setStudioName = useGameStore((state) => state.setStudioName);
   const configureRole = useGameStore((state) => state.configureRole);
@@ -243,6 +246,15 @@ export default function App({
         identityToken!,
         { walletAddress }
       )
+  });
+
+  const workerRosterQuery = useQuery({
+    queryKey: ['worker-roster', clientEnv.workerAllowlist],
+    enabled: hasHydratedPlayerState && clientEnv.workerAllowlist.length > 0,
+    queryFn: async () =>
+      getApi<WorkerRegistryListResponse>('/api/workers?hydrate=manifest'),
+    refetchOnWindowFocus: false,
+    staleTime: 30_000
   });
 
   const progressMutation = useMutation({
@@ -846,6 +858,36 @@ export default function App({
     setGameStateSaveRetry({ snapshot: null, attempt: 0 });
     setHasHydratedPlayerState(true);
   }, [bootstrapQuery.data, hydrateForPlayer, setPlayer]);
+
+  useEffect(() => {
+    if (!hasHydratedPlayerState) {
+      return;
+    }
+
+    if (clientEnv.workerAllowlist.length === 0) {
+      syncWorkerRoster([], []);
+      return;
+    }
+
+    if (!workerRosterQuery.isFetched) {
+      return;
+    }
+
+    if (workerRosterQuery.isError) {
+      console.error(workerRosterQuery.error);
+    }
+
+    syncWorkerRoster(workerRosterQuery.data?.workers ?? [], clientEnv.workerAllowlist);
+  }, [
+    bootstrapQuery.data?.gameState?.updatedAt,
+    bootstrapQuery.data?.player.id,
+    hasHydratedPlayerState,
+    syncWorkerRoster,
+    workerRosterQuery.data?.workers,
+    workerRosterQuery.error,
+    workerRosterQuery.isError,
+    workerRosterQuery.isFetched
+  ]);
 
   useEffect(() => {
     if (!hasHydratedPlayerState || artifactDeployMutation.isPending || !artifactGenerationRecovery) {

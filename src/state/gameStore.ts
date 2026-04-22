@@ -5,6 +5,7 @@ import type {
   AssignmentLogEntry,
   GameStateSnapshot
 } from '../contracts/gameState';
+import type { WorkerRegistryEntry } from '../contracts/workers';
 import { FINAL_SCENE_INDEX } from '../levels/story';
 import {
   TUTORIAL_BRIEF,
@@ -14,6 +15,7 @@ import {
 } from '../levels/tutorial';
 import { generateStartingWorkers, simulateRun } from '../sim';
 import { getWorkerLicenseCost } from '../workers/catalog';
+import { buildWorkerRosterWithAllowlist } from '../workers/integration';
 import type {
   Worker,
   ArtifactBundle,
@@ -46,6 +48,7 @@ type GameStore = {
   artifactGenerationRecovery?: ArtifactGenerationRecovery;
   runCount: number;
   assignmentLog: AssignmentLogEntry[];
+  syncWorkerRoster: (registryWorkers: WorkerRegistryEntry[], allowlistRegistryKeys: string[]) => void;
   hydrateForPlayer: (playerId: string, snapshot?: Partial<GameStateSnapshot> | null) => void;
   clearPlayerState: () => void;
   setStorySceneIndex: (next: number) => void;
@@ -348,6 +351,28 @@ export const useGameStore = create<GameStore>()(
   persist(
     (set, get) => ({
       ...getInitialState(),
+      syncWorkerRoster: (registryWorkers, allowlistRegistryKeys) => {
+        set((state) => {
+          const workers = buildWorkerRosterWithAllowlist(
+            state.workers,
+            allowlistRegistryKeys,
+            registryWorkers
+          );
+          const workerIds = new Set(workers.map((worker) => worker.id));
+
+          return {
+            workers,
+            roles: state.roles.map((role) =>
+              role.assignedWorkerId && !workerIds.has(role.assignedWorkerId)
+                ? {
+                    ...role,
+                    assignedWorkerId: undefined
+                  }
+                : role
+            )
+          };
+        });
+      },
       hydrateForPlayer: (playerId, snapshot) => {
         const state = get();
 

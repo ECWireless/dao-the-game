@@ -11,7 +11,7 @@ type PortraitCrop = {
   scale?: number;
 };
 
-const PORTRAIT_SOURCES: Record<GuildMemberProfile['handle'], string> = {
+const PORTRAIT_SOURCES: Record<string, string> = {
   'quartermaster-nyx': '/raidguild-avatars/quartermaster-nyx.png',
   'glint-archive': '/raidguild-avatars/glint-archive.png',
   'moss-scrip': '/raidguild-avatars/moss-scrip.png',
@@ -54,7 +54,7 @@ function getInitials(name: string) {
 }
 
 export function GuildMemberAvatar({ member }: GuildMemberAvatarProps) {
-  const src = PORTRAIT_SOURCES[member.handle];
+  const src = member.avatarUrl ?? PORTRAIT_SOURCES[member.handle];
 
   return (
     <span className="guild-member-avatar" aria-hidden="true">
