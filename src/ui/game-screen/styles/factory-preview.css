@@ -292,6 +292,42 @@
   border-top: 1px solid rgb(176 208 255 / 10%);
 }
 
+.deployment-payment-list {
+  margin-top: 0.14rem;
+  display: grid;
+  gap: 0.34rem;
+}
+
+.deployment-payment-row {
+  padding-top: 0.42rem;
+  display: grid;
+  gap: 0.14rem;
+  border-top: 1px solid rgb(176 208 255 / 10%);
+}
+
+.deployment-payment-row:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.deployment-payment-row span {
+  color: rgb(159 203 255 / 58%);
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.deployment-payment-row strong {
+  color: #f6f9ff;
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+
+.deployment-payment-row p {
+  margin: 0;
+}
+
 .deployment-notes {
   display: grid;
   gap: 0.16rem;

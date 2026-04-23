@@ -6,6 +6,7 @@ import type {
   WorkerRegistryLiveMetadata,
   WorkerRegistrySubmitRequest
 } from '../../src/contracts/workers';
+import type { RoleTagId, WorkerManifest, WorkerRunRequest } from '../../src/types.js';
 import {
   WORKER_ERC8004_REGISTRY_ADDRESS,
   WORKER_REGISTRATION_CHAIN,
@@ -122,6 +123,8 @@ const WorkerRegistrySubmitRequestSchema = z.object({
 
 const WORKER_FETCH_TIMEOUT_MS = 5000;
 const MAX_WORKER_RESPONSE_BYTES = 256 * 1024;
+const MAX_WORKER_LICENSE_PRICE_USDC = 1;
+const X402_REQUIRED_HEADER_NAMES = ['payment-required', 'x-payment'] as const;
 
 export type WorkerRegistryHydrationMode = 'manifest' | 'full';
 
@@ -228,6 +231,135 @@ async function fetchJson<T>(url: string, schema: z.ZodSchema<T>, label: string):
 
 function buildWorkerUrl(workerOrigin: string, path: string): string {
   return new URL(path, `${workerOrigin}/`).toString();
+}
+
+function getWorkerLicensePriceAmount(manifest: WorkerManifest): number {
+  const amount = Number.parseFloat(manifest.pricing.amount);
+
+  if (!Number.isFinite(amount) || amount < 0) {
+    throw new HttpError(400, 'Worker pricing amount must be a valid non-negative USDC value.');
+  }
+
+  return amount;
+}
+
+function buildWorkerRunProbeRequest(roleTag: RoleTagId): WorkerRunRequest {
+  const baseRequest = {
+    specVersion: 'dao-the-game.run-request.v1' as const,
+    job: {
+      requestId: 'registry-payment-probe',
+      requestKind: 'live-assignment' as const,
+      requestedAt: new Date().toISOString(),
+      artifactType: 'conference-site' as const,
+      hatName: roleTag,
+      brief: {
+        clientName: 'DAO the Game Registry',
+        mission: 'Validate paid /run behavior for registry submission.',
+        requirements: ['Return a valid paid-worker response for this contract.'] as [string]
+      },
+      contract: {
+        outputContentType: 'application/json' as const
+      }
+    }
+  } satisfies WorkerRunRequest;
+
+  switch (roleTag) {
+    case 'ui-designer':
+    case 'brand-designer':
+      return baseRequest;
+    case 'frontend-engineer':
+      return {
+        ...baseRequest,
+        job: {
+          ...baseRequest.job,
+          contract: {
+            inputContentType: 'application/json',
+            outputContentType: 'text/html'
+          },
+          upstreamHandoff: {
+            summary: 'Registry payment probe design handoff.',
+            contentType: 'application/json',
+            content: JSON.stringify({
+              designLanguage: 'systems',
+              implementationDirective: 'Return a full HTML document for the current assignment.'
+            })
+          }
+        }
+      };
+    case 'code-reviewer':
+      return {
+        ...baseRequest,
+        job: {
+          ...baseRequest.job,
+          contract: {
+            inputContentType: 'text/html',
+            outputContentType: 'text/html'
+          },
+          upstreamHandoff: {
+            summary: 'Registry payment probe implementation handoff.',
+            contentType: 'text/html',
+            content:
+              '<!doctype html><html><head><title>Registry Probe</title></head><body><main><h1>Registry Probe</h1></main></body></html>'
+          }
+        }
+      };
+  }
+}
+
+export async function validateWorkerPaymentRegistration(
+  workerOrigin: string,
+  manifest: WorkerManifest
+): Promise<void> {
+  const priceAmount = getWorkerLicensePriceAmount(manifest);
+
+  if (priceAmount > MAX_WORKER_LICENSE_PRICE_USDC) {
+    throw new HttpError(
+      400,
+      `Worker pricing amount must be ${MAX_WORKER_LICENSE_PRICE_USDC} USDC or less per request attempt.`
+    );
+  }
+
+  if (priceAmount === 0) {
+    return;
+  }
+
+  let response: Response;
+
+  try {
+    response = await fetch(buildWorkerUrl(workerOrigin, '/.well-known/dao-the-game/run'), {
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify(buildWorkerRunProbeRequest(manifest.identity.roleTag)),
+      redirect: 'error',
+      signal: AbortSignal.timeout(WORKER_FETCH_TIMEOUT_MS)
+    });
+  } catch {
+    throw new HttpError(
+      400,
+      'Paid worker /run payment challenge could not be verified from the submitted worker origin.'
+    );
+  }
+
+  if (response.status !== 402) {
+    throw new HttpError(
+      400,
+      'Paid workers must return HTTP 402 Payment Required from /run when called without payment.'
+    );
+  }
+
+  const paymentHeader = X402_REQUIRED_HEADER_NAMES.find((headerName) =>
+    response.headers.has(headerName)
+  );
+
+  if (!paymentHeader) {
+    throw new HttpError(
+      400,
+      'Paid workers must include an x402 payment header with their unpaid /run challenge.'
+    );
+  }
 }
 
 export function parseWorkerRegistrySubmitRequest(body: unknown): WorkerRegistrySubmitRequest {

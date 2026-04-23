@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import type { ArtifactWorkerPaymentsPreference } from '../../../contracts/artifact';
 import type { ArtifactGenerationRecovery } from '../../../contracts/gameState';
 import { hasPipelineStage } from '../../../pipeline';
 import type { Worker, ArtifactBundle, Brief, HatRole, RunResult } from '../../../types';
 import type { ArtifactGenerationProgress } from '../types';
 import { buildFactoryRoleLanes } from '../factoryUtils';
 import { usePannableViewport } from '../usePannableViewport';
+import { buildWorkerPaymentPlan } from '../../../workers/paymentPlan';
+import { FactoryPaymentSheet } from './FactoryPaymentSheet';
 import { FactoryPreview } from './FactoryPreview';
 import { FactoryRequirementsSheet } from './FactoryRequirementsSheet';
 import { FactoryWorkerSheet } from './FactoryWorkerSheet';
@@ -24,7 +27,8 @@ type FactorySceneProps = {
   artifactGenerationRecovery?: ArtifactGenerationRecovery | null;
   onRetryArtifactGeneration?: () => void | Promise<void>;
   isRetryingArtifactGeneration?: boolean;
-  onRun?: () => void | Promise<void>;
+  payerWalletAddress?: string | null;
+  onRun?: (workerPayments?: ArtifactWorkerPaymentsPreference) => void | Promise<void>;
   onContinue?: () => void;
   onLockChange?: (isLocked: boolean) => void;
   isReadOnly?: boolean;
@@ -61,6 +65,7 @@ export function FactoryScene({
   artifactGenerationRecovery = null,
   onRetryArtifactGeneration,
   isRetryingArtifactGeneration = false,
+  payerWalletAddress = null,
   onRun,
   onContinue,
   onLockChange,
@@ -70,10 +75,14 @@ export function FactoryScene({
   const [packetIndex, setPacketIndex] = useState(0);
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
   const [isRequirementsVisible, setIsRequirementsVisible] = useState(false);
+  const [isPaymentApprovalVisible, setIsPaymentApprovalVisible] = useState(false);
+  const [queuedWorkerPayments, setQueuedWorkerPayments] =
+    useState<ArtifactWorkerPaymentsPreference | null>(null);
   const [openTraceStageId, setOpenTraceStageId] = useState<PositionedRoleLane['stageId'] | null>(null);
   const hasTriggeredRunRef = useRef(false);
   const hasSettledOnOutputRef = useRef(false);
   const roleLanes = useMemo(() => buildFactoryRoleLanes(roles, workers), [workers, roles]);
+  const paymentPlan = useMemo(() => buildWorkerPaymentPlan(roles, workers), [roles, workers]);
   const workerTraceByStageId = useMemo(
     () => new Map((latestArtifacts?.workerTrace ?? []).map((trace) => [trace.stageId, trace])),
     [latestArtifacts?.workerTrace]
@@ -325,13 +334,14 @@ export function FactoryScene({
 
     void (async () => {
       try {
-        await onRun();
+        await onRun(queuedWorkerPayments ?? undefined);
       } finally {
         setIsRunning(false);
+        setQueuedWorkerPayments(null);
         setIsPreviewVisible(false);
       }
     })();
-  }, [isReadOnly, isRunning, onRun]);
+  }, [isReadOnly, isRunning, onRun, queuedWorkerPayments]);
 
   useEffect(() => {
     if (isPipelineRunning) {
@@ -443,10 +453,20 @@ export function FactoryScene({
     sourceNode.y
   ]);
 
+  const beginRun = useCallback((workerPayments?: ArtifactWorkerPaymentsPreference) => {
+    hasTriggeredRunRef.current = false;
+    setIsPaymentApprovalVisible(false);
+    setIsPreviewVisible(false);
+    setQueuedWorkerPayments(workerPayments ?? null);
+    setIsRunning(true);
+    setPacketIndex(0);
+  }, []);
+
   const handleRetryGeneration = useCallback(async () => {
     hasSettledOnOutputRef.current = false;
     setIsPreviewVisible(false);
     setIsRequirementsVisible(false);
+    setIsPaymentApprovalVisible(false);
     setOpenTraceStageId(null);
     setPacketIndex(0);
 
@@ -637,10 +657,12 @@ export function FactoryScene({
           type="button"
           disabled={!canRun || isPipelineRunning || !onRun}
           onClick={() => {
-            hasTriggeredRunRef.current = false;
-            setIsPreviewVisible(false);
-            setIsRunning(true);
-            setPacketIndex(0);
+            if (paymentPlan.requiresApproval) {
+              setIsPaymentApprovalVisible(true);
+              return;
+            }
+
+            beginRun();
           }}
         >
           {isRunning ? 'Deploying...' : 'Deploy Through Factory'}
@@ -685,6 +707,35 @@ export function FactoryScene({
 
       {isRequirementsVisible ? (
         <FactoryRequirementsSheet brief={brief} onClose={() => setIsRequirementsVisible(false)} />
+      ) : null}
+      {isPaymentApprovalVisible ? (
+        <FactoryPaymentSheet
+          plan={paymentPlan}
+          payerWalletAddress={payerWalletAddress}
+          onApprove={() =>
+            beginRun(
+              payerWalletAddress
+                ? {
+                    mode: 'approve-all',
+                    walletAddress: payerWalletAddress
+                  }
+                : undefined
+            )
+          }
+          onUseFreeFallback={() =>
+            beginRun(
+              payerWalletAddress
+                ? {
+                    mode: 'demo-fallback',
+                    walletAddress: payerWalletAddress
+                  }
+                : {
+                    mode: 'demo-fallback'
+                  }
+            )
+          }
+          onClose={() => setIsPaymentApprovalVisible(false)}
+        />
       ) : null}
       {openTrace ? <FactoryWorkerSheet trace={openTrace} onClose={() => setOpenTraceStageId(null)} /> : null}
     </section>

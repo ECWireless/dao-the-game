@@ -18,8 +18,8 @@ function createRegistryWorker(input: {
     workerOrigin: `https://${input.handle}.example.com`,
     erc8004TokenId: input.tokenId,
     agentCardUri: `ipfs://${input.id}`,
-    registrationChainId: 84532,
-    paymentChainId: 84532,
+    registrationChainId: 8453,
+    paymentChainId: 8453,
     ownerAddress: '0x1111111111111111111111111111111111111111',
     engineerEmail: null,
     availability: 'active',
@@ -62,7 +62,7 @@ describe('buildWorkerRosterWithAllowlist', () => {
   it('replaces only the first frontend slot when one frontend worker is allowlisted', () => {
     const registryWorker = createRegistryWorker({
       id: 'registry-frontend-1',
-      registryKey: '84532:17',
+      registryKey: '8453:17',
       tokenId: '17',
       roleTag: 'frontend-engineer',
       name: 'Clive Vector',
@@ -71,7 +71,7 @@ describe('buildWorkerRosterWithAllowlist', () => {
 
     const roster = buildWorkerRosterWithAllowlist(
       BUILTIN_WORKER_REGISTRY,
-      ['84532:17'],
+      ['8453:17'],
       [registryWorker]
     );
 
@@ -86,7 +86,7 @@ describe('buildWorkerRosterWithAllowlist', () => {
   it('fills shared frontend slots in allowlist order', () => {
     const first = createRegistryWorker({
       id: 'registry-frontend-1',
-      registryKey: '84532:17',
+      registryKey: '8453:17',
       tokenId: '17',
       roleTag: 'frontend-engineer',
       name: 'Clive Vector',
@@ -94,7 +94,7 @@ describe('buildWorkerRosterWithAllowlist', () => {
     });
     const second = createRegistryWorker({
       id: 'registry-frontend-2',
-      registryKey: '84532:19',
+      registryKey: '8453:19',
       tokenId: '19',
       roleTag: 'frontend-engineer',
       name: 'Nova Grid',
@@ -103,7 +103,7 @@ describe('buildWorkerRosterWithAllowlist', () => {
 
     const roster = buildWorkerRosterWithAllowlist(
       BUILTIN_WORKER_REGISTRY,
-      ['84532:19', '84532:17'],
+      ['8453:19', '8453:17'],
       [first, second]
     );
 
@@ -114,7 +114,7 @@ describe('buildWorkerRosterWithAllowlist', () => {
   it('maps design workers to their fixed slots', () => {
     const uiWorker = createRegistryWorker({
       id: 'registry-ui-1',
-      registryKey: '84532:31',
+      registryKey: '8453:31',
       tokenId: '31',
       roleTag: 'ui-designer',
       name: 'Interface Tide',
@@ -122,7 +122,7 @@ describe('buildWorkerRosterWithAllowlist', () => {
     });
     const brandWorker = createRegistryWorker({
       id: 'registry-brand-1',
-      registryKey: '84532:32',
+      registryKey: '8453:32',
       tokenId: '32',
       roleTag: 'brand-designer',
       name: 'Banner Static',
@@ -131,7 +131,7 @@ describe('buildWorkerRosterWithAllowlist', () => {
 
     const roster = buildWorkerRosterWithAllowlist(
       BUILTIN_WORKER_REGISTRY,
-      ['84532:31', '84532:32'],
+      ['8453:31', '8453:32'],
       [uiWorker, brandWorker]
     );
 

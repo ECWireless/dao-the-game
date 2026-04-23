@@ -12,7 +12,15 @@
     "job": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["requestId", "requestKind", "requestedAt", "artifactType", "hatName", "brief", "contract"],
+      "required": [
+        "requestId",
+        "requestKind",
+        "requestedAt",
+        "artifactType",
+        "hatName",
+        "brief",
+        "contract"
+      ],
       "properties": {
         "requestId": {
           "type": "string",

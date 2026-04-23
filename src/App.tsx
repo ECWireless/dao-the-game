@@ -10,7 +10,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Address } from 'viem';
 import type {
   ArtifactDeployEvent,
-  ArtifactDeployRequest
+  ArtifactDeployRequest,
+  ArtifactWorkerPaymentsPreference
 } from './contracts/artifact';
 import type {
   OrgRoleHatRecord,
@@ -594,7 +595,10 @@ export default function App({
     syncResetRefs();
   }, [resetMutation, setArtifactGenerationRecovery, syncResetRefs, updateBootstrapCache]);
 
-  const buildArtifactDeployRequest = useCallback((cycle: 1 | 2): ArtifactDeployRequest | null => {
+  const buildArtifactDeployRequest = useCallback((
+    cycle: 1 | 2,
+    workerPayments?: ArtifactWorkerPaymentsPreference
+  ): ArtifactDeployRequest | null => {
     const currentState = useGameStore.getState();
     const result =
       currentState.runHistory[cycle] ??
@@ -626,7 +630,8 @@ export default function App({
         studioName: currentState.studioName,
         roles: currentState.roles,
         workers: currentState.workers
-      }
+      },
+      ...(workerPayments ? { workerPayments } : {})
     };
   }, []);
 
@@ -783,7 +788,7 @@ export default function App({
     ]
   );
 
-  const handleRunProduction = useCallback(async () => {
+  const handleRunProduction = useCallback(async (workerPayments?: ArtifactWorkerPaymentsPreference) => {
     const result = runProduction();
 
     if (!result) {
@@ -791,7 +796,7 @@ export default function App({
     }
 
     const nextCycle = Math.min(useGameStore.getState().runCount, 2) as 1 | 2;
-    const deployRequest = buildArtifactDeployRequest(nextCycle);
+    const deployRequest = buildArtifactDeployRequest(nextCycle, workerPayments);
 
     if (!deployRequest) {
       setArtifactGenerationError('No draft artifact was available for assembly.');
@@ -1048,6 +1053,7 @@ export default function App({
       onRetryArtifactGeneration={handleRetryArtifactDeploy}
       isRetryingArtifactGeneration={artifactDeployMutation.isPending}
       onResetDemo={handleResetDemo}
+      payerWalletAddress={walletAddress}
       artifactGenerationProgress={artifactGenerationProgress}
       artifactGenerationError={artifactGenerationError}
       artifactGenerationRecovery={artifactGenerationRecovery ?? null}

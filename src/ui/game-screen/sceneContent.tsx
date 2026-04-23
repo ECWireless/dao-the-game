@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { ArtifactWorkerPaymentsPreference } from '../../contracts/artifact';
 import type { ArtifactGenerationRecovery } from '../../contracts/gameState';
 import type { OrgTreeRecord } from '../../contracts/org';
 import { TUTORIAL_BRIEF } from '../../levels/tutorial';
@@ -36,13 +37,14 @@ type SceneContentArgs = {
   artifactGenerationRecovery?: ArtifactGenerationRecovery | null;
   retryArtifactGeneration?: () => Promise<void> | void;
   isRetryingArtifactGeneration?: boolean;
+  payerWalletAddress?: string | null;
   advanceStory: () => void;
   queueCrossAppAdvance: () => void;
   setStudioName: (name: string) => Promise<void> | void;
   configureRole: (roleId: string, name: string) => Promise<void> | void;
   unlockExpandedRoles: () => void;
   assignRole: (roleId: string, workerId: string) => void;
-  runProduction: () => Promise<void> | void;
+  runProduction: (workerPayments?: ArtifactWorkerPaymentsPreference) => Promise<void> | void;
   submitClientReview: (cycle: 1 | 2) => void;
   resetDemo: () => Promise<void> | void;
   setIsFactoryLocked: (isLocked: boolean) => void;
@@ -115,6 +117,7 @@ export function renderSceneContent({
   artifactGenerationRecovery,
   retryArtifactGeneration,
   isRetryingArtifactGeneration = false,
+  payerWalletAddress = null,
   advanceStory,
   queueCrossAppAdvance,
   setStudioName,
@@ -277,6 +280,7 @@ export function renderSceneContent({
           artifactGenerationRecovery={runCount >= 1 ? artifactGenerationRecovery : undefined}
           onRetryArtifactGeneration={isInteractive ? retryArtifactGeneration : undefined}
           isRetryingArtifactGeneration={isRetryingArtifactGeneration}
+          payerWalletAddress={payerWalletAddress}
           onRun={isInteractive ? runProduction : undefined}
           onContinue={isInteractive ? () => submitClientReview(1) : undefined}
           onLockChange={isInteractive ? setIsFactoryLocked : undefined}
@@ -373,6 +377,7 @@ export function renderSceneContent({
           artifactGenerationRecovery={runCount >= 2 ? artifactGenerationRecovery : undefined}
           onRetryArtifactGeneration={isInteractive ? retryArtifactGeneration : undefined}
           isRetryingArtifactGeneration={isRetryingArtifactGeneration}
+          payerWalletAddress={payerWalletAddress}
           onRun={isInteractive ? runProduction : undefined}
           onContinue={isInteractive ? () => submitClientReview(2) : undefined}
           onLockChange={isInteractive ? setIsFactoryLocked : undefined}
