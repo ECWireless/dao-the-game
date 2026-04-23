@@ -1,4 +1,4 @@
-import { PIPELINE_STAGE_ORDER } from '../pipeline';
+import { PIPELINE_STAGE_ORDER } from '../pipeline.js';
 import type { PipelineStageId, RoleTagId, Worker } from '../types';
 import { getRoleTagLabel } from './roleTags';
 
