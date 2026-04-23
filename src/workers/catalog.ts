@@ -1,6 +1,6 @@
 import { PIPELINE_STAGE_ORDER } from '../pipeline.js';
 import type { PipelineStageId, RoleTagId, Worker } from '../types';
-import { getRoleTagLabel } from './roleTags';
+import { getRoleTagLabel } from './roleTags.js';
 
 function getStageEntries(worker: Worker): Array<[PipelineStageId, number]> {
   return PIPELINE_STAGE_ORDER.map((stageId) => [stageId, worker.gameplay.capabilityVector[stageId]]);

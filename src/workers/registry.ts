@@ -1,5 +1,5 @@
 import type { Worker } from '../types';
-import { getRoleTagLabel } from './roleTags';
+import { getRoleTagLabel } from './roleTags.js';
 
 type BuiltinWorkerSeed = Omit<
   Worker,

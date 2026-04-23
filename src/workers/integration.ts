@@ -1,7 +1,7 @@
 import type { WorkerRegistryEntry } from '../contracts/workers';
 import type { RoleTagId, Worker } from '../types';
-import { getRoleTagLabel } from './roleTags';
-import { BUILTIN_WORKER_REGISTRY } from './registry';
+import { getRoleTagLabel } from './roleTags.js';
+import { BUILTIN_WORKER_REGISTRY } from './registry.js';
 
 const BUILTIN_BY_ID = new Map(BUILTIN_WORKER_REGISTRY.map((worker) => [worker.id, worker]));
 
