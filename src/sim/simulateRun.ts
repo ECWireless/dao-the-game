@@ -1,4 +1,9 @@
-import { PIPELINE_STAGE_ORDER, getPipelineStageDefinition, inferPipelineStageId } from '../pipeline';
+import {
+  PIPELINE_STAGE_ORDER,
+  getFirstRoleByPipelineStage,
+  getPipelineStageDefinition,
+  inferPipelineStageId
+} from '../pipeline';
 import type {
   Worker,
   PipelineStageId,
@@ -227,19 +232,7 @@ function compareStagesByStrength(left: PipelineStageResult, right: PipelineStage
 }
 
 function getRoleByStage(state: RunState): Map<PipelineStageId, RunState['roles'][number]> {
-  const roleByStage = new Map<PipelineStageId, RunState['roles'][number]>();
-
-  for (const role of state.roles) {
-    const stageId = inferPipelineStageId(role);
-
-    if (!stageId || roleByStage.has(stageId)) {
-      continue;
-    }
-
-    roleByStage.set(stageId, role);
-  }
-
-  return roleByStage;
+  return getFirstRoleByPipelineStage(state.roles);
 }
 
 function getDuplicateStageIds(state: RunState): PipelineStageId[] {

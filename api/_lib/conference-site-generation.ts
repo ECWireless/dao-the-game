@@ -30,7 +30,10 @@ import type {
   WorkerRunRequest
 } from '../../src/types';
 import { getHatExecutionContract, getPipelineStageContract } from '../../src/pipeline.js';
-import { buildWorkerPaymentPlan, type WorkerPaymentStagePlan } from '../../src/workers/paymentPlan.js';
+import {
+  buildWorkerPaymentPlanFromPipeline,
+  type WorkerPaymentStagePlan
+} from '../../src/workers/paymentPlan.js';
 import { getArtifactDebugWorkers, getOpenAiApiKey } from './env.js';
 import { HttpError } from './http.js';
 import {
@@ -451,10 +454,10 @@ function isExternalWorker(agent: Worker): boolean {
   );
 }
 
-function buildStagePaymentPlanMap(input: RunArtifactsInput): Map<PipelineStageId, WorkerPaymentStagePlan> {
-  return new Map(
-    buildWorkerPaymentPlan(input.roles, input.workers).stages.map((stage) => [stage.stageId, stage])
-  );
+function buildStagePaymentPlanMap(
+  stages: WorkerPaymentStagePlan[]
+): Map<PipelineStageId, WorkerPaymentStagePlan> {
+  return new Map(stages.map((stage) => [stage.stageId, stage]));
 }
 
 function buildInitialDemoFallbackAssignment(
@@ -548,6 +551,33 @@ function getFallbackAssignmentAfterPaymentFailure(assignment: StageAssignment): 
     ...assignment,
     agent: fallbackWorker
   };
+}
+
+function resolvePaymentSummaryStageWorker({
+  stage,
+  workerById,
+  assignments,
+  paymentContext
+}: {
+  stage: WorkerPaymentStagePlan;
+  workerById: Map<string, Worker>;
+  assignments: Map<PipelineStageId, StageAssignment>;
+  paymentContext: WorkerPaymentExecutionContext | null;
+}): Worker {
+  const plannedWorker = workerById.get(stage.workerId) ?? assignments.get(stage.stageId)?.agent;
+
+  if (!plannedWorker) {
+    throw new HttpError(
+      500,
+      `Could not resolve the worker summary for ${stage.stageId}.`
+    );
+  }
+
+  if (stage.kind === 'paid-external' && paymentContext?.mode === 'demo-fallback') {
+    return getBuiltinFallbackWorker(plannedWorker) ?? plannedWorker;
+  }
+
+  return plannedWorker;
 }
 
 function normalizeBriefRequirements(requirements: string[]): [string, ...string[]] {
@@ -1809,8 +1839,13 @@ export async function generateConferenceSiteArtifactWithWorkers(
   }
 
   const assignments = getStageAssignments(input);
-  const paymentPlan = buildWorkerPaymentPlan(input.roles, input.workers);
-  const paymentPlanByStage = buildStagePaymentPlanMap(input);
+  const workerById = new Map(input.workers.map((worker) => [worker.id, worker]));
+  const paymentPlan = buildWorkerPaymentPlanFromPipeline(
+    input.result.pipeline?.stages,
+    input.roles,
+    input.workers
+  );
+  const paymentPlanByStage = buildStagePaymentPlanMap(paymentPlan.stages);
   const paymentOutcomes = new Map<PipelineStageId, ArtifactPaymentStageEntry>();
   const baseContext = buildBaseContext(input);
   const fallback = buildFallbackContent(deterministicFallback, input.brief.conferenceSiteSpec);
@@ -2593,19 +2628,32 @@ export async function generateConferenceSiteArtifactWithWorkers(
     const paymentSummary = buildArtifactPaymentSummary({
       payerWalletAddress: paymentContext?.payerWalletAddress ?? null,
       wouldHavePaid: paymentPlan.total,
-      stages: paymentPlan.stages.map(
-        (stage) =>
-          paymentOutcomes.get(stage.stageId) ??
-          buildArtifactPaymentStageEntry({
-            plan: stage,
-            executedWorker: assignments.get(stage.stageId)?.agent ?? input.workers[0]!,
-            status: stage.kind === 'paid-external' ? 'fallback-free' : 'free',
-            note:
-              stage.kind === 'paid-external'
-                ? 'This paid stage did not complete as an external paid run.'
-                : buildFreeStageNote(stage, stage.workerName)
-          })
-      )
+      stages: paymentPlan.stages.map((stage) => {
+        const recordedOutcome = paymentOutcomes.get(stage.stageId);
+
+        if (recordedOutcome) {
+          return recordedOutcome;
+        }
+
+        const executedWorker = resolvePaymentSummaryStageWorker({
+          stage,
+          workerById,
+          assignments,
+          paymentContext
+        });
+
+        return buildArtifactPaymentStageEntry({
+          plan: stage,
+          executedWorker,
+          status: stage.kind === 'paid-external' ? 'fallback-free' : 'free',
+          note:
+            stage.kind === 'paid-external'
+              ? paymentContext?.mode === 'demo-fallback'
+                ? buildFallbackStageNote('player-choice', executedWorker.name)
+                : 'This paid stage did not complete as an external paid run.'
+              : buildFreeStageNote(stage, executedWorker.name)
+        });
+      })
     });
     const workerTrace = buildWorkerTrace({
       studioName: input.studioName?.trim() || 'Ghost Studio',

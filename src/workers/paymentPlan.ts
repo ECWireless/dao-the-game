@@ -1,5 +1,16 @@
-import { getPipelineStageDefinition, inferPipelineStageId, sortRolesByPipelineStage } from '../pipeline';
-import type { HatRole, PipelineStageId, Worker, WorkerPaymentStageKind } from '../types';
+import {
+  getFirstRoleByPipelineStage,
+  getPipelineStageDefinition,
+  inferPipelineStageId,
+  sortRolesByPipelineStage
+} from '../pipeline';
+import type {
+  HatRole,
+  PipelineStageId,
+  PipelineStageResult,
+  Worker,
+  WorkerPaymentStageKind
+} from '../types';
 import { getWorkerLicenseCost } from './catalog';
 
 export type WorkerPaymentStagePlan = {
@@ -24,6 +35,22 @@ export type WorkerPaymentPlan = {
   requiresApproval: boolean;
 };
 
+function finalizeWorkerPaymentPlan(stages: WorkerPaymentStagePlan[]): WorkerPaymentPlan {
+  const total = stages
+    .filter((stage) => stage.kind === 'paid-external')
+    .reduce((sum, stage) => sum + stage.amount, 0);
+  const payableStageCount = stages.filter((stage) => stage.kind === 'paid-external').length;
+  const freeStageCount = stages.length - payableStageCount;
+
+  return {
+    stages,
+    total,
+    payableStageCount,
+    freeStageCount,
+    requiresApproval: payableStageCount > 0
+  };
+}
+
 function getConfiguredRunRoles(roles: HatRole[]): HatRole[] {
   const configuredRoles = roles.filter((role) => role.isConfigured);
   return configuredRoles.length > 0 ? configuredRoles : roles;
@@ -47,7 +74,10 @@ function getStageKind(worker: Worker, amount: number): WorkerPaymentStageKind {
 
 export function buildWorkerPaymentPlan(roles: HatRole[], workers: Worker[]): WorkerPaymentPlan {
   const workerById = new Map(workers.map((worker) => [worker.id, worker]));
-  const runnableRoles = sortRolesByPipelineStage(getConfiguredRunRoles(roles));
+  const configuredRunRoles = getConfiguredRunRoles(roles);
+  const runnableRoles = sortRolesByPipelineStage([
+    ...getFirstRoleByPipelineStage(configuredRunRoles).values()
+  ]);
   const stages: WorkerPaymentStagePlan[] = [];
 
   for (const role of runnableRoles) {
@@ -80,17 +110,46 @@ export function buildWorkerPaymentPlan(roles: HatRole[], workers: Worker[]): Wor
     });
   }
 
-  const total = stages
-    .filter((stage) => stage.kind === 'paid-external')
-    .reduce((sum, stage) => sum + stage.amount, 0);
-  const payableStageCount = stages.filter((stage) => stage.kind === 'paid-external').length;
-  const freeStageCount = stages.length - payableStageCount;
+  return finalizeWorkerPaymentPlan(stages);
+}
 
-  return {
-    stages,
-    total,
-    payableStageCount,
-    freeStageCount,
-    requiresApproval: payableStageCount > 0
-  };
+export function buildWorkerPaymentPlanFromPipeline(
+  pipelineStages: readonly PipelineStageResult[] | undefined,
+  roles: HatRole[],
+  workers: Worker[]
+): WorkerPaymentPlan {
+  const workerById = new Map(workers.map((worker) => [worker.id, worker]));
+  const roleById = new Map(roles.map((role) => [role.id, role]));
+  const stages: WorkerPaymentStagePlan[] = [];
+
+  for (const stage of pipelineStages ?? []) {
+    if (!stage.assignedWorkerId) {
+      continue;
+    }
+
+    const worker = workerById.get(stage.assignedWorkerId);
+
+    if (!worker) {
+      continue;
+    }
+
+    const role = stage.roleId ? roleById.get(stage.roleId) : undefined;
+    const amount = getWorkerLicenseCost(worker);
+
+    stages.push({
+      stageId: stage.id,
+      stageLabel: stage.label || getPipelineStageDefinition(stage.id).label,
+      roleId: stage.roleId ?? role?.id,
+      roleName: stage.roleName ?? role?.name ?? getPipelineStageDefinition(stage.id).label,
+      workerId: worker.id,
+      workerName: worker.manifest.identity.name,
+      workerHandle: worker.manifest.identity.handle,
+      registryRecordId: worker.registryRecordId,
+      workerOrigin: worker.workerOrigin,
+      amount,
+      kind: getStageKind(worker, amount)
+    });
+  }
+
+  return finalizeWorkerPaymentPlan(stages);
 }

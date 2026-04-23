@@ -1,7 +1,7 @@
 import { createViemAccount } from '@privy-io/node/viem';
 import { registerExactEvmScheme } from '@x402/evm/exact/client';
 import { wrapFetchWithPayment, x402Client, type Network } from '@x402/fetch';
-import type { Address } from 'viem';
+import { getAddress, isAddress, type Address } from 'viem';
 import type { ArtifactWorkerPaymentsPreference } from '../../src/contracts/artifact.js';
 import {
   WORKER_NETWORKS,
@@ -31,6 +31,24 @@ export type WorkerPaymentExecutionContext = {
   fetchWithPayment: typeof fetch | null;
 };
 
+function normalizeOptionalPayerWalletAddress(walletAddress?: string | null): string | null {
+  if (typeof walletAddress !== 'string') {
+    return null;
+  }
+
+  const trimmedWalletAddress = walletAddress.trim();
+
+  if (!trimmedWalletAddress) {
+    return null;
+  }
+
+  if (!isAddress(trimmedWalletAddress)) {
+    throw new HttpError(400, 'A valid Base wallet address is required for worker payments.');
+  }
+
+  return getAddress(trimmedWalletAddress);
+}
+
 export async function createWorkerPaymentExecutionContext({
   user,
   identityToken,
@@ -43,12 +61,18 @@ export async function createWorkerPaymentExecutionContext({
   if (preference.mode === 'demo-fallback') {
     return {
       mode: preference.mode,
-      payerWalletAddress: preference.walletAddress ?? null,
+      payerWalletAddress: normalizeOptionalPayerWalletAddress(preference.walletAddress),
       fetchWithPayment: null
     };
   }
 
-  const wallet = getEmbeddedPrivyEthereumWallet(user, preference.walletAddress);
+  const normalizedPayerWalletAddress = normalizeOptionalPayerWalletAddress(preference.walletAddress);
+
+  if (!normalizedPayerWalletAddress) {
+    throw new HttpError(400, 'A valid Base wallet address is required for worker payments.');
+  }
+
+  const wallet = getEmbeddedPrivyEthereumWallet(user, normalizedPayerWalletAddress);
   const walletId = wallet.id;
 
   if (!walletId) {

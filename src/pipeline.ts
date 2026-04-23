@@ -168,6 +168,22 @@ export function sortRolesByPipelineStage(roles: HatRole[]): HatRole[] {
   return [...roles].sort(comparePipelineStages);
 }
 
+export function getFirstRoleByPipelineStage(roles: HatRole[]): Map<PipelineStageId, HatRole> {
+  const roleByStage = new Map<PipelineStageId, HatRole>();
+
+  for (const role of roles) {
+    const stageId = inferPipelineStageId(role);
+
+    if (!stageId || roleByStage.has(stageId)) {
+      continue;
+    }
+
+    roleByStage.set(stageId, role);
+  }
+
+  return roleByStage;
+}
+
 export function hasPipelineStage(roles: HatRole[], stageId: PipelineStageId): boolean {
   return roles.some((role) => inferPipelineStageId(role) === stageId);
 }

@@ -1,5 +1,5 @@
 import type { ArtifactDeployEvent, ArtifactDeployRequest } from '../../src/contracts/artifact';
-import { buildWorkerPaymentPlan } from '../../src/workers/paymentPlan.js';
+import { buildWorkerPaymentPlanFromPipeline } from '../../src/workers/paymentPlan.js';
 import { generateConferenceSiteArtifactWithWorkers } from '../_lib/conference-site-generation.js';
 import { deployArtifactToPinata, canUsePinataDeploys } from '../_lib/pinata.js';
 import { handleRouteError, HttpError, options, parseOptionalJsonBody, withCors } from '../_lib/http.js';
@@ -69,7 +69,11 @@ export async function POST(request: Request): Promise<Response> {
     validateRequestBody(body);
 
     const paymentPlan = body.generationInput
-      ? buildWorkerPaymentPlan(body.generationInput.roles, body.generationInput.workers)
+      ? buildWorkerPaymentPlanFromPipeline(
+          body.generationInput.result.pipeline?.stages,
+          body.generationInput.roles,
+          body.generationInput.workers
+        )
       : null;
 
     if (paymentPlan?.requiresApproval && !body.workerPayments) {
