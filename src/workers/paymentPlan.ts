@@ -3,7 +3,7 @@ import {
   getPipelineStageDefinition,
   inferPipelineStageId,
   sortRolesByPipelineStage
-} from '../pipeline';
+} from '../pipeline.js';
 import type {
   HatRole,
   PipelineStageId,
@@ -11,7 +11,7 @@ import type {
   Worker,
   WorkerPaymentStageKind
 } from '../types';
-import { getWorkerLicenseCost } from './catalog';
+import { getWorkerLicenseCost } from './catalog.js';
 
 export type WorkerPaymentStagePlan = {
   stageId: PipelineStageId;
