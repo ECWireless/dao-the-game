@@ -1,8 +1,10 @@
 import type { ArtifactDeployEvent, ArtifactDeployRequest } from '../../src/contracts/artifact';
+import { buildWorkerPaymentPlan } from '../../src/workers/paymentPlan.js';
 import { generateConferenceSiteArtifactWithWorkers } from '../_lib/conference-site-generation.js';
 import { deployArtifactToPinata, canUsePinataDeploys } from '../_lib/pinata.js';
 import { handleRouteError, HttpError, options, parseOptionalJsonBody, withCors } from '../_lib/http.js';
-import { requirePrivyUser } from '../_lib/privy.js';
+import { requirePrivyAuth } from '../_lib/privy.js';
+import { createWorkerPaymentExecutionContext } from '../_lib/workerPayments.js';
 
 export const runtime = 'nodejs';
 
@@ -39,14 +41,52 @@ function validateRequestBody(body: ArtifactDeployRequest | null): asserts body i
   ) {
     throw new HttpError(400, 'Artifact provenance is missing required fields.');
   }
+
+  if (body.workerPayments) {
+    if (
+      typeof body.workerPayments !== 'object' ||
+      (body.workerPayments.mode !== 'approve-all' &&
+        body.workerPayments.mode !== 'demo-fallback')
+    ) {
+      throw new HttpError(400, 'Worker payment preferences are invalid.');
+    }
+
+    if (
+      body.workerPayments.mode === 'approve-all' &&
+      (typeof body.workerPayments.walletAddress !== 'string' ||
+        !body.workerPayments.walletAddress.trim())
+    ) {
+      throw new HttpError(400, 'A payer wallet address is required to approve paid worker stages.');
+    }
+  }
 }
 
 export async function POST(request: Request): Promise<Response> {
   try {
-    await requirePrivyUser(request);
+    const { user, identityToken } = await requirePrivyAuth(request);
     const body = await parseOptionalJsonBody<ArtifactDeployRequest>(request);
 
     validateRequestBody(body);
+
+    const paymentPlan = body.generationInput
+      ? buildWorkerPaymentPlan(body.generationInput.roles, body.generationInput.workers)
+      : null;
+
+    if (paymentPlan?.requiresApproval && !body.workerPayments) {
+      throw new HttpError(
+        400,
+        'Worker payment approval is required before the paid line can start.'
+      );
+    }
+
+    const workerPaymentContext =
+      body.generationInput && body.workerPayments
+        ? await createWorkerPaymentExecutionContext({
+            user,
+            identityToken,
+            preference: body.workerPayments
+          })
+        : null;
 
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
@@ -66,7 +106,12 @@ export async function POST(request: Request): Promise<Response> {
             });
 
             const generationResult = body.generationInput
-              ? await generateConferenceSiteArtifactWithWorkers(body.generationInput, body.artifact, writeEvent)
+              ? await generateConferenceSiteArtifactWithWorkers(
+                  body.generationInput,
+                  body.artifact,
+                  writeEvent,
+                  workerPaymentContext
+                )
               : { artifact: body.artifact, usedFallback: false };
 
             console.info(

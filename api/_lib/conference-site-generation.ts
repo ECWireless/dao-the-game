@@ -19,6 +19,7 @@ import {
 import type { ArtifactDeployEvent } from '../../src/contracts/artifact.js';
 import type {
   ArtifactBundle,
+  ArtifactPaymentStageEntry,
   ArtifactWorkerTrace,
   HatExecutionContract,
   HatRole,
@@ -29,9 +30,16 @@ import type {
   WorkerRunRequest
 } from '../../src/types';
 import { getHatExecutionContract, getPipelineStageContract } from '../../src/pipeline.js';
+import { buildWorkerPaymentPlan, type WorkerPaymentStagePlan } from '../../src/workers/paymentPlan.js';
 import { getArtifactDebugWorkers, getOpenAiApiKey } from './env.js';
 import { HttpError } from './http.js';
-import { runExternalWorker } from './workerRun.js';
+import {
+  buildArtifactPaymentStageEntry,
+  buildArtifactPaymentSummary,
+  getBuiltinFallbackWorker,
+  type WorkerPaymentExecutionContext
+} from './workerPayments.js';
+import { runExternalWorker, WorkerPaymentError } from './workerRun.js';
 
 const LAYOUT_VARIANTS = [
   'balanced-summit',
@@ -443,6 +451,105 @@ function isExternalWorker(agent: Worker): boolean {
   );
 }
 
+function buildStagePaymentPlanMap(input: RunArtifactsInput): Map<PipelineStageId, WorkerPaymentStagePlan> {
+  return new Map(
+    buildWorkerPaymentPlan(input.roles, input.workers).stages.map((stage) => [stage.stageId, stage])
+  );
+}
+
+function buildInitialDemoFallbackAssignment(
+  assignment: StageAssignment,
+  paymentStage: WorkerPaymentStagePlan | undefined,
+  paymentContext: WorkerPaymentExecutionContext | null
+): {
+  assignment: StageAssignment;
+  fallbackReason: 'player-choice' | null;
+} {
+  if (paymentStage?.kind !== 'paid-external' || paymentContext?.mode !== 'demo-fallback') {
+    return {
+      assignment,
+      fallbackReason: null
+    };
+  }
+
+  const fallbackWorker = getBuiltinFallbackWorker(assignment.agent);
+
+  if (!fallbackWorker) {
+    throw new HttpError(
+      502,
+      `${assignment.agent.name} could not be rerouted to a free demo worker for ${assignment.stageId}.`
+    );
+  }
+
+  return {
+    assignment: {
+      ...assignment,
+      agent: fallbackWorker
+    },
+    fallbackReason: 'player-choice'
+  };
+}
+
+function buildPaymentSuccessNote(workerName: string): string {
+  return `${workerName} cleared its x402 license and ran on the live line.`;
+}
+
+function buildFreeStageNote(plan: WorkerPaymentStagePlan, workerName: string): string {
+  switch (plan.kind) {
+    case 'free-external':
+      return `${workerName} ran as an external worker without charging this line.`;
+    case 'free-demo':
+    default:
+      return `${workerName} ran as a free demo worker on this line.`;
+  }
+}
+
+function buildFallbackStageNote(reason: 'player-choice' | 'payment-failed', workerName: string): string {
+  if (reason === 'player-choice') {
+    return `${workerName} took this stage after the player chose the free demo fallback instead of paying the external worker.`;
+  }
+
+  return `${workerName} took this stage after the external worker payment could not be completed from the player's Base wallet. Fund the wallet and rerun if you want the paid worker back on the line.`;
+}
+
+function recordPaymentOutcome(
+  outcomes: Map<PipelineStageId, ArtifactPaymentStageEntry>,
+  paymentStage: WorkerPaymentStagePlan | undefined,
+  executedWorker: Worker,
+  status: 'paid' | 'free' | 'fallback-free',
+  note: string
+): void {
+  if (!paymentStage) {
+    return;
+  }
+
+  outcomes.set(
+    paymentStage.stageId,
+    buildArtifactPaymentStageEntry({
+      plan: paymentStage,
+      executedWorker,
+      status,
+      note
+    })
+  );
+}
+
+function getFallbackAssignmentAfterPaymentFailure(assignment: StageAssignment): StageAssignment {
+  const fallbackWorker = getBuiltinFallbackWorker(assignment.agent);
+
+  if (!fallbackWorker) {
+    throw new HttpError(
+      502,
+      `${assignment.agent.name} could not be rerouted to a free demo worker after payment failed.`
+    );
+  }
+
+  return {
+    ...assignment,
+    agent: fallbackWorker
+  };
+}
+
 function normalizeBriefRequirements(requirements: string[]): [string, ...string[]] {
   if (requirements.length > 0) {
     return [requirements[0]!, ...requirements.slice(1)];
@@ -502,6 +609,9 @@ function buildExternalWorkerRunRequest({
   assignment: StageAssignment;
   upstreamHandoff?: WorkerHandoff;
 }): WorkerRunRequest {
+  const requestId = crypto.randomUUID();
+  const requestedAt = new Date().toISOString();
+
   if (
     upstreamHandoff &&
     assignment.contract.inputContentType &&
@@ -516,9 +626,9 @@ function buildExternalWorkerRunRequest({
   return {
     specVersion: 'dao-the-game.run-request.v1',
     job: {
-      requestId: crypto.randomUUID(),
+      requestId,
       requestKind: 'live-assignment',
-      requestedAt: new Date().toISOString(),
+      requestedAt,
       artifactType: input.brief.artifactType,
       hatName: assignment.roleName ?? assignment.role?.name ?? assignment.stageId,
       brief: {
@@ -536,12 +646,16 @@ async function runExternalAssignedWorker({
   input,
   assignment,
   upstreamHandoff,
-  sink
+  sink,
+  fetchImplementation,
+  paymentEnabled = false
 }: {
   input: RunArtifactsInput;
   assignment: StageAssignment;
   upstreamHandoff?: WorkerHandoff;
   sink?: GenerationEventSink;
+  fetchImplementation?: typeof fetch;
+  paymentEnabled?: boolean;
 }): Promise<WorkerHandoff> {
   const workerOrigin = assignment.agent.workerOrigin;
 
@@ -569,7 +683,11 @@ async function runExternalAssignedWorker({
         input,
         assignment,
         upstreamHandoff
-      })
+      }),
+      {
+        fetchImplementation,
+        paymentEnabled
+      }
     );
     const durationMs = Date.now() - startedAt;
 
@@ -602,6 +720,10 @@ async function runExternalAssignedWorker({
 
     return handoff;
   } catch (error) {
+    if (error instanceof WorkerPaymentError) {
+      throw error;
+    }
+
     const durationMs = Date.now() - startedAt;
     const message = error instanceof Error ? error.message : 'External worker run failed.';
 
@@ -1676,7 +1798,8 @@ function buildDeploymentSummaryContext({
 export async function generateConferenceSiteArtifactWithWorkers(
   input: RunArtifactsInput,
   fallbackArtifact?: ReturnType<typeof buildConferenceSiteArtifact>,
-  sink?: GenerationEventSink
+  sink?: GenerationEventSink,
+  paymentContext: WorkerPaymentExecutionContext | null = null
 ): Promise<WorkerGeneratedArtifactResult> {
   const client = createOpenAiClient();
   const deterministicFallback = fallbackArtifact ?? buildConferenceSiteArtifact(input);
@@ -1686,52 +1809,138 @@ export async function generateConferenceSiteArtifactWithWorkers(
   }
 
   const assignments = getStageAssignments(input);
+  const paymentPlan = buildWorkerPaymentPlan(input.roles, input.workers);
+  const paymentPlanByStage = buildStagePaymentPlanMap(input);
+  const paymentOutcomes = new Map<PipelineStageId, ArtifactPaymentStageEntry>();
   const baseContext = buildBaseContext(input);
   const fallback = buildFallbackContent(deterministicFallback, input.brief.conferenceSiteSpec);
   const defaultDesignContract = buildFallbackDesignContract(fallback);
 
   try {
     const designWorker = assignments.get('design');
-    const designResult =
-      designWorker && !isExternalWorker(designWorker.agent)
-        ? await runStructuredWorker({
-            client,
-            schema: DesignWorkerSchema,
-            schemaName: 'conference_design_worker_output',
-            systemPrompt: getDesignSystemPrompt(),
-            assignment: designWorker,
-            sink,
-            context: buildDesignStageContext({
-              baseContext,
-              worker: summarizeWorker(designWorker.agent, designWorker.roleName),
-              workerDirective: getWorkerGenerationDirective(designWorker.agent),
-              currentDraft: {
-                heroLayout: fallback.heroLayout,
-                designLanguage: fallback.designLanguage,
-                visualTreatment: fallback.visualTreatment,
-                panelStyle: fallback.panelStyle,
-                cardGeometry: fallback.cardGeometry,
-                density: fallback.density,
-                trackLayout: fallback.trackLayout,
-                detailLayout: fallback.detailLayout,
-                headlineFont: fallback.headlineFont,
-                sectionOrder: fallback.sectionOrder,
-                heroHeadline: fallback.heroHeadline,
-                heroSubhead: fallback.heroSubhead,
-                heroAtmosphere: fallback.heroAtmosphere,
-                layoutVariant: fallback.layoutVariant
-              }
-            })
+    const designPaymentStage = designWorker ? paymentPlanByStage.get(designWorker.stageId) : undefined;
+    const {
+      assignment: designExecutionWorker,
+      fallbackReason: designFallbackReason
+    } = designWorker
+      ? buildInitialDemoFallbackAssignment(designWorker, designPaymentStage, paymentContext)
+      : { assignment: undefined, fallbackReason: null };
+    let designResult: WorkerRunResult<typeof DesignWorkerSchema> | null = null;
+    let externalDesignHandoff: WorkerHandoff | null = null;
+
+    if (designExecutionWorker && !isExternalWorker(designExecutionWorker.agent)) {
+      designResult = await runStructuredWorker({
+        client,
+        schema: DesignWorkerSchema,
+        schemaName: 'conference_design_worker_output',
+        systemPrompt: getDesignSystemPrompt(),
+        assignment: designExecutionWorker,
+        sink,
+        context: buildDesignStageContext({
+          baseContext,
+          worker: summarizeWorker(designExecutionWorker.agent, designExecutionWorker.roleName),
+          workerDirective: getWorkerGenerationDirective(designExecutionWorker.agent),
+          currentDraft: {
+            heroLayout: fallback.heroLayout,
+            designLanguage: fallback.designLanguage,
+            visualTreatment: fallback.visualTreatment,
+            panelStyle: fallback.panelStyle,
+            cardGeometry: fallback.cardGeometry,
+            density: fallback.density,
+            trackLayout: fallback.trackLayout,
+            detailLayout: fallback.detailLayout,
+            headlineFont: fallback.headlineFont,
+            sectionOrder: fallback.sectionOrder,
+            heroHeadline: fallback.heroHeadline,
+            heroSubhead: fallback.heroSubhead,
+            heroAtmosphere: fallback.heroAtmosphere,
+            layoutVariant: fallback.layoutVariant
+          }
+        })
+      });
+
+      recordPaymentOutcome(
+        paymentOutcomes,
+        designPaymentStage,
+        designExecutionWorker.agent,
+        designFallbackReason ? 'fallback-free' : 'free',
+        designFallbackReason
+          ? buildFallbackStageNote(designFallbackReason, designExecutionWorker.agent.name)
+          : designPaymentStage
+            ? buildFreeStageNote(designPaymentStage, designExecutionWorker.agent.name)
+            : `${designExecutionWorker.agent.name} completed the design pass.`
+      );
+    } else if (designExecutionWorker) {
+      try {
+        externalDesignHandoff = await runExternalAssignedWorker({
+          input,
+          assignment: designExecutionWorker,
+          sink,
+          fetchImplementation:
+            designPaymentStage?.kind === 'paid-external' && paymentContext?.mode === 'approve-all'
+              ? paymentContext.fetchWithPayment ?? undefined
+              : undefined,
+          paymentEnabled:
+            designPaymentStage?.kind === 'paid-external' && paymentContext?.mode === 'approve-all'
+        });
+
+        recordPaymentOutcome(
+          paymentOutcomes,
+          designPaymentStage,
+          designExecutionWorker.agent,
+          designPaymentStage?.kind === 'paid-external' ? 'paid' : 'free',
+          designPaymentStage?.kind === 'paid-external'
+            ? buildPaymentSuccessNote(designExecutionWorker.agent.name)
+            : designPaymentStage
+              ? buildFreeStageNote(designPaymentStage, designExecutionWorker.agent.name)
+              : `${designExecutionWorker.agent.name} completed the design pass.`
+        );
+      } catch (error) {
+        if (!(error instanceof WorkerPaymentError) || designPaymentStage?.kind !== 'paid-external') {
+          throw error;
+        }
+
+        const fallbackDesignWorker = getFallbackAssignmentAfterPaymentFailure(designExecutionWorker);
+
+        designResult = await runStructuredWorker({
+          client,
+          schema: DesignWorkerSchema,
+          schemaName: 'conference_design_worker_output',
+          systemPrompt: getDesignSystemPrompt(),
+          assignment: fallbackDesignWorker,
+          sink,
+          context: buildDesignStageContext({
+            baseContext,
+            worker: summarizeWorker(fallbackDesignWorker.agent, fallbackDesignWorker.roleName),
+            workerDirective: getWorkerGenerationDirective(fallbackDesignWorker.agent),
+            currentDraft: {
+              heroLayout: fallback.heroLayout,
+              designLanguage: fallback.designLanguage,
+              visualTreatment: fallback.visualTreatment,
+              panelStyle: fallback.panelStyle,
+              cardGeometry: fallback.cardGeometry,
+              density: fallback.density,
+              trackLayout: fallback.trackLayout,
+              detailLayout: fallback.detailLayout,
+              headlineFont: fallback.headlineFont,
+              sectionOrder: fallback.sectionOrder,
+              heroHeadline: fallback.heroHeadline,
+              heroSubhead: fallback.heroSubhead,
+              heroAtmosphere: fallback.heroAtmosphere,
+              layoutVariant: fallback.layoutVariant
+            }
           })
-        : null;
-    const externalDesignHandoff =
-      designWorker && isExternalWorker(designWorker.agent)
-        ? await runExternalAssignedWorker({
-            input,
-            assignment: designWorker,
-            sink
-          })
-        : null;
+        });
+
+        recordPaymentOutcome(
+          paymentOutcomes,
+          designPaymentStage,
+          fallbackDesignWorker.agent,
+          'fallback-free',
+          buildFallbackStageNote('payment-failed', fallbackDesignWorker.agent.name)
+        );
+      }
+    }
     const design = designResult?.output ?? null;
     const designContractPatch = design
       ? {
@@ -1815,34 +2024,131 @@ export async function generateConferenceSiteArtifactWithWorkers(
     };
 
     const implementationWorker = assignments.get('implementation');
-    const implementationResult =
-      implementationWorker && !isExternalWorker(implementationWorker.agent)
-        ? await runStructuredWorker({
-            client,
-            schema: ImplementationWorkerSchema,
-            schemaName: 'conference_implementation_worker_output',
-            systemPrompt: getImplementationSystemPrompt(),
-            assignment: implementationWorker,
-            sink,
-            context: buildImplementationStageContext({
-              baseContext,
-              worker: summarizeWorker(implementationWorker.agent, implementationWorker.roleName),
-              workerDirective: getWorkerGenerationDirective(implementationWorker.agent),
-              designContract,
-              contentSeed: implementationSeed,
-              upstreamHandoff: designHandoff ?? undefined
-            })
+    const implementationPaymentStage = implementationWorker
+      ? paymentPlanByStage.get(implementationWorker.stageId)
+      : undefined;
+    const {
+      assignment: implementationExecutionWorker,
+      fallbackReason: implementationFallbackReason
+    } = implementationWorker
+      ? buildInitialDemoFallbackAssignment(
+          implementationWorker,
+          implementationPaymentStage,
+          paymentContext
+        )
+      : { assignment: undefined, fallbackReason: null };
+    let implementationResult: WorkerRunResult<typeof ImplementationWorkerSchema> | null = null;
+    let externalImplementationHandoff: WorkerHandoff | null = null;
+
+    if (implementationExecutionWorker && !isExternalWorker(implementationExecutionWorker.agent)) {
+      implementationResult = await runStructuredWorker({
+        client,
+        schema: ImplementationWorkerSchema,
+        schemaName: 'conference_implementation_worker_output',
+        systemPrompt: getImplementationSystemPrompt(),
+        assignment: implementationExecutionWorker,
+        sink,
+        context: buildImplementationStageContext({
+          baseContext,
+          worker: summarizeWorker(
+            implementationExecutionWorker.agent,
+            implementationExecutionWorker.roleName
+          ),
+          workerDirective: getWorkerGenerationDirective(implementationExecutionWorker.agent),
+          designContract,
+          contentSeed: implementationSeed,
+          upstreamHandoff: designHandoff ?? undefined
+        })
+      });
+
+      recordPaymentOutcome(
+        paymentOutcomes,
+        implementationPaymentStage,
+        implementationExecutionWorker.agent,
+        implementationFallbackReason ? 'fallback-free' : 'free',
+        implementationFallbackReason
+          ? buildFallbackStageNote(
+              implementationFallbackReason,
+              implementationExecutionWorker.agent.name
+            )
+          : implementationPaymentStage
+            ? buildFreeStageNote(
+                implementationPaymentStage,
+                implementationExecutionWorker.agent.name
+              )
+            : `${implementationExecutionWorker.agent.name} completed the implementation pass.`
+      );
+    } else if (implementationExecutionWorker) {
+      try {
+        externalImplementationHandoff = await runExternalAssignedWorker({
+          input,
+          assignment: implementationExecutionWorker,
+          upstreamHandoff: designHandoff ?? undefined,
+          sink,
+          fetchImplementation:
+            implementationPaymentStage?.kind === 'paid-external' &&
+            paymentContext?.mode === 'approve-all'
+              ? paymentContext.fetchWithPayment ?? undefined
+              : undefined,
+          paymentEnabled:
+            implementationPaymentStage?.kind === 'paid-external' &&
+            paymentContext?.mode === 'approve-all'
+        });
+
+        recordPaymentOutcome(
+          paymentOutcomes,
+          implementationPaymentStage,
+          implementationExecutionWorker.agent,
+          implementationPaymentStage?.kind === 'paid-external' ? 'paid' : 'free',
+          implementationPaymentStage?.kind === 'paid-external'
+            ? buildPaymentSuccessNote(implementationExecutionWorker.agent.name)
+            : implementationPaymentStage
+              ? buildFreeStageNote(
+                  implementationPaymentStage,
+                  implementationExecutionWorker.agent.name
+                )
+              : `${implementationExecutionWorker.agent.name} completed the implementation pass.`
+        );
+      } catch (error) {
+        if (
+          !(error instanceof WorkerPaymentError) ||
+          implementationPaymentStage?.kind !== 'paid-external'
+        ) {
+          throw error;
+        }
+
+        const fallbackImplementationWorker =
+          getFallbackAssignmentAfterPaymentFailure(implementationExecutionWorker);
+
+        implementationResult = await runStructuredWorker({
+          client,
+          schema: ImplementationWorkerSchema,
+          schemaName: 'conference_implementation_worker_output',
+          systemPrompt: getImplementationSystemPrompt(),
+          assignment: fallbackImplementationWorker,
+          sink,
+          context: buildImplementationStageContext({
+            baseContext,
+            worker: summarizeWorker(
+              fallbackImplementationWorker.agent,
+              fallbackImplementationWorker.roleName
+            ),
+            workerDirective: getWorkerGenerationDirective(fallbackImplementationWorker.agent),
+            designContract,
+            contentSeed: implementationSeed,
+            upstreamHandoff: designHandoff ?? undefined
           })
-        : null;
-    const externalImplementationHandoff =
-      implementationWorker && isExternalWorker(implementationWorker.agent)
-        ? await runExternalAssignedWorker({
-            input,
-            assignment: implementationWorker,
-            upstreamHandoff: designHandoff ?? undefined,
-            sink
-          })
-        : null;
+        });
+
+        recordPaymentOutcome(
+          paymentOutcomes,
+          implementationPaymentStage,
+          fallbackImplementationWorker.agent,
+          'fallback-free',
+          buildFallbackStageNote('payment-failed', fallbackImplementationWorker.agent.name)
+        );
+      }
+    }
     const implementation = implementationResult?.output
       ? {
           ...implementationResult.output,
@@ -1874,15 +2180,24 @@ export async function generateConferenceSiteArtifactWithWorkers(
           : null;
 
     const reviewWorker = assignments.get('review');
+    const reviewPaymentStage = reviewWorker ? paymentPlanByStage.get(reviewWorker.stageId) : undefined;
+    const {
+      assignment: reviewExecutionWorker,
+      fallbackReason: reviewFallbackReason
+    } = reviewWorker
+      ? buildInitialDemoFallbackAssignment(reviewWorker, reviewPaymentStage, paymentContext)
+      : { assignment: undefined, fallbackReason: null };
     const reviewInputHandoff =
       implementationHandoff?.contentType === 'text/html' ? implementationHandoff : undefined;
     const reviewJudgeContext =
-      reviewWorker && implementation?.siteDocument?.trim() && !isExternalWorker(reviewWorker.agent)
+      reviewExecutionWorker &&
+      implementation?.siteDocument?.trim() &&
+      !isExternalWorker(reviewExecutionWorker.agent)
         ? buildReviewStageContext({
             baseContext,
             stage: 'review',
-            worker: summarizeWorker(reviewWorker.agent, reviewWorker.roleName),
-            workerDirective: getWorkerGenerationDirective(reviewWorker.agent),
+            worker: summarizeWorker(reviewExecutionWorker.agent, reviewExecutionWorker.roleName),
+            workerDirective: getWorkerGenerationDirective(reviewExecutionWorker.agent),
             designGuardrails: reviewDesignGuardrails,
             implementedSite: {
               siteTitle: implementation.siteTitle,
@@ -1897,20 +2212,22 @@ export async function generateConferenceSiteArtifactWithWorkers(
             }
           })
         : null;
-    const reviewJudgeInitialResult =
-      reviewWorker && reviewJudgeContext
-        ? await runStructuredWorker({
+    let reviewJudgeInitialResult: WorkerRunResult<typeof ReviewJudgeSchema> | null = null;
+
+    if (reviewExecutionWorker && reviewJudgeContext) {
+      reviewJudgeInitialResult = await runStructuredWorker({
             client,
             schema: ReviewJudgeSchema,
             schemaName: 'conference_review_judge_output',
             systemPrompt: getReviewJudgeSystemPrompt(),
-            assignment: reviewWorker,
+            assignment: reviewExecutionWorker,
             sink,
             context: reviewJudgeContext
-          })
-        : null;
-    const reviewJudgeResult =
-      reviewWorker &&
+          });
+    }
+
+    let reviewJudgeResult =
+      reviewExecutionWorker &&
       reviewJudgeContext &&
       reviewJudgeInitialResult?.usedFallback
         ? await runStructuredWorker({
@@ -1918,21 +2235,102 @@ export async function generateConferenceSiteArtifactWithWorkers(
             schema: ReviewJudgeSchema,
             schemaName: 'conference_review_judge_output_retry',
             systemPrompt: getReviewJudgeSystemPrompt(),
-            assignment: reviewWorker,
+            assignment: reviewExecutionWorker,
             modelOverride: 'gpt-5-mini',
             sink,
             context: reviewJudgeContext
           })
         : reviewJudgeInitialResult;
-    const externalReviewHandoff =
-      reviewWorker && isExternalWorker(reviewWorker.agent) && reviewInputHandoff
-        ? await runExternalAssignedWorker({
-            input,
-            assignment: reviewWorker,
-            upstreamHandoff: reviewInputHandoff,
-            sink
-          })
-        : null;
+    let externalReviewHandoff: WorkerHandoff | null = null;
+
+    if (reviewExecutionWorker && isExternalWorker(reviewExecutionWorker.agent) && reviewInputHandoff) {
+      try {
+        externalReviewHandoff = await runExternalAssignedWorker({
+          input,
+          assignment: reviewExecutionWorker,
+          upstreamHandoff: reviewInputHandoff,
+          sink,
+          fetchImplementation:
+            reviewPaymentStage?.kind === 'paid-external' && paymentContext?.mode === 'approve-all'
+              ? paymentContext.fetchWithPayment ?? undefined
+              : undefined,
+          paymentEnabled:
+            reviewPaymentStage?.kind === 'paid-external' && paymentContext?.mode === 'approve-all'
+        });
+
+        recordPaymentOutcome(
+          paymentOutcomes,
+          reviewPaymentStage,
+          reviewExecutionWorker.agent,
+          reviewPaymentStage?.kind === 'paid-external' ? 'paid' : 'free',
+          reviewPaymentStage?.kind === 'paid-external'
+            ? buildPaymentSuccessNote(reviewExecutionWorker.agent.name)
+            : reviewPaymentStage
+              ? buildFreeStageNote(reviewPaymentStage, reviewExecutionWorker.agent.name)
+              : `${reviewExecutionWorker.agent.name} completed the review pass.`
+        );
+      } catch (error) {
+        if (!(error instanceof WorkerPaymentError) || reviewPaymentStage?.kind !== 'paid-external') {
+          throw error;
+        }
+
+        const fallbackReviewWorker = getFallbackAssignmentAfterPaymentFailure(reviewExecutionWorker);
+        const fallbackReviewContext =
+          implementation?.siteDocument?.trim()
+            ? buildReviewStageContext({
+                baseContext,
+                stage: 'review',
+                worker: summarizeWorker(fallbackReviewWorker.agent, fallbackReviewWorker.roleName),
+                workerDirective: getWorkerGenerationDirective(fallbackReviewWorker.agent),
+                designGuardrails: reviewDesignGuardrails,
+                implementedSite: {
+                  siteTitle: implementation.siteTitle,
+                  siteDocument: implementation.siteDocument,
+                  htmlCharCount: implementation.siteDocument.length
+                },
+                implementationSummary: {
+                  buildSummary: implementation.buildSummary,
+                  mobileStrategy: implementation.mobileStrategy,
+                  preservedSignals: implementation.preservedSignals,
+                  sectionHighlights: implementation.sectionHighlights
+                }
+              })
+            : null;
+
+        reviewJudgeResult =
+          fallbackReviewContext
+            ? await runStructuredWorker({
+                client,
+                schema: ReviewJudgeSchema,
+                schemaName: 'conference_review_judge_output',
+                systemPrompt: getReviewJudgeSystemPrompt(),
+                assignment: fallbackReviewWorker,
+                sink,
+                context: fallbackReviewContext
+              })
+            : null;
+
+        recordPaymentOutcome(
+          paymentOutcomes,
+          reviewPaymentStage,
+          fallbackReviewWorker.agent,
+          'fallback-free',
+          buildFallbackStageNote('payment-failed', fallbackReviewWorker.agent.name)
+        );
+      }
+    } else if (reviewExecutionWorker && reviewJudgeResult) {
+      recordPaymentOutcome(
+        paymentOutcomes,
+        reviewPaymentStage,
+        reviewExecutionWorker.agent,
+        reviewFallbackReason ? 'fallback-free' : 'free',
+        reviewFallbackReason
+          ? buildFallbackStageNote(reviewFallbackReason, reviewExecutionWorker.agent.name)
+          : reviewPaymentStage
+            ? buildFreeStageNote(reviewPaymentStage, reviewExecutionWorker.agent.name)
+            : `${reviewExecutionWorker.agent.name} completed the review pass.`
+      );
+    }
     const reviewJudge =
       reviewJudgeResult?.output ??
       (externalReviewHandoff && reviewInputHandoff
@@ -1955,6 +2353,19 @@ export async function generateConferenceSiteArtifactWithWorkers(
         : null;
 
     const deploymentWorker = assignments.get('deployment');
+    const deploymentPaymentStage = deploymentWorker
+      ? paymentPlanByStage.get(deploymentWorker.stageId)
+      : undefined;
+    const {
+      assignment: deploymentExecutionWorker,
+      fallbackReason: deploymentFallbackReason
+    } = deploymentWorker
+      ? buildInitialDemoFallbackAssignment(
+          deploymentWorker,
+          deploymentPaymentStage,
+          paymentContext
+        )
+      : { assignment: undefined, fallbackReason: null };
     const deploymentInputHandoff =
       reviewHandoff?.contentType === 'text/html'
         ? reviewHandoff
@@ -1962,7 +2373,7 @@ export async function generateConferenceSiteArtifactWithWorkers(
           ? implementationHandoff
           : undefined;
     const deploymentSource =
-      deploymentWorker && deploymentInputHandoff?.content.trim() && implementation
+      deploymentExecutionWorker && deploymentInputHandoff?.content.trim() && implementation
         ? buildDeploymentSummaryContext({
             siteTitle: inferSiteTitleFromHtml(
               deploymentInputHandoff.content,
@@ -1979,37 +2390,114 @@ export async function generateConferenceSiteArtifactWithWorkers(
             htmlCharCount: deploymentInputHandoff.content.length
           })
         : null;
-    const deploymentResult =
-      deploymentWorker && deploymentSource && !isExternalWorker(deploymentWorker.agent)
-        ? await runStructuredWorker({
-            client,
-            schema: DeploymentWorkerSchema,
-            schemaName: 'conference_deployment_worker_output',
-            systemPrompt: getDeploymentSystemPrompt(),
-            assignment: deploymentWorker,
-            sink,
-            context: buildDeploymentStageContext({
-              baseContext,
-              worker: summarizeWorker(deploymentWorker.agent, deploymentWorker.roleName),
-              workerDirective: getWorkerGenerationDirective(deploymentWorker.agent),
-              finalSiteSummary: deploymentSource
-            })
-          })
-        : null;
-    const externalDeploymentHandoff =
-      deploymentWorker && isExternalWorker(deploymentWorker.agent) && deploymentInputHandoff
-        ? await runExternalAssignedWorker({
-            input,
-            assignment: deploymentWorker,
-            upstreamHandoff: deploymentInputHandoff,
-            sink
-          })
-        : null;
+    let deploymentResult: WorkerRunResult<typeof DeploymentWorkerSchema> | null = null;
+    let externalDeploymentHandoff: WorkerHandoff | null = null;
+
+    if (deploymentExecutionWorker && deploymentSource && !isExternalWorker(deploymentExecutionWorker.agent)) {
+      deploymentResult = await runStructuredWorker({
+        client,
+        schema: DeploymentWorkerSchema,
+        schemaName: 'conference_deployment_worker_output',
+        systemPrompt: getDeploymentSystemPrompt(),
+        assignment: deploymentExecutionWorker,
+        sink,
+        context: buildDeploymentStageContext({
+          baseContext,
+          worker: summarizeWorker(deploymentExecutionWorker.agent, deploymentExecutionWorker.roleName),
+          workerDirective: getWorkerGenerationDirective(deploymentExecutionWorker.agent),
+          finalSiteSummary: deploymentSource
+        })
+      });
+
+      recordPaymentOutcome(
+        paymentOutcomes,
+        deploymentPaymentStage,
+        deploymentExecutionWorker.agent,
+        deploymentFallbackReason ? 'fallback-free' : 'free',
+        deploymentFallbackReason
+          ? buildFallbackStageNote(deploymentFallbackReason, deploymentExecutionWorker.agent.name)
+          : deploymentPaymentStage
+            ? buildFreeStageNote(deploymentPaymentStage, deploymentExecutionWorker.agent.name)
+            : `${deploymentExecutionWorker.agent.name} completed the deployment pass.`
+      );
+    } else if (
+      deploymentExecutionWorker &&
+      isExternalWorker(deploymentExecutionWorker.agent) &&
+      deploymentInputHandoff
+    ) {
+      try {
+        externalDeploymentHandoff = await runExternalAssignedWorker({
+          input,
+          assignment: deploymentExecutionWorker,
+          upstreamHandoff: deploymentInputHandoff,
+          sink,
+          fetchImplementation:
+            deploymentPaymentStage?.kind === 'paid-external' &&
+            paymentContext?.mode === 'approve-all'
+              ? paymentContext.fetchWithPayment ?? undefined
+              : undefined,
+          paymentEnabled:
+            deploymentPaymentStage?.kind === 'paid-external' &&
+            paymentContext?.mode === 'approve-all'
+        });
+
+        recordPaymentOutcome(
+          paymentOutcomes,
+          deploymentPaymentStage,
+          deploymentExecutionWorker.agent,
+          deploymentPaymentStage?.kind === 'paid-external' ? 'paid' : 'free',
+          deploymentPaymentStage?.kind === 'paid-external'
+            ? buildPaymentSuccessNote(deploymentExecutionWorker.agent.name)
+            : deploymentPaymentStage
+              ? buildFreeStageNote(deploymentPaymentStage, deploymentExecutionWorker.agent.name)
+              : `${deploymentExecutionWorker.agent.name} completed the deployment pass.`
+        );
+      } catch (error) {
+        if (
+          !(error instanceof WorkerPaymentError) ||
+          deploymentPaymentStage?.kind !== 'paid-external'
+        ) {
+          throw error;
+        }
+
+        const fallbackDeploymentWorker =
+          getFallbackAssignmentAfterPaymentFailure(deploymentExecutionWorker);
+
+        deploymentResult =
+          deploymentSource
+            ? await runStructuredWorker({
+                client,
+                schema: DeploymentWorkerSchema,
+                schemaName: 'conference_deployment_worker_output',
+                systemPrompt: getDeploymentSystemPrompt(),
+                assignment: fallbackDeploymentWorker,
+                sink,
+                context: buildDeploymentStageContext({
+                  baseContext,
+                  worker: summarizeWorker(
+                    fallbackDeploymentWorker.agent,
+                    fallbackDeploymentWorker.roleName
+                  ),
+                  workerDirective: getWorkerGenerationDirective(fallbackDeploymentWorker.agent),
+                  finalSiteSummary: deploymentSource
+                })
+              })
+            : null;
+
+        recordPaymentOutcome(
+          paymentOutcomes,
+          deploymentPaymentStage,
+          fallbackDeploymentWorker.agent,
+          'fallback-free',
+          buildFallbackStageNote('payment-failed', fallbackDeploymentWorker.agent.name)
+        );
+      }
+    }
     const deployment = deploymentResult?.output
       ? deploymentResult.output
       : externalDeploymentHandoff
         ? buildSyntheticDeploymentOutput(externalDeploymentHandoff)
-        : deploymentWorker && deploymentSource
+        : deploymentExecutionWorker && deploymentSource
         ? {
             launchSummary: 'I prepared the assembled site for publish without reopening the HTML build.',
             shipReadiness: reviewJudge?.needsChanges
@@ -2056,15 +2544,15 @@ export async function generateConferenceSiteArtifactWithWorkers(
             : null;
     const finalDocumentWorker =
       deploymentHandoff?.contentType === 'text/html' &&
-      deploymentWorker &&
-      isExternalWorker(deploymentWorker.agent)
-        ? deploymentWorker
+      deploymentExecutionWorker &&
+      isExternalWorker(deploymentExecutionWorker.agent)
+        ? deploymentExecutionWorker
         : reviewHandoff?.contentType === 'text/html' &&
-            reviewWorker &&
-            isExternalWorker(reviewWorker.agent)
-          ? reviewWorker
-          : implementationHandoff?.contentType === 'text/html' && implementationWorker
-            ? implementationWorker
+            reviewExecutionWorker &&
+            isExternalWorker(reviewExecutionWorker.agent)
+          ? reviewExecutionWorker
+        : implementationHandoff?.contentType === 'text/html' && implementationExecutionWorker
+            ? implementationExecutionWorker
             : null;
     const finalDocument = finalHtmlHandoff?.content.trim()
       ? {
@@ -2102,15 +2590,32 @@ export async function generateConferenceSiteArtifactWithWorkers(
       siteTitle: finalDocument.siteTitle,
       siteDocument: finalDocument.siteDocument
     });
+    const paymentSummary = buildArtifactPaymentSummary({
+      payerWalletAddress: paymentContext?.payerWalletAddress ?? null,
+      wouldHavePaid: paymentPlan.total,
+      stages: paymentPlan.stages.map(
+        (stage) =>
+          paymentOutcomes.get(stage.stageId) ??
+          buildArtifactPaymentStageEntry({
+            plan: stage,
+            executedWorker: assignments.get(stage.stageId)?.agent ?? input.workers[0]!,
+            status: stage.kind === 'paid-external' ? 'fallback-free' : 'free',
+            note:
+              stage.kind === 'paid-external'
+                ? 'This paid stage did not complete as an external paid run.'
+                : buildFreeStageNote(stage, stage.workerName)
+          })
+      )
+    });
     const workerTrace = buildWorkerTrace({
       studioName: input.studioName?.trim() || 'Ghost Studio',
-      designWorker,
+      designWorker: designExecutionWorker ?? designWorker,
       design: designTraceSource,
-      implementationWorker,
+      implementationWorker: implementationExecutionWorker ?? implementationWorker,
       implementation: implementationTraceSource,
-      reviewWorker,
+      reviewWorker: reviewExecutionWorker ?? reviewWorker,
       review: reviewTraceSource,
-      deploymentWorker,
+      deploymentWorker: deploymentExecutionWorker ?? deploymentWorker,
       deployment: deploymentTraceSource,
       finalDocumentWorker,
       finalDocument
@@ -2119,6 +2624,7 @@ export async function generateConferenceSiteArtifactWithWorkers(
     return {
       artifact: {
         ...artifact,
+        paymentSummary,
         workerTrace
       },
       usedFallback: false

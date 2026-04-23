@@ -63,7 +63,7 @@ export const BUILTIN_WORKER_REGISTRY: Worker[] = [
       },
       pricing: {
         asset: 'USDC',
-        amount: '0.04',
+        amount: '0',
         chargeModel: 'per_request_attempt'
       }
     },
@@ -122,7 +122,7 @@ export const BUILTIN_WORKER_REGISTRY: Worker[] = [
       },
       pricing: {
         asset: 'USDC',
-        amount: '0.05',
+        amount: '0',
         chargeModel: 'per_request_attempt'
       }
     },
@@ -181,7 +181,7 @@ export const BUILTIN_WORKER_REGISTRY: Worker[] = [
       },
       pricing: {
         asset: 'USDC',
-        amount: '0.05',
+        amount: '0',
         chargeModel: 'per_request_attempt'
       }
     },
@@ -240,7 +240,7 @@ export const BUILTIN_WORKER_REGISTRY: Worker[] = [
       },
       pricing: {
         asset: 'USDC',
-        amount: '0.04',
+        amount: '0',
         chargeModel: 'per_request_attempt'
       }
     },
@@ -299,7 +299,7 @@ export const BUILTIN_WORKER_REGISTRY: Worker[] = [
       },
       pricing: {
         asset: 'USDC',
-        amount: '0.03',
+        amount: '0',
         chargeModel: 'per_request_attempt'
       }
     },
@@ -358,7 +358,7 @@ export const BUILTIN_WORKER_REGISTRY: Worker[] = [
       },
       pricing: {
         asset: 'USDC',
-        amount: '0.04',
+        amount: '0',
         chargeModel: 'per_request_attempt'
       }
     },

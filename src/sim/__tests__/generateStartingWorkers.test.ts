@@ -28,7 +28,7 @@ describe('generateStartingWorkers', () => {
       expect(worker.handle.length).toBeGreaterThan(0);
       expect(worker.specialty.length).toBeGreaterThan(0);
       expect(worker.traits.length).toBeGreaterThanOrEqual(3);
-      expect(Number.parseFloat(worker.manifest.pricing.amount)).toBeGreaterThan(0);
+      expect(Number.parseFloat(worker.manifest.pricing.amount)).toBe(0);
       expect(worker.capabilityVector.design).toBeGreaterThanOrEqual(0);
       expect(worker.capabilityVector.design).toBeLessThanOrEqual(100);
       expect(worker.capabilityVector.implementation).toBeGreaterThanOrEqual(0);

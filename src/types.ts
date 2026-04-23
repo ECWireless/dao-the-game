@@ -4,6 +4,8 @@ export type ArtifactType = 'conference-site';
 
 export type WorkerContentType = 'text/plain' | 'text/html' | 'application/json';
 
+export type WorkerPaymentStageKind = 'paid-external' | 'free-external' | 'free-demo';
+
 export type RoleTagId =
   | 'ui-designer'
   | 'brand-designer'
@@ -383,7 +385,38 @@ export type ArtifactBundle = {
   notes: string[];
   siteDocument: string;
   provenance: ArtifactProvenance;
+  paymentSummary?: ArtifactPaymentSummary;
   workerTrace?: ArtifactWorkerTrace[];
+};
+
+export type ArtifactPaymentStageStatus = 'paid' | 'free' | 'fallback-free';
+
+export type ArtifactPaymentStageEntry = {
+  stageId: PipelineStageId;
+  stageLabel: string;
+  roleName: string;
+  plannedWorkerId: string;
+  plannedWorkerName: string;
+  executedWorkerId: string;
+  executedWorkerName: string;
+  amount: number;
+  kind: WorkerPaymentStageKind;
+  status: ArtifactPaymentStageStatus;
+  note: string;
+};
+
+export type ArtifactPaymentSummary = {
+  asset: 'USDC';
+  protocol: 'x402';
+  chainId: number;
+  chainName: string;
+  payerWalletAddress?: string | null;
+  totalPaid: number;
+  wouldHavePaid: number;
+  paidStageCount: number;
+  freeStageCount: number;
+  fallbackStageCount: number;
+  stages: ArtifactPaymentStageEntry[];
 };
 
 export type ClientReview = {

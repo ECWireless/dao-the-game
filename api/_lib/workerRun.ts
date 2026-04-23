@@ -115,24 +115,61 @@ function buildWorkerRunUrl(workerOrigin: string): string {
   return new URL('/.well-known/dao-the-game/run', `${workerOrigin}/`).toString();
 }
 
+export class WorkerPaymentError extends Error {
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = 'WorkerPaymentError';
+  }
+}
+
 export async function runExternalWorker(
   workerOrigin: string,
-  body: WorkerRunRequest
+  body: WorkerRunRequest,
+  options?: {
+    fetchImplementation?: typeof fetch;
+    paymentEnabled?: boolean;
+  }
 ): Promise<WorkerRunResponse> {
   const normalizedWorkerOrigin = await normalizeWorkerOrigin(workerOrigin, {
     errorStatus: 502,
     label: 'External worker origin'
   });
-  const response = await fetch(buildWorkerRunUrl(normalizedWorkerOrigin), {
-    method: 'POST',
-    headers: {
-      accept: 'application/json',
-      'content-type': 'application/json'
-    },
-    body: JSON.stringify(body),
-    redirect: 'error',
-    signal: AbortSignal.timeout(WORKER_RUN_TIMEOUT_MS)
-  });
+  const fetchImplementation = options?.fetchImplementation ?? fetch;
+  let response: Response;
+
+  try {
+    response = await fetchImplementation(buildWorkerRunUrl(normalizedWorkerOrigin), {
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        'cache-control': 'no-store',
+        'content-type': 'application/json',
+        pragma: 'no-cache',
+        'x-dao-the-game-request-id': body.job.requestId,
+        'x-dao-the-game-request-kind': body.job.requestKind
+      },
+      body: JSON.stringify(body),
+      redirect: 'error',
+      signal: AbortSignal.timeout(WORKER_RUN_TIMEOUT_MS)
+    });
+  } catch (error) {
+    if (options?.paymentEnabled) {
+      throw new WorkerPaymentError(
+        error instanceof Error
+          ? error.message
+          : 'Worker payment could not be completed for this stage.',
+        { cause: error }
+      );
+    }
+
+    throw error;
+  }
+
+  if (options?.paymentEnabled && response.status === 402) {
+    throw new WorkerPaymentError(
+      'Worker payment could not be completed for this stage.'
+    );
+  }
 
   if (!response.ok) {
     throw new HttpError(502, `Worker run failed with status ${response.status}.`);

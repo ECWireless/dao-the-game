@@ -1,8 +1,19 @@
 import type { ArtifactBundle, PipelineStageId, RunArtifactsInput } from '../types';
 
+export type ArtifactWorkerPaymentsPreference =
+  | {
+      mode: 'approve-all';
+      walletAddress: string;
+    }
+  | {
+      mode: 'demo-fallback';
+      walletAddress?: string | null;
+    };
+
 export type ArtifactDeployRequest = {
   artifact: ArtifactBundle;
   generationInput?: RunArtifactsInput;
+  workerPayments?: ArtifactWorkerPaymentsPreference;
 };
 
 export type ArtifactDeployResponse = {

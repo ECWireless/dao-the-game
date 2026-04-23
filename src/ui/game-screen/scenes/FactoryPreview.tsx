@@ -57,6 +57,7 @@ export function FactoryPreview({
     currentArtifact: latestArtifacts,
     previousRun: cycle === 2 ? previousRun : undefined
   });
+  const paymentSummary = latestArtifacts?.paymentSummary;
 
   useEffect(() => {
     setIsFrameLoading(hasDeployPreview);
@@ -137,6 +138,18 @@ export function FactoryPreview({
             <p>Deployed URL</p>
             <strong>{latestArtifacts.publicUrl ?? heroUrl}</strong>
           </article>
+          {paymentSummary ? (
+            <>
+              <article className="deployment-artifact-card">
+                <p>Worker payments</p>
+                <strong>{formatUsdc(paymentSummary.totalPaid)}</strong>
+              </article>
+              <article className="deployment-artifact-card">
+                <p>Would have paid</p>
+                <strong>{formatUsdc(paymentSummary.wouldHavePaid)}</strong>
+              </article>
+            </>
+          ) : null}
         </div>
       ) : null}
 
@@ -182,6 +195,41 @@ export function FactoryPreview({
               <p>{deploymentReadout.comparison.coverageLine}</p>
             </div>
           ) : null}
+        </div>
+      ) : null}
+
+      {paymentSummary ? (
+        <div className="deployment-report">
+          <p className="deployment-report-kicker">Worker payment summary</p>
+          <p>
+            {paymentSummary.paidStageCount > 0
+              ? `Factory cleared ${formatUsdc(paymentSummary.totalPaid)} on ${paymentSummary.chainName} via ${paymentSummary.protocol} for ${paymentSummary.paidStageCount} paid stage${paymentSummary.paidStageCount === 1 ? '' : 's'}.`
+              : `Factory did not clear any paid external stages on this run.`}
+          </p>
+          <p>
+            {paymentSummary.fallbackStageCount > 0
+              ? `${paymentSummary.fallbackStageCount} paid stage${paymentSummary.fallbackStageCount === 1 ? '' : 's'} rerouted to free demo workers.`
+              : `All non-paid stages stayed free.`}
+          </p>
+          <div className="deployment-payment-list">
+            {paymentSummary.stages.map((stage) => (
+              <div key={`${stage.stageId}-${stage.plannedWorkerName}`} className="deployment-payment-row">
+                <span>{stage.stageLabel}</span>
+                <strong>
+                  {stage.status === 'fallback-free'
+                    ? `${stage.plannedWorkerName} -> ${stage.executedWorkerName}`
+                    : stage.executedWorkerName}
+                  {' • '}
+                  {stage.status === 'paid'
+                    ? formatUsdc(stage.amount)
+                    : stage.kind === 'paid-external'
+                      ? `Free fallback (would have been ${formatUsdc(stage.amount)})`
+                      : 'Free'}
+                </strong>
+                <p>{stage.note}</p>
+              </div>
+            ))}
+          </div>
         </div>
       ) : null}
 

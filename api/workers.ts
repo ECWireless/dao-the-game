@@ -15,6 +15,7 @@ import {
   fetchWorkerLiveMetadata,
   hydrateWorkerRegistryEntry,
   parseWorkerRegistrySubmitRequest,
+  validateWorkerPaymentRegistration,
   type WorkerRegistryHydrationMode,
   verifyErc8004Registration
 } from './_lib/workerRegistry.js';
@@ -73,14 +74,12 @@ export async function POST(request: Request): Promise<Response> {
     const body = await parseOptionalJsonBody<unknown>(request);
     const parsed = parseWorkerRegistrySubmitRequest(body);
     const workerOrigin = await normalizeWorkerOrigin(parsed.workerOrigin);
-
-    const [live, registration] = await Promise.all([
-      fetchWorkerLiveMetadata(workerOrigin),
-      verifyErc8004Registration({
-        erc8004TokenId: parsed.erc8004TokenId,
-        agentCardUri: parsed.agentCardUri
-      })
-    ]);
+    const live = await fetchWorkerLiveMetadata(workerOrigin);
+    await validateWorkerPaymentRegistration(workerOrigin, live.manifest);
+    const registration = await verifyErc8004Registration({
+      erc8004TokenId: parsed.erc8004TokenId,
+      agentCardUri: parsed.agentCardUri
+    });
 
     const entry = await upsertWorkerRegistryEntry({
       workerOrigin,

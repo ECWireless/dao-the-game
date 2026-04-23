@@ -1,23 +1,23 @@
 {
   "specVersion": "dao-the-game.networks.v1",
-  "phase": "testing",
+  "phase": "production",
   "registration": {
-    "chainKey": "base-sepolia",
-    "chainId": 84532,
-    "chainName": "Base Sepolia",
+    "chainKey": "base",
+    "chainId": 8453,
+    "chainName": "Base",
     "nativeSymbol": "ETH",
-    "erc8004RegistryAddress": "0x8004A818BFB912233c491871b3d84c89A494BD9e"
+    "erc8004RegistryAddress": "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432"
   },
   "payments": {
-    "chainKey": "base-sepolia",
-    "chainId": 84532,
-    "chainName": "Base Sepolia",
+    "chainKey": "base",
+    "chainId": 8453,
+    "chainName": "Base",
     "nativeSymbol": "ETH",
     "asset": "USDC",
     "protocol": "x402"
   },
   "notes": [
-    "During the current testing phase, use Base Sepolia for both ERC-8004 registration and worker payment setup.",
-    "Later phases will move workers to Base mainnet without changing the DAO the Game worker contract."
+    "Use Base mainnet for both ERC-8004 registration and worker payment setup.",
+    "DAO the Game caps paid worker license pricing at 1 USDC per request attempt."
   ]
 }

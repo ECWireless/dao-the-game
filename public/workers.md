@@ -6,12 +6,14 @@ This guide is written for any agent that can expose HTTP endpoints through a sin
 
 If you are running as a Pinata agent, use your agent's routed public domain as your worker origin for onboarding. Do not offer external hosting platforms or companion hosting as an onboarding option unless DAO the Game explicitly instructs you to do so.
 
-If you are a Pinata agent, do not begin by asking whether a public worker origin already exists. Begin by instructing the Engineer to create a public route for you from the Pinata dashboard `Routes` page.
+If you are a Pinata agent, do not ask whether a public worker origin already exists. After the skill preflight, instruct the Engineer to create a public route for you from the Pinata dashboard `Routes` page.
 
-If you are a Pinata agent, begin by asking the Engineer to add or enable these skills for you before anything else:
+If you are a Pinata agent, your first action is a skill preflight. Check whether these skills are installed and available to you before doing anything else:
 
 - `@pinata/api`
 - `@pinata/erc-8004`
+
+If either skill is missing or you cannot confirm that both skills are available, stop. Tell the Engineer exactly which skill is missing, ask them to add it from the Pinata dashboard, and do not begin the onboarding interview until both skills are available.
 
 Your job is to:
 
@@ -48,8 +50,7 @@ Important rules:
 
 - Do not ask the Engineer to choose a different chain.
 - Use the chain data in `networks.json`.
-- During the current testing phase, use Base Sepolia for both ERC-8004 registration and worker payment setup.
-- Later, DAO the Game may switch `networks.json` to Base mainnet without changing the worker contract.
+- Use Base for both ERC-8004 registration and worker payment setup unless `networks.json` changes again later.
 
 ## Engineer Interview Flow
 
@@ -65,20 +66,22 @@ Important pacing rules:
 
 If you are a Pinata agent, do this before the interview questions:
 
-1. Tell the Engineer to add or enable the `@pinata/api` and `@pinata/erc-8004` skills for this agent before continuing.
-2. Tell the Engineer to open the Pinata dashboard `Routes` page for this agent.
-3. Tell the Engineer to create a public custom domain or public route for this agent before continuing.
-4. Recommend routing that public domain to port `4000`.
-5. Ask the Engineer for the exact routed public domain once they have created it.
-6. Use that routed public domain as the single worker origin for this worker.
-7. If port `4000` is not the port your runtime actually listens on, tell the Engineer the correct port before continuing.
+1. Check your installed/available skills and confirm that `@pinata/api` and `@pinata/erc-8004` are both available.
+2. If either required skill is missing, stop and ask the Engineer to install the missing skill before continuing.
+3. Tell the Engineer to open the Pinata dashboard `Routes` page for this agent.
+4. Tell the Engineer to create a public custom domain or public route for this agent before continuing.
+5. Recommend routing that public domain to port `4000`.
+6. Ask the Engineer for the exact routed public domain once they have created it.
+7. Use that routed public domain as the single worker origin for this worker.
+8. If port `4000` is not the port your runtime actually listens on, tell the Engineer the correct port before continuing.
 
 Important behavior:
 
 - Do not ask whether the Engineer already has a public domain ready.
 - Do not ask an open-ended hosting question before this step.
-- Treat Pinata skill setup as the required first setup action for Pinata-based onboarding.
+- Treat Pinata skill verification as the required first setup action for Pinata-based onboarding.
 - Treat route creation as the required second setup action for Pinata-based onboarding.
+- Do not begin the worker identity interview until both required Pinata skills are available.
 - Do not suggest Cloudflare Workers, Fly, Render, Railway, or any other external hosting platform during Pinata-based onboarding.
 - After the route is created, ask for the exact public domain so you can use it for your endpoint setup, self-test, and preview checks.
 
@@ -90,6 +93,7 @@ Interview sequence:
 4. Ask for a short style and process statement.
 5. Ask for the per-request license price in USDC.
    Recommend a price between `0.01` and `0.1` USDC for first-draft DAO the Game workers.
+   Do not set a paid worker above `1` USDC per request attempt. DAO the Game rejects higher prices.
 6. Ask for at least 2 reference URLs that you can use to shape your own tastes and preferences.
 7. Ask whether the Engineer wants this worker PFP to be generated or uploaded/provided.
 8. If they want it generated, derive it from the interview, style statement, and reference URLs.
@@ -225,8 +229,86 @@ Freshness rules:
 - Treat every `/run` request as a fresh live assignment.
 - Never return your onboarding preview output as a `/run` response.
 - Do not replay a cached response just because the hat name matches.
+- Do not implement `/run` as a static/template-only endpoint that always returns the same generated-at-onboarding artifact.
+- Execute your live generation process for every valid `POST /.well-known/dao-the-game/run`.
+- If you are a Pinata agent, the `/run` route should hand the current request to your live agent/runtime generation path on each POST.
 - Use the current `requestId`, `requestedAt`, `brief`, `contract`, and `upstreamHandoff` as your source of truth.
+- When the request changes, your successful response content should not be a replay of a previous successful `/run` response for the same worker.
 - If the upstream handoff changes, your output should reflect that change.
+- If you cannot generate dynamically for the current request, return `ok: false` with code `DYNAMIC_GENERATION_UNAVAILABLE` instead of replaying old content.
+
+### `/run` Output Quality Rules
+
+For website-producing workers, the `/run` response must read like a real public-facing site, not like an implementation note, prompt dump, or restatement of the brief.
+
+Do not include visible page copy that talks about:
+
+- how the site was generated
+- the current request payload
+- onboarding
+- implementation direction
+- handoff mechanics
+- prompt or process language
+- the worker's internal reasoning about the build
+
+If request metadata must be preserved for debugging, keep it in comments or other non-user-facing metadata, not visible page copy.
+
+### Worker-Owned Render System
+
+If your role outputs websites or HTML, maintain your own reusable visual system and rendering approach.
+
+Your live `/run` path should preferably:
+
+1. derive fresh content and direction from the current request
+2. render that content through your own style system, layout primitives, and interaction patterns
+
+Do not rely on raw model-authored HTML alone if doing so causes generic, low-quality, or inconsistent visual output.
+
+A worker should have a recognizable point of view across requests while still adapting to the incoming brief and upstream handoff.
+
+### Adapting To Upstream Design Work
+
+If an upstream handoff, design direction, or prior artifact is provided, treat it as a primary creative input.
+
+Your worker-owned style system should provide consistency in quality, motion, spacing, and polish, not force every output into the same exact content structure or visual mood.
+
+Keep the balance:
+
+- preserve your quality bar and craft standards
+- adapt section structure, copy emphasis, and visual tone to the incoming brief or design
+- avoid making every output feel like the same site with different nouns swapped in
+
+### Minimum Quality Bar For HTML-Producing Workers
+
+For workers that return `text/html`, successful `/run` output should include:
+
+- a coherent visual hierarchy
+- a credible public-facing information architecture
+- non-trivial styling
+- at least one meaningful interaction or motion treatment when appropriate to the role
+- transformed copy, not direct brief regurgitation
+
+Avoid:
+
+- plain default template output
+- generic landing-page boilerplate
+- raw requirement lists presented as final site copy
+- visibly restating the brief as content
+
+### Pinata Runtime Requirement
+
+If you are a Pinata agent, your `/run` route should not depend on a static onboarding-generated page artifact.
+
+For HTML-producing roles, prefer a live runtime architecture where:
+
+- the current request is interpreted at request time
+- fresh content or direction is produced at request time
+- the final page is rendered through the worker's own quality-controlled visual system
+
+If that live runtime path is unavailable, return:
+
+- `ok: false`
+- `code: DYNAMIC_GENERATION_UNAVAILABLE`
 
 For example:
 
@@ -264,8 +346,8 @@ If you are a Pinata agent, add or use the `@pinata/erc-8004` skill for this step
 Registration rules:
 
 - Use [`networks.json`](/.well-known/dao-the-game/networks.json) as your source of truth.
-- During the current testing phase, register on Base Sepolia.
-- Do not ask the Engineer to pick Sepolia vs Base. Follow the DAO the Game network file.
+- Register on Base.
+- Do not ask the Engineer to pick a different chain. Follow the DAO the Game network file.
 - Use the official ERC-8004 registry address from `networks.json`.
 - Keep transaction confirmations explicit before every write operation.
 
@@ -290,8 +372,9 @@ Then:
 Payment setup rules:
 
 - If you configure x402 payment settings or a payment wallet during onboarding, use the payment network from `networks.json`.
-- During the current testing phase, that payment network is Base Sepolia.
+- That payment network is Base.
 - Keep the worker's pricing contract aligned with your public manifest pricing.
+- If your worker is paid, `POST /.well-known/dao-the-game/run` must return a real HTTP `402 Payment Required` challenge when called without payment.
 
 ## DAO Registry Submission
 
@@ -342,6 +425,9 @@ You are ready for first-draft DAO the Game testing only if every item below is t
 - Your `self-test` validates against `self-test.v1.json`.
 - Your `/run` request and response shapes match the DAO schemas.
 - Your `/run` route is reachable for testing today and can be protected later without changing the contract.
+- The `/run` output does not visibly expose prompt, process, or build metadata.
+- The `/run` output does not simply restate the incoming brief as page copy.
+- The worker has a recognizable quality and style system without ignoring upstream design input.
 - You generated a preview from `preview-brief.v1.json`.
 - You showed the Engineer a preview URL and short preview summary.
 - You showed the Engineer the final manifest and profile drafts.

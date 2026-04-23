@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ArtifactWorkerPaymentsPreference } from '../contracts/artifact';
 import type { ArtifactGenerationRecovery } from '../contracts/gameState';
 import type { OrgTreeRecord } from '../contracts/org';
 import { getScene, type StoryApp } from '../levels/story';
@@ -39,8 +40,9 @@ type GameScreenProps = {
   isRetryingArtifactGeneration?: boolean;
   onSetStudioName?: (name: string) => Promise<void> | void;
   onConfigureRole?: (roleId: string, name: string) => Promise<void> | void;
-  onRunProduction?: () => Promise<void> | void;
+  onRunProduction?: (workerPayments?: ArtifactWorkerPaymentsPreference) => Promise<void> | void;
   onResetDemo?: () => Promise<void> | void;
+  payerWalletAddress?: string | null;
 };
 
 export default function GameScreen({
@@ -57,7 +59,8 @@ export default function GameScreen({
   onSetStudioName,
   onConfigureRole,
   onRunProduction,
-  onResetDemo
+  onResetDemo,
+  payerWalletAddress = null
 }: GameScreenProps) {
   const storySceneIndex = useGameStore((state) => state.storySceneIndex);
   const unlockedRoleCount = useGameStore((state) => state.unlockedRoleCount);
@@ -155,9 +158,9 @@ export default function GameScreen({
     [requestAppSwitch]
   );
 
-  const handleRunProduction = useCallback(() => {
+  const handleRunProduction = useCallback((workerPayments?: ArtifactWorkerPaymentsPreference) => {
     if (onRunProduction) {
-      return onRunProduction();
+      return onRunProduction(workerPayments);
     }
 
     runProduction();
@@ -455,6 +458,7 @@ export default function GameScreen({
         artifactGenerationRecovery,
         retryArtifactGeneration: onRetryArtifactGeneration,
         isRetryingArtifactGeneration,
+        payerWalletAddress,
         advanceStory,
         queueCrossAppAdvance,
         setStudioName: onSetStudioName ?? setStudioName,
